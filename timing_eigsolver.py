@@ -23,8 +23,10 @@ sym_mat_raw = mat_dense + mat_dense.T
 sym_mat = jax.device_put(sym_mat_raw)
 
 def model(X):
-    Y,__ = jax.scipy.linalg.eigh(sym_mat+X)
-    return np.mean(Y)
+    Y,Z = jax.scipy.linalg.eigh(sym_mat+X)
+    Y.block_until_ready()
+    Z.block_until_ready()
+    # return np.mean(Y)
 
 # jitting the function
 jax_model = jax.jit(model)
