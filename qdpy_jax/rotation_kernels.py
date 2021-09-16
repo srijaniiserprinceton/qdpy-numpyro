@@ -34,6 +34,11 @@ def minus1pow(num):
         return 1.0
 
 
+def test_jax_Omega():
+    """Test if jax.jit works on Omega()
+    """
+    
+
 def compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2):
     """Computing the kernels which are used for obtaining the                                                                                                                        
     submatrix elements.                                                                                                                                                              
