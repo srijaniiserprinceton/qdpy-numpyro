@@ -12,7 +12,7 @@ import sys
 import timeit
 import time
 
-dtype = 'float32'
+dtype = 'complex64'
 
 numpyro.set_platform(f'{sys.argv[1]}')
 
