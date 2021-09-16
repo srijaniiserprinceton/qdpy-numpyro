@@ -2,6 +2,7 @@ import jax.numpy as jnp
 import numpy as np
 import jax
 import py3nj
+import time
 
 jit = jax.jit
 
@@ -33,11 +34,12 @@ def minus1pow(num):
     else:
         return 1.0
 
+def pure_uses_internal_state(x):
+    state = dict(even=0, odd=0)
+    for i in range(10):
+        state['even' if i % 2 == 0 else 'odd'] += x
+    return state['even'] + state['odd']
 
-def test_jax_Omega():
-    """Test if jax.jit works on Omega()
-    """
-    
 
 def compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2):
     """Computing the kernels which are used for obtaining the                                                                                                                        
@@ -61,7 +63,22 @@ def compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2):
         
     return Tsr
 
+Niter = 1000
 
+t1 = time.time()
+for i in range(Niter): __ = pure_uses_internal_state(5.)
+t2 = time.time()
+
+
+
+t3 = time.time()
+for i in range(Niter): __ = jit(pure_uses_internal_state)(5.)
+t4 = time.time()
+
+print((t2-t1)/Niter)
+print((t4-t3)/Niter)
+
+'''
 # parameters to be included in the global dictionary later?
 s_arr = np.array([1,3,5], dtype='int')
 
@@ -95,3 +112,4 @@ V1, V2 = V, V
 _compute_Tsr = jit(compute_Tsr)
 
 Tsr = compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2) #.block_until_ready()
+'''
