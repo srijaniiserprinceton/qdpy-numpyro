@@ -27,6 +27,30 @@ def w3j(l1, l2, l3, m1, m2, m3):
         return 0.0
     return wigval
 
+
+def w3j_vecm(l1, l2, l3, m1, m2, m3):
+    """Computes the wigner-3j symbol for given l1, l2, l3, m1, m2, m3.
+
+    Inputs:
+    -------
+    l1, l2, l3 - int
+    m1, m2, m3 - np.ndarray(ndim=1, dtype=np.int32)
+
+    Returns:
+    --------
+    wigvals - np.ndarray(ndim=1, dtype=np.float32)
+    """
+    l1 = int(2*l1)
+    l2 = int(2*l2)
+    l3 = int(2*l3)
+    m1 = 2*m1
+    m2 = 2*m2
+    m3 = 2*m3
+    wigvals = py3nj.wigner3j(l1, l2, l3, m1, m2, m3)
+    return wigvals
+
+
+
 def minus1pow(num):
     """Computes (-1)^n"""
     if num%2 == 1:
@@ -78,7 +102,6 @@ t4 = time.time()
 print((t2-t1)/Niter)
 print((t4-t3)/Niter)
 
-'''
 # parameters to be included in the global dictionary later?
 s_arr = np.array([1,3,5], dtype='int')
 
@@ -112,4 +135,3 @@ V1, V2 = V, V
 _compute_Tsr = jit(compute_Tsr)
 
 Tsr = compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2) #.block_until_ready()
-'''
