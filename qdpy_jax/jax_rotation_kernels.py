@@ -2,14 +2,25 @@ import numpy as np
 import py3nj
 import time
 import jax
-import jax.numpy as np
+import jax.numpy as jnp
 
 def Omega(ell, N):
     """Computes Omega_N^\ell"""
-    if abs(N) > ell:
-        return 0
-    else:
-        return np.sqrt(0.5 * (ell+N) * (ell-N+1))
+    return jax.lax.cond(
+        abs(N) > ell,
+        lambda __: 0.0,
+        lambda __: jnp.sqrt(0.5 * (ell+N) * (ell-N+1)),
+        operand=None)
+    
+
+def minus1pow(num):
+    """Computes (-1)^n"""
+    return jax.lax.cond(
+        num % 2 == 1,
+        lambda __: -1,
+        lambda __: 1,
+        operand=None)
+
 
 def w3j(l1, l2, l3, m1, m2, m3):
     """Computes the wigner-3j symbol for given l1, l2, l3, m1, m2, m3"""
@@ -46,16 +57,7 @@ def w3j_vecm(l1, l2, l3, m1, m2, m3):
     m3 = 2*m3
     wigvals = py3nj.wigner3j(l1, l2, l3, m1, m2, m3)
     return wigvals
-
-
-
-def minus1pow(num):
-    """Computes (-1)^n"""
-    if num%2 == 1:
-        return -1.0
-    else:
-        return 1.0
-
+    
 
 def compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2):
     """Computing the kernels which are used for obtaining the                                                                                                                        
@@ -109,8 +111,43 @@ V1, V2 = V, V
 
 Niter = 1000
 
+# testing the Omega function
+_Omega = jax.jit(Omega)
+__ = _Omega(n1,ell1)
+
+t1 = time.time()
+for __ in range(Niter): Omega_eval = Omega(n1, ell1).block_until_ready()
+t2 = time.time()
+
+t3 = time.time()
+for __ in range(Niter): Omega_eval = _Omega(n1, ell1).block_until_ready()
+t4 = time.time()
+
+print("Omega()")
+print("Time taken in seconds (without jax): ", (t2-t1)/Niter) 
+print("Time taken in seconds (with jax): ", (t4-t3)/Niter) 
+
+
+# testing the minus1pow function
+_minus1pow = jax.jit(minus1pow)
+__ = _minus1pow(29)
+
+t1 = time.time()
+for __ in range(Niter): minus1pow_eval = minus1pow(29).block_until_ready()
+t2 = time.time()
+
+
+t3 = time.time()
+for __ in range(Niter): minus1pow_eval = _minus1pow(29).block_until_ready()
+t4 = time.time()
+
+print("minus1pow()")
+print("Time taken in seconds (without jax): ", (t2-t1)/Niter) 
+print("Time taken in seconds (with jax): ", (t4-t3)/Niter) 
+
+
+'''
 t1 = time.time()
 for __ in range(Niter): Tsr = compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2)
 t2 = time.time()
-
-print("Time taken in seconds (no jax): ", (t2-t1)/Niter) 
+'''
