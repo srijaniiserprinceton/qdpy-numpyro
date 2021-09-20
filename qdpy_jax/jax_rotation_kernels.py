@@ -1,6 +1,8 @@
 import numpy as np
 import py3nj
 import time
+import jax
+import jax.numpy as np
 
 def Omega(ell, N):
     """Computes Omega_N^\ell"""
