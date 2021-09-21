@@ -57,32 +57,6 @@ def w3j_vecm(l1, l2, l3, m1, m2, m3):
     m3 = 2*m3
     wigvals = py3nj.wigner3j(l1, l2, l3, m1, m2, m3)
     return wigvals
-    
-
-def compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2):
-    """Computing the kernels which are used for obtaining the                                                                                                                        
-    submatrix elements.                                                                                                                                                              
-    """
-    
-    Tsr = np.zeros((len(s_arr), len(r)))
-    
-    L1sq = ell1*(ell1+1)
-    L2sq = ell2*(ell2+1)
-    Om1 = Omega(ell1, 0)
-    Om2 = Omega(ell2, 0)
-    
-    for i in range(len(s_arr)):
-        s = s_arr[i]
-        ls2fac = L1sq + L2sq - s*(s+1)
-        eigfac = U2*V1 + V2*U1 - U1*U2 - 0.5*V1*V2*ls2fac
-        # wigval = w3j(ell1, s, ell2, -1, 0, 1)
-        # using some dummy number until we write the 
-        # function for mapping wigner3js
-        wigval = 1.0
-        Tsr[i, :] = -(1 - minus1pow(ell1 + ell2 + s)) * \
-                    Om1 * Om2 * wigval * eigfac / r
-        
-    return Tsr
 
 def jax_compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2):
     """Computing the kernels which are used for obtaining the                                                                                                                        
