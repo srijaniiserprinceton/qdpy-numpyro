@@ -4,7 +4,7 @@ import time
 import jax
 import jax.numpy as jnp
 
-def Omega(ell, N):
+def jax_Omega(ell, N):
     """Computes Omega_N^\ell"""
     return jax.lax.cond(
         abs(N) > ell,
@@ -13,7 +13,7 @@ def Omega(ell, N):
         operand=None)
     
 
-def minus1pow(num):
+def jax_minus1pow(num):
     """Computes (-1)^n"""
     return jax.lax.cond(
         num % 2 == 1,
@@ -75,11 +75,41 @@ def compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2):
         s = s_arr[i]
         ls2fac = L1sq + L2sq - s*(s+1)
         eigfac = U2*V1 + V2*U1 - U1*U2 - 0.5*V1*V2*ls2fac
-        wigval = w3j(ell1, s, ell2, -1, 0, 1)
+        # wigval = w3j(ell1, s, ell2, -1, 0, 1)
+        # using some dummy number until we write the 
+        # function for mapping wigner3js
+        wigval = 1.0
         Tsr[i, :] = -(1 - minus1pow(ell1 + ell2 + s)) * \
                     Om1 * Om2 * wigval * eigfac / r
         
     return Tsr
+
+def jax_compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2):
+    """Computing the kernels which are used for obtaining the                                                                                                                        
+    submatrix elements.                                                                                                                                                              
+    """
+    
+    Tsr = jnp.zeros((len(s_arr), len(r)))
+    
+    L1sq = ell1*(ell1+1)
+    L2sq = ell2*(ell2+1)
+    Om1 = jax_Omega(ell1, 0)
+    Om2 = jax_Omega(ell2, 0)
+    
+    for i in range(len(s_arr)):
+        s = s_arr[i]
+        ls2fac = L1sq + L2sq - s*(s+1)
+        eigfac = U2*V1 + V2*U1 - U1*U2 - 0.5*V1*V2*ls2fac
+        # wigval = w3j(ell1, s, ell2, -1, 0, 1)
+        # using some dummy number until we write the 
+        # function for mapping wigner3js
+        wigval = 1.0
+        Tsr_at_i = -(1 - jax_minus1pow(ell1 + ell2 + s)) * \
+                    Om1 * Om2 * wigval * eigfac / r
+        Tsr = jax.ops.index_update(Tsr, i, Tsr_at_i)
+        
+    return Tsr
+
 
 # parameters to be included in the global dictionary later?
 s_arr = np.array([1,3,5], dtype='int')
@@ -111,12 +141,12 @@ V1, V2 = V, V
 
 Niter = 1000
 
-# testing the Omega function
-_Omega = jax.jit(Omega)
+# testing the Omega() function
+_Omega = jax.jit(jax_Omega)
 __ = _Omega(n1,ell1)
 
 t1 = time.time()
-for __ in range(Niter): Omega_eval = Omega(n1, ell1).block_until_ready()
+for __ in range(Niter): Omega_eval = jax_Omega(n1, ell1).block_until_ready()
 t2 = time.time()
 
 t3 = time.time()
@@ -124,16 +154,15 @@ for __ in range(Niter): Omega_eval = _Omega(n1, ell1).block_until_ready()
 t4 = time.time()
 
 print("Omega()")
-print("Time taken in seconds (without jax): ", (t2-t1)/Niter) 
-print("Time taken in seconds (with jax): ", (t4-t3)/Niter) 
+print("JIT version is faster by", (t2-t1)/(t4-t3)) 
 
 
-# testing the minus1pow function
-_minus1pow = jax.jit(minus1pow)
+# testing the minus1pow() function
+_minus1pow = jax.jit(jax_minus1pow)
 __ = _minus1pow(29)
 
 t1 = time.time()
-for __ in range(Niter): minus1pow_eval = minus1pow(29).block_until_ready()
+for __ in range(Niter): minus1pow_eval = jax_minus1pow(29).block_until_ready()
 t2 = time.time()
 
 
@@ -142,12 +171,21 @@ for __ in range(Niter): minus1pow_eval = _minus1pow(29).block_until_ready()
 t4 = time.time()
 
 print("minus1pow()")
-print("Time taken in seconds (without jax): ", (t2-t1)/Niter) 
-print("Time taken in seconds (with jax): ", (t4-t3)/Niter) 
+print("JIT version is faster by: ", (t2-t1)/(t4-t3)) 
 
 
-'''
+# testing compute_Tsr() function
+_compute_Tsr = jax.jit(jax_compute_Tsr)
+__ = _compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2)
+
 t1 = time.time()
-for __ in range(Niter): Tsr = compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2)
+for __ in range(Niter): __ = jax_compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2).block_until_ready()
 t2 = time.time()
-'''
+
+t3 = time.time()
+for __ in range(Niter): __ = _compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2).block_until_ready()
+t4 = time.time()
+
+print("compute_Tsr()")
+print("JIT version is faster by: ", (t2-t1)/(t4-t3)) 
+
