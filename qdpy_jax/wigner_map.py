@@ -21,17 +21,22 @@ def find_c_RY03():
     
     # converting it to the Eqn.(2.11) form according to the step in
     # ~https://github.com/csdms-contrib/slepian_alpha/blob/master/wignersort.m~
-    
+
+    # to store various indices during the operation
     temp = jnp.zeros((1,2), dtype='int32')
-    
+    # to store information of the phase re-adjustment needed
+    oddperm = np.array([0], dtype='boolean')
+
     # finding the location of the smallest elements S
     S_cont_index = jnp.argmin(R)
     S_row_ind, S_col_ind = ind2sub(S_cont_index, 3, 3)
     temp = jax.ops.index_update(temp, 0, S_row_ind)
     temp = jax.ops.index_update(temp, 1, S_col_ind)
     
-    R = circshift(R,-(temp-1));
-    
+    # moving S to the (0,0) position
+    R = jnp.roll(R, -(temp[0]-1), axis=0)
+    R = jnp.roll(R, -(temp[1]-1), axis=1)
+
     # finding the location of the largest element L
     L_cont_ind = jnp.argmax(R)
     L_row_ind, L_col_ind = ind2sub(L_cont_ind, 3, 3)
@@ -39,36 +44,68 @@ def find_c_RY03():
     temp = jax.ops.index_update(temp, 1, L_col_ind)
     
     #Reorder Regge square
-    jax.lax.cond(
-        temp[0] == 1,
-        R = jax.numpy.transpose(R),
-        lambda __: None,
-        operand=none)
-        if(temp(1)==3):
-            R(:,2:3) = jnp.fliplr(R(:,2:3));
-            oddperm(i)=true;
+    # in this part there are a bunch of inequalities
+    # that need to be checked to carry out row and 
+    # col swapping operations. Defining the miscellaneous
+    # internal functions for jax.lax.cond
 
-    else:
-        if temp(2)==3
-        R(:,2:3)=fliplr(R(:,2:3));
-        oddperm(i)=true;
+    def true_func_1():
+        R = jnp.transpose(R)
+        def true_func_1_true_func():
+            R = jax.ops.index_update(R,jax.ops.index[:,1:3],jnp.fliplr(b[:,1:3])))
+            oddperm = jax.ops.index_add(oddperm,0,1)
+            return R, oddperm
+            
+        R, oddperm = jax.ops.cond(temp[0] == 2,
+                    true_func_1_true_func,
+                    lambda __: return R, oddperm,
+                    operand=True)
+        
+        return R, oddperm
+
+    def false_func_1():
+        def false_func_1_true_func():
+            R = jax.ops.index_update(R,jax.ops.index[:,1:3],jnp.fliplr(b[:,1:3])))
+            oddperm = jax.ops.index_add(oddperm,0,1)
+            return R, oddperm
+
+    R, oddperm = jax.ops.cond(temp[1] == 0,
+                              true_func_1,
+                              false_func_1,
+                              operand=None)
+
+
+    def true_func_2():
+        oddperm = jax.ops.index_update(oddperm, 0, 1-oddperm[0])
+        R = jax.ops.index_update(R,jax.ops.index[1:3,:],jnp.flipud(b[1:3,:])))
+        return R, oddperm
+
+    def false_func_2():
+        def flase_func_2_true_func():
+            R = jax.ops.index_update(R,jax.ops.index[1:3,:],jnp.flipud(b[1:3,:])))
+            oddperm = jax.ops.index_update(oddperm, 0, 1-oddperm[0])
+            return R, oddperm
+
+        jax.ops.cond(R(3,2) == R(2,2) and R(3,3) < R(2,3),
+                     false_func_2_true_func,
+                     lambda __: return None,
+                     operand=None)
+
+    jax.ops.cond(R(3,2) < R(2,2),
+        true_func_2,
+        false_func_2,
+        operand=None)
     
+    
+    if ~issorted(wrev(regge(i,:)))
+    disp('WHOA! something''s wrong here...')
+    end
 
-    if R(3,2)<R(2,2):
-        oddperm(i)=1-oddperm(i);
-        R(2:3,:)=flipud(R(2:3,:));
-    elif R(3,2)==R(2,2) && R(3,3)<R(2,3);
-R(2:3,:)=flipud(R(2:3,:));
-oddperm(i)=1-oddperm(i);
-end
-regge(i,1:5)=[R(1,2) R(2,1) R(3,3) R(2,2) R(1,1)]; 
-if ~issorted(wrev(regge(i,:)))
-disp('WHOA! something''s wrong here...')
-end
-L, X, T, B, S = regge
-
-#RY03 Eqn.(2.13)
-
-c=L*(24+L*(50+L*(35+L*(10+L))))/120 + \
-      X*(6+X*(11+X*(6+X)))/24+T*(2+T*(3+T))/6 + \
-      B*(B+1)/2+S+1
+    # initializing the Regge free parameters from the matrix R
+    L, X, T, B, S = regge
+    
+    #RY03 Eqn.(2.13)
+    
+    c=L*(24+L*(50+L*(35+L*(10+L))))/120 + \
+       X*(6+X*(11+X*(6+X)))/24+T*(2+T*(3+T))/6 + \
+       B*(B+1)/2+S+1
