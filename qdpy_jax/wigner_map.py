@@ -143,7 +143,7 @@ ell1, ell2, ell3 = 2, 10, 12
 m1, m2, m3 = -1, 0, 1 
 
 # timing the functions with and without jitting
-Niter = 1000
+Niter = 100
 
 print(find_c_RY03(ell1, ell2, ell3, m1, m2, m3))
 
