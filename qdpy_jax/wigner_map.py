@@ -2,6 +2,10 @@ import jax.numpy as jnp
 import jax
 import time
 
+jax.config.update('jax_platform_name', 'cpu')
+from jax.lib import xla_bridge
+print(xla_bridge.get_backend().platform) 
+
 # function to check if the elements of a 1D array are sorted
 def issorted(a):
     return jnp.all(a[:-1] <= a[1:])
@@ -25,7 +29,8 @@ def find_c_RY03(ell1, ell2, ell3, m1, m2, m3):
     # ~https://github.com/csdms-contrib/slepian_alpha/blob/master/wignersort.m~
 
     # to store various indices during the operation
-    temp = jnp.array([1,2], dtype='int32')
+    # temp = jnp.array([1,2], dtype='int32')
+    temp = jnp.zeros(2, dtype='int32')
     # to store information of the phase re-adjustment needed
     oddperm = jnp.array([0], dtype='int32')
 
@@ -36,8 +41,8 @@ def find_c_RY03(ell1, ell2, ell3, m1, m2, m3):
     temp = jax.ops.index_update(temp, 1, S_col_ind)
     
     # moving S to the (0,0) position
-    R = jnp.roll(R, -(temp[0]-1), axis=0)
-    R = jnp.roll(R, -(temp[1]-1), axis=1)
+    R = jnp.roll(R, -temp[0], axis=0)
+    R = jnp.roll(R, -temp[1], axis=1)
 
     # finding the location of the largest element L
     L_cont_ind = jnp.argmax(R)
@@ -102,19 +107,16 @@ def find_c_RY03(ell1, ell2, ell3, m1, m2, m3):
 
         return R_and_oddperm
 
-
     R, oddperm = jax.lax.cond(temp[1] == 0,
                               true_func_1,
                               false_func_1,
                               operand=(R, oddperm))
-
 
     R, oddperm = jax.lax.cond(R[2,1] < R[1,1],
                               true_func_2,
                               false_func_2,
                               operand=(R, oddperm))
     
-
     # extracting regge params
     regge = jnp.array([R[0,1], R[1,0], R[2,2], R[1,1], R[0,0]])
     
@@ -123,6 +125,7 @@ def find_c_RY03(ell1, ell2, ell3, m1, m2, m3):
                                lambda __: 1, 
                                lambda __: 0,
                                operand=None)
+    print(regge)
 
     '''
     # initializing the Regge free parameters from the matrix R
@@ -138,27 +141,29 @@ def find_c_RY03(ell1, ell2, ell3, m1, m2, m3):
     '''
     return regge
 
-# wigner parameters
-ell1, ell2, ell3 = 2, 10, 12
-m1, m2, m3 = -1, 0, 1 
 
-# timing the functions with and without jitting
-Niter = 1000
+if __name__ == "__main__":
+    # wigner parameters
+    ell1, ell2, ell3 = 2, 10, 12
+    m1, m2, m3 = -1, 0, 1 
 
-print(find_c_RY03(ell1, ell2, ell3, m1, m2, m3))
+    # timing the functions with and without jitting
+    Niter = 1
 
-# timing the unjitted version
-t1 = time.time()
-for __ in range(Niter): c = find_c_RY03(ell1, ell2, ell3, m1, m2, m3).block_until_ready()
-t2 = time.time()
+    print(find_c_RY03(ell1, ell2, ell3, m1, m2, m3))
 
-# timing the jitted version
-_find_c_RY03 = jax.jit(find_c_RY03)
-__ = _find_c_RY03(ell1, ell2, ell3, m1, m2, m3)
+    # timing the unjitted version
+    t1 = time.time()
+    for __ in range(Niter): c = find_c_RY03(ell1, ell2, ell3, m1, m2, m3).block_until_ready()
+    t2 = time.time()
 
-t3 = time.time()
-for __ in range(Niter): c = _find_c_RY03(ell1, ell2, ell3, m1, m2, m3).block_until_ready()
-t4 = time.time()
+    # timing the jitted version
+    _find_c_RY03 = jax.jit(find_c_RY03)
+    __ = _find_c_RY03(ell1, ell2, ell3, m1, m2, m3)
+
+    t3 = time.time()
+    for __ in range(Niter): c = _find_c_RY03(ell1, ell2, ell3, m1, m2, m3).block_until_ready()
+    t4 = time.time()
 
 
-print('JIT speeds up by: ', (t2-t1)/(t4-t3))
+    print('JIT speeds up by: ', (t2-t1)/(t4-t3))
