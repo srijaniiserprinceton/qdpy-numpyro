@@ -2,6 +2,12 @@ import numpy as np
 import py3nj
 import time
 
+def gamma(ell):
+    """Computes gamma_ell"""
+    return np.sqrt((2*ell + 1)/4/np.pi)
+
+
+
 def Omega(ell, N):
     """Computes Omega_N^\ell"""
     if abs(N) > ell:
@@ -55,6 +61,15 @@ def minus1pow(num):
         return 1.0
 
 
+def minus1pow_vec(num):
+    """Computes (-1)^n"""
+    mask_pos = num%2 == 0
+    ret = np.zeros_like(num, dtype=np.int32)
+    ret[mask_pos] = 1
+    ret[~mask_pos] = -1
+    return ret
+
+
 def compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2):
     """Computing the kernels which are used for obtaining the                                                                                                                        
     submatrix elements.                                                                                                                                                              
@@ -76,6 +91,45 @@ def compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2):
                     Om1 * Om2 * wigval * eigfac / r
         
     return Tsr
+
+
+def get_Cvec(ell1, ell2, s_arr, r, U1, U2, V1, V2, omegaref):
+    """Computing the non-zero components of the submatrix"""
+    # ell = np.minimum(ell1, ell2)
+    ell = ell1   # !!!!!!!!!!! a temporary fix. This needs to be taken care of
+    m = np.arange(-ell, ell+1)
+
+    len_s = np.size(s_arr)
+
+    wigvals = np.zeros((2*ell+1, len_s))
+
+    for i in range(len_s):
+        wigvals[:, i] = w3j_vecm(ell1, s_arr[i], ell2, -m, 0*m, m)
+     
+    Tsr = compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2)
+    # -1 factor from definition of toroidal field                                                                                                                                    
+    '''wsr = np.loadtxt(f'{self.sup.gvar.datadir}/{WFNAME}')\                                                                                                                        
+    [:, self.rmin_idx:self.rmax_idx] * (-1.0)'''
+    # self.sup.spline_dict.get_wsr_from_Bspline()                                                                                                                                    
+    #wsr = self.sup.spline_dict.wsr
+    # wsr[0, :] *= 0.0 # setting w1 = 0                                                                                                                                              
+    # wsr[1, :] *= 0.0 # setting w3 = 0                                                                                                                                              
+    # wsr[2, :] *= 0.0 # setting w5 = 0                                                                                                                                              
+    # wsr /= 2.0                                                                                                                                                                     
+    # integrand = Tsr * wsr * (self.sup.gvar.rho * self.sup.gvar.r**2)[NAX, :]                                                                                                       
+    
+    integrand = Tsr * wsr   # since U and V are scaled by sqrt(rho) * r                                                                                                              
+    
+    #### TO BE REPLACED WITH SIMPSON #####
+    integral = np.trapz(integrand, axis=1, x=r)
+    
+    prod_gammas = gamma(ell1) * gamma(ell2) * gamma(s_arr)
+    omegaref = omegaref
+    Cvec = minus1pow_vec(m) * 8*np.pi * omegaref * (wigvals @ (prod_gammas * integral))
+    
+    return Cvec
+
+
 
 # parameters to be included in the global dictionary later?
 s_arr = np.array([1,3,5], dtype='int')
@@ -102,13 +156,25 @@ V = np.loadtxt('V3672.dat')
 U = U[rmin_ind:rmax_ind]
 V = V[rmin_ind:rmax_ind]
 
+wsr = np.loadtxt('w.dat')
+wsr = wsr[:,rmin_ind:rmax_ind]
+
 U1, U2 = U, U
 V1, V2 = V, V
 
-Niter = 1000
+omegaref = 1234.
+
+Niter = 100
 
 t1 = time.time()
 for __ in range(Niter): Tsr = compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2)
 t2 = time.time()
 
-print("Time taken in seconds (no jax): ", (t2-t1)/Niter) 
+print(f"[compute_Tsr] Time taken per iteration in seconds (no jax): , {(t2-t1)/Niter:.3e} seconds")
+
+
+
+t3 = time.time()
+for __ in range(Niter): __ = get_Cvec(ell1, ell2, s_arr, r, U1, U2, V1, V2, omegaref)
+t4 = time.time()
+print(f"[get_Cvec] Time taken per iteration in seconds (no jax): , {(t4-t3)/Niter:.3e} seconds")

@@ -114,7 +114,6 @@ def jax_compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2):
     """Computing the kernels which are used for obtaining the                                                                                                                        
     submatrix elements.                                                                                                                                                              
     """
-    
     Tsr = jnp.zeros((len(s_arr), len(r)))
     
     L1sq = ell1*(ell1+1)
@@ -257,6 +256,7 @@ t4 = time.time()
 
 print("compute_Tsr()")
 print("JIT version is faster by: ", (t2-t1)/(t4-t3)) 
+print(f"Time taken per iteration (jax jitted) compute_Tsr = {(t4-t3)/Niter:.3e} seconds")
 
 
 # testing get_Cvec() function                                                                                                                                                                           
@@ -273,3 +273,4 @@ t4 = time.time()
 
 print("get_Cvec()")
 print("JIT version is faster by: ", (t2-t1)/(t4-t3))
+print(f"Time taken per iteration (jax jitted) get_Cvec = {(t4-t3)/Niter:.3e} seconds")
