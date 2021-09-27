@@ -83,7 +83,7 @@ def jax_get_Cvec(ell1, ell2, s_arr, r, U1, U2, V1, V2, omegaref):
     # for i in range(len_s):
     #    wigvals[:, i] = w3j_vecm(ell1, s_arr[i], ell2, -m, 0*m, m)
      
-    jax.lax.fori_loop(0, len_s,
+    wigvals = jax.lax.fori_loop(0, len_s,
                       lambda i, wigvals: jax.ops.index_update(wigvals,jax.ops.index[:,i],1),
                       wigvals)
    
@@ -121,23 +121,28 @@ def jax_compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2):
     Om1 = jax_Omega(ell1, 0)
     Om2 = jax_Omega(ell2, 0)
     
-    for i in range(len(s_arr)):
+    # creating internal function for the fori_loop
+    def func4Tsr_s_loop(i, Tsr):
         s = s_arr[i]
         ls2fac = L1sq + L2sq - s*(s+1)
         eigfac = U2*V1 + V2*U1 - U1*U2 - 0.5*V1*V2*ls2fac
-        # wigval = w3j(ell1, s, ell2, -1, 0, 1)
-        # using some dummy number until we write the 
-        # function for mapping wigner3js
+        # wigval = w3j(ell1, s, ell2, -1, 0, 1)                                                       
+        # using some dummy number until we write the                                                  
+        # function for mapping wigner3js                                                              
         wigval = 1.0
         Tsr_at_i = -(1 - jax_minus1pow(ell1 + ell2 + s)) * \
                     Om1 * Om2 * wigval * eigfac / r
         Tsr = jax.ops.index_update(Tsr, i, Tsr_at_i)
-        
+
+        return Tsr
+
+    Tsr = jax.lax.fori_loop(0, len(s_arr), func4Tsr_s_loop, Tsr)
+
     return Tsr
 
 
 # parameters to be included in the global dictionary later?
-s_arr = np.array([1,3,5], dtype='int')
+s_arr = jnp.array([1,3,5], dtype='int')
 
 rmin = 0.3
 rmax = 1.0
@@ -173,7 +178,7 @@ U1, U2 = U, U
 V1, V2 = V, V
 
 Niter = 100
-
+'''
 # testing the Omega() function
 _Omega = jax.jit(jax_Omega)
 __ = _Omega(n1,ell1)
@@ -239,7 +244,7 @@ t4 = time.time()
 
 print("gamma()")
 print("JIT version is faster by: ", (t2-t1)/(t4-t3)) 
-
+'''
 
 
 # testing compute_Tsr() function
