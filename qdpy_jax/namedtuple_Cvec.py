@@ -46,7 +46,7 @@ def jax_get_Cvec(gvars, qdpt_mode, eigfuncs):
     # for i in range(len_s):
     #    wigvals[:, i] = w3j_vecm(ell1, s_arr[i], ell2, -m, 0*m, m)
      
-    jax.lax.fori_loop(0, len_s,
+    wigvals = jax.lax.fori_loop(0, len_s,
                       lambda i, wigvals: jax.ops.index_update(wigvals,jax.ops.index[:,i],1),
                       wigvals)
    
@@ -159,7 +159,7 @@ eigfuncs = EIGFUNCS(U1, U2, V1, V2)
 
 Niter = 100
 
-# testing get_Cvec() function                                                                                                                                                           # declaring only qdpt_mode as static argument. It is critical to note that it is
+# testing get_Cvec() function                                                                                                                                                                                     # declaring only qdpt_mode as static argument. It is critical to note that it is
 # better to avoid trying to declare namedtuples containing arrays to be static argument.
 # since for our problem, a changed array will be marked by a changed mode, it is better
 # to club the non-array info in a separate namedtuple than the array info. For example,
