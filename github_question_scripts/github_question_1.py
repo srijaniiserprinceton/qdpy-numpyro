@@ -1,6 +1,8 @@
 import jax
 import jax.numpy as jnp
+import numpy as np
 from collections import namedtuple
+import sys
 
 class qdptMode:
     def __init__(self, GVAR):
@@ -49,7 +51,7 @@ class qdptMode:
             # unpacking the neighbour dictionary
             # number of submatrices along each dimension of the square supermatrix
             dim_blocks = NBR_DICT.num_neighbours
-           
+
             nl_neighbours = NBR_DICT.nl_neighbours
             
             # supermatix can be tiled with submatrices corresponding to                                                                                                      
@@ -59,9 +61,9 @@ class qdptMode:
                           * jnp.ones((dim_blocks, 1), dtype='int32') + 1
             dimY_submat = 2*nl_neighbours[:, 1].reshape(dim_blocks, 1) \
                           * jnp.ones((1, dim_blocks), dtype='int32') + 1
-            dim_super = jnp.sum(dimX_submat[0, :])
+
             # we use float32 for the current problem since for DR it is a real matrix
-            supmat = jnp.zeros((dim_super, dim_super), dtype='float32')
+            supmat = jnp.zeros((CENMULT.dim_super, CENMULT.dim_super), dtype='float32')
             
             return supmat
             
@@ -76,22 +78,29 @@ smax = 5
 
 # loading the neighbours. Here, we have hardcoded the following multiplets
 # (0,198), (0,200), (0,202). 
-nl_neighbours = jnp.array([[0,198], [0,200], [0,202]], dtype='int32')
-omega_neighbours = jnp.array([67.65916460412984, 67.99455100807411, 68.32826640883721])
+nl_neighbours = np.array([[0,198], [0,200], [0,202]], dtype='int32')
+omega_neighbours = np.array([67.65916460412984, 67.99455100807411, 68.32826640883721])
+
+# calculating the dimension of the supermatrix beforehand
+dim_super = np.sum(2 * nl_neighbours[:,1] + 1)
+
+# converting arrays to jax.numpy type
+nl_neighbours = jnp.array(nl_neighbours)
+omega_neighbours = jnp.array(omega_neighbours)
 
 # this dictionary does not change with changing central multiplets
-GVAR = namedtuple('GVAR', 'fwindow smax')
+GVAR_ = namedtuple('GVAR', 'fwindow smax')
 
 # this dictionary changes with central multiplet
 # NEEDS TO BE A STATIC ARGUMENT
-CENMULT = namedtuple('CENMULT', 'ell0')
+CENMULT_ = namedtuple('CENMULT', 'ell0, dim_super')
 
 # dictionary for neighbours
-NEIGHBOUR_DICT = namedtuple('NEIGHBOUR_DICT', 'nl_neighbours omega_neighbours')
+NEIGHBOUR_DICT_ = namedtuple('NEIGHBOUR_DICT', 'nl_neighbours omega_neighbours')
 
-GVAR = GVAR(fwindow, smax)
-CENMULT = CENMULT(ell0)
-NEIGHBOUR_DICT = NEIGHBOUR_DICT(nl_neighbours, omega_neighbours)
+GVAR = GVAR_(fwindow, smax)
+CENMULT = CENMULT_(ell0, dim_super)
+NEIGHBOUR_DICT = NEIGHBOUR_DICT_(nl_neighbours, omega_neighbours)
 # creating instance of the class qdptMode
 qdpt_mode = qdptMode(GVAR)
 
@@ -99,3 +108,16 @@ qdpt_mode = qdptMode(GVAR)
 _compute_supermatrix = jax.jit(qdpt_mode.build_supermatrix_function(), static_argnums=(0,))
 
 __ = _compute_supermatrix(CENMULT, NEIGHBOUR_DICT).block_until_ready()
+
+# checking if its re-compiling
+for ell0 in range(190, 201):
+    print('Executing ', ell0)
+    CENMULT = CENMULT_(ell0, dim_super)
+    __ = _compute_supermatrix(CENMULT, NEIGHBOUR_DICT).block_until_ready()
+
+
+# checking if its re-compiling
+for ell0 in range(180, 211):
+    print('Executing ', ell0)
+    CENMULT = CENMULT_(ell0, dim_super)
+    __ = _compute_supermatrix(CENMULT, NEIGHBOUR_DICT).block_until_ready()
