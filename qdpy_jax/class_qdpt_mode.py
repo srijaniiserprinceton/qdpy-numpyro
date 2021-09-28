@@ -1,5 +1,8 @@
 import jax
 import jax.numpy as jnp
+ # we still need numpy for the static variables
+# for example, variables that conrtol the dimensions of matrices
+import numpy as np   
 from collections import namedtuple
 
 class qdptMode:
@@ -9,11 +12,8 @@ class qdptMode:
     (and amongnst themselves). The supermatrix is constructed for all possible                                                                                   
     coupling combinations (l, n) <--> (l', n').                                                                                                                      
     """
-    __all__ = ["nl_idx", "nl_idx_vec",
-               "get_omega_neighbors",
-               "get_mode_neighbors_params",
-               "create_supermatrix",
-               "update_supermatrix"]
+    __all__ = ["get_mode_neighbours_params",
+               "build_supermatrix_function"]
 
     def __init__(self, GVAR):
         """Initialized with parameters that do not change
@@ -22,27 +22,23 @@ class qdptMode:
         self.smax = GVAR.smax
         self.freq_window = GVAR.fwindow
 
-    def get_mode_neighbors_params(self, CENMULT, NBR_DICT):
+    def get_mode_neighbours_params(self, CENMULT, NBR_DICT):
         """Gets the parameters corresponding to mode-neighbours.
         CENMULT is passes so as to make that a static variable.
         """
-        # THESE PARAMETERS OUT TO BE CONSTRUCTED ON THE FLY FROM
-        # CENMULT
+        # THESE PARAMETERS OUGHT TO BE CONSTRUCTED ON THE FLY FROM CENMULT
         nl_neighbours = NBR_DICT.nl_neighbours
         nl_neighbours_idx = NBR_DICT.nl_neighbours_idx
         omega_neighbours = NBR_DICT.omega_neighbours
-        num_neighbours = jnp.size(NBR_DICT.omega_neighbours)
 
         NBR_DICT_FINAL = namedtuple('NBR_DICT_FINAL',
                                     'nl_neighbours \
                                     nl_neighbours_idx \
-                                    omega_neighbours \
-                                    num_neighbours')
+                                    omega_neighbours')
         
         NBR_DICT_FINAL = NBR_DICT_FINAL(nl_neighbours,
                                     nl_neighbours_idx,
-                                    omega_neighbours,
-                                    num_neighbours)
+                                    omega_neighbours)
 
         
 
@@ -59,40 +55,44 @@ class qdptMode:
             """Function to assimilate all the neighbour info
             and return the function to compute the SuperMatrix'
             """
-            # getting the neighbour dictionary from CENMULT
-            # hardcoding its contnet for now, hence passing 
-            # NBR_DICT_TRIAL TOO
-            NBR_DICT = self.get_mode_neighbors_params(CENMULT, NBR_DICT_TRIAL)
+            print('Compiling dummy: ', CENMULT.dummy)
+            
+            # tiling supermatrix with submatrices
+            supmat = self.tile_submatrices(CENMULT)
 
-            # unpacking the neighbour dictionary
-            # number of submatrices along each dimension of the square supermatrix
-            dim_blocks = NBR_DICT.num_neighbours
-           
-            nl_neighbours = NBR_DICT.nl_neighbours
-            
-            # supermatix can be tiled with submatrices corresponding to                                                                                                      
-            # (l, n) - (l', n') coupling. The dimensions of the submatrix                                                                                                    
-            # is (2l+1, 2l'+1)                                                                                                                                               
-            dimX_submat = 2*nl_neighbours[:, 1].reshape(1, dim_blocks) \
-                          * jnp.ones((dim_blocks, 1), dtype='int32') + 1
-            dimY_submat = 2*nl_neighbours[:, 1].reshape(dim_blocks, 1) \
-                          * jnp.ones((1, dim_blocks), dtype='int32') + 1
-            dim_super = jnp.sum(dimX_submat[0, :])
-            # we use float32 for the current problem since for DR it is a real matrix
-            supmat = jnp.zeros((dim_super, dim_super), dtype='float32')
-            
             return supmat
             
         return compute_supermatrix
 
+    def tile_submatrices(self, CENMULT):
+        """Function to loop over the submatrix blocks and tile in the 
+        submatrices into the supermatrix.
+        """
+        supmat = jnp.zeros((CENMULT.dim_super, CENMULT.dim_super), dtype='float32')
+
+        for i in range(CENMULT.dim_blocks):
+            for ii in range(i, CENMULT.dim_blocks):
+                startx, starty = SM.startx[i,ii], SM.starty[i,ii]
+                endx, endy = SM.endx[i,ii], SM.endy[i,ii]
+                print(startx)
+
+                submat = jnp.ones((SM.endx-SM.startx, SM.endy-SM.starty), dtype='float32')
+
+                supmat[SM.startx:SM.endx,
+                            SM.starty:SM.endy] = submat
+                supmat[SM.starty:SM.endy,
+                            SM.startx:SM.endx] = jnp.transpose(jnp.conjugate(submat))
+
+        return supmat
+        
+#####################################################################################
+
 # initializing the necessary variables in gvar
 fwindow = 150   # in muHz
-# central multiplet
-n0, ell0 = 0, 200
-# max degree of perturbation (considering odd only)
-smax = 5
-# hardcoding central multiplet index for (0, 200)
-cenmult_idx = 3672 
+n0, ell0 = 0, 200  # central multiplet
+smax = 5    # max degree of perturbation (considering odd only)
+cenmult_idx = 3672   # hardcoding central multiplet index for (0, 200)
+
 # hardcong unperturbed freq of central multiplet
 # needs to be scaled up by GVAR.OM * 1e6 to be in muHz
 unit_omega = 20.963670602632025   # GVAR.OM * 1e6  
@@ -100,27 +100,74 @@ omegaref = 67.99455100807411
 
 # loading the neighbours. Here, we have hardcoded the following multiplets
 # (0,198), (0,200), (0,202). 
-nl_neighbours = jnp.array([[0,198], [0,200], [0,202]], dtype='int32')
-nl_neighbours_idx = jnp.array([3650, 3672, 3693], dtype='int32')
-omega_neighbours = jnp.array([67.65916460412984, 67.99455100807411, 68.32826640883721])
+nl_neighbours = np.array([[0,198], [0,200], [0,202]], dtype='int32')
+nl_neighbours_idx = np.array([3650, 3672, 3693], dtype='int32')
+omega_neighbours = np.array([67.65916460412984, 67.99455100807411, 68.32826640883721])
+
+# computing the dimensions of the supermatrix apriori since this should be a static 
+# variable and not a traced value
+dim_super = 2 * np.sum(nl_neighbours[:,1] + 1)
+dim_blocks = np.size(omega_neighbours)
+
+# supermatix can be tiled with submatrices corresponding to                                                                                                      
+# (l, n) - (l', n') coupling. The dimensions of the submatrix                                                                                                    
+# is (2l+1, 2l'+1)                                                                                                                                               
+dimX_submat = 2*nl_neighbours[:, 1].reshape(1, dim_blocks) \
+              * np.ones((dim_blocks, 1), dtype='int32') + 1
+dimY_submat = 2*nl_neighbours[:, 1].reshape(dim_blocks, 1) \
+              * np.ones((1, dim_blocks), dtype='int32') + 1
+
+# creating the startx, startx, endx, endy for subnatrices
+submat_tile_ind = np.zeros((dim_blocks, dim_blocks, 4), dtype='int32')
+for ix in range(dim_blocks):
+    for iy in range(dim_blocks):
+        submat_tile_ind[ix,iy,0] = int(dimX_submat[0, :ix].sum()) 
+        submat_tile_ind[ix,iy,1] = int(dimY_submat[:iy, 0].sum())
+        submat_tile_ind[ix,iy,2] = int(dimX_submat[0, :int(ix+1)].sum()) 
+        submat_tile_ind[ix,iy,3] = int(dimY_submat[:int(iy+1), 0].sum())
+
+# converting numpy to jax.numpy type arrays
+nl_neighbours = jnp.array(nl_neighbours)
+nl_neighbours_idx = jnp.array(nl_neighbours_idx)
+omega_neighbours = jnp.array(omega_neighbours)
+
+dimX_submat = jnp.array(dimX_submat)
+dimY_submat = jnp.array(dimY_submat)
+
+#######################################################################################
+# CREATING THE NAMED TUPLES
 
 # this dictionary does not change with changing central multiplets
-GVAR = namedtuple('GVAR', 'fwindow smax unit_omega')
+GVAR_ = namedtuple('GVAR', 'fwindow smax unit_omega')
 
-# this dictionary changes with central multiplet
-# NEEDS TO BE A STATIC ARGUMENT
-CENMULT = namedtuple('CENMULT', 'n0 ell0 omegaref cenmult_idx')
+# this dictionary changes with central multiplet. NEEDS TO BE A STATIC ARGUMENT
+CENMULT_ = namedtuple('CENMULT', 'dummy n0 ell0 omegaref cenmult_idx dim_super dim_blocks')
 
-# dictionary for neighbours
-NEIGHBOUR_DICT = namedtuple('NEIGHBOUR_DICT', 'nl_neighbours nl_neighbours_idx, omega_neighbours')
+# dictionary for neighbours. WILL CONTAIN ARRAYS. CAN'T BE STATIC ARGUMENT
+NEIGHBOUR_DICT_ = namedtuple('NEIGHBOUR_DICT', 'nl_neighbours nl_neighbours_idx, omega_neighbours,\
+                             dimX_submat, dimY_submat')
 
-GVAR = GVAR(fwindow, smax, unit_omega)
-CENMULT = CENMULT(n0, ell0, omegaref, cenmult_idx)
-NEIGHBOUR_DICT = NEIGHBOUR_DICT(nl_neighbours, nl_neighbours_idx, omega_neighbours)
+SUBMAT_DICT_ = namedtuple('SUBMAT_DICT', 'startx starty endx endy')
+
+# INITIALIZING THE NAMEDTUPLES
+GVAR = GVAR_(fwindow, smax, unit_omega)
+CENMULT = CENMULT_(-1, n0, ell0, omegaref, cenmult_idx, dim_super, dim_blocks)
+NEIGHBOUR_DICT = NEIGHBOUR_DICT_(nl_neighbours, nl_neighbours_idx, omega_neighbours, dimX_submat, dimY_submat)
+
+SUBMAT_DICT = SUBMAT_DICT_(submat_tile_ind[:,:,0], submat_tile_ind[:,:,1], submat_tile_ind[:,:,2], submat_tile_ind[:,:,3])
+
 # creating instance of the class qdptMode
 qdpt_mode = qdptMode(GVAR)
 
 # jitting function to compute supermatrix
 _compute_supermatrix = jax.jit(qdpt_mode.build_supermatrix_function(), static_argnums=(0,))
 
-__ = _compute_supermatrix(CENMULT, NEIGHBOUR_DICT).block_until_ready()
+for dummy in range(5):
+    CENMULT = CENMULT_(dummy, n0, ell0, omegaref, cenmult_idx, dim_super, dim_blocks)
+    print('Executing dummy: ', dummy)
+    __ = _compute_supermatrix(CENMULT, NEIGHBOUR_DICT, SUBMAT_DICT).block_until_ready()
+
+for dummy in range(10):
+    CENMULT = CENMULT_(dummy, n0, ell0, omegaref, cenmult_idx, dim_super, dim_blocks)
+    print('Executing dummy: ', dummy)
+    __ = _compute_supermatrix(CENMULT, NEIGHBOUR_DICT, SUBMAT_DICT).block_until_ready()
