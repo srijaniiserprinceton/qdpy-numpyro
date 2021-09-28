@@ -4,6 +4,43 @@ import jax.numpy as jnp
 # for example, variables that conrtol the dimensions of matrices
 import numpy as np   
 from collections import namedtuple
+from functools import partial
+import sys
+
+def some_hash_function(x):
+    return int(jnp.sum(x))
+
+class HashableArrayWrapper:
+    def __init__(self, val):
+        self.val = val
+    def __hash__(self):
+        return some_hash_function(self.val)
+    def __eq__(self, other):
+        return (isinstance(other, HashableArrayWrapper) and
+                jnp.all(jnp.equal(self.val, other.val)))
+
+def gnool_jit(fun, static_array_argnums=()):
+    @partial(jax.jit, static_argnums=static_array_argnums)
+    def callee(*args):
+        args = list(args)
+        for i in static_array_argnums:
+            args[i] = args[i].val
+        return fun(*args)
+    
+    def caller(*args):
+        args = list(args)
+        for i in static_array_argnums:
+            args[i] = HashableArrayWrapper(args[i])
+        return callee(*args)
+    
+    return caller
+
+'''
+@partial(gnool_jit, static_array_argnums=(0,))
+def f(x):
+    print('re-tracing!')
+    return x ** 2
+'''
 
 class qdptMode:
     """Class that handles modes that are perturbed using QDPT. Each class instance                                                                                           
@@ -51,20 +88,21 @@ class qdptMode:
         This function is spefic to the central multiplet. So,
         CENMULT needs to be a static argument.
         """
-        def compute_supermatrix(CENMULT, NBR_DICT_TRIAL):
+        def compute_supermatrix(CENMULT, NBR_DICT_TRIAL, SUBMAT_DICT):
             """Function to assimilate all the neighbour info
             and return the function to compute the SuperMatrix'
             """
             print('Compiling dummy: ', CENMULT.dummy)
             
             # tiling supermatrix with submatrices
-            supmat = self.tile_submatrices(CENMULT)
+            supmat = self.tile_submatrices(CENMULT, SUBMAT_DICT)
 
             return supmat
             
         return compute_supermatrix
 
-    def tile_submatrices(self, CENMULT):
+    
+    def tile_submatrices(self, CENMULT, SM):
         """Function to loop over the submatrix blocks and tile in the 
         submatrices into the supermatrix.
         """
@@ -160,7 +198,7 @@ SUBMAT_DICT = SUBMAT_DICT_(submat_tile_ind[:,:,0], submat_tile_ind[:,:,1], subma
 qdpt_mode = qdptMode(GVAR)
 
 # jitting function to compute supermatrix
-_compute_supermatrix = jax.jit(qdpt_mode.build_supermatrix_function(), static_argnums=(0,))
+_compute_supermatrix = jax.jit(qdpt_mode.build_supermatrix_function(), static_array_argnums=(0,))
 
 for dummy in range(5):
     CENMULT = CENMULT_(dummy, n0, ell0, omegaref, cenmult_idx, dim_super, dim_blocks)
