@@ -92,6 +92,7 @@ class qdptMode:
             """Function to assimilate all the neighbour info
             and return the function to compute the SuperMatrix'
             """
+            print(SUBMAT_DICT)
             print('Compiling dummy: ', CENMULT.dummy)
             
             # tiling supermatrix with submatrices
@@ -198,7 +199,7 @@ SUBMAT_DICT = SUBMAT_DICT_(submat_tile_ind[:,:,0], submat_tile_ind[:,:,1], subma
 qdpt_mode = qdptMode(GVAR)
 
 # jitting function to compute supermatrix
-_compute_supermatrix = jax.jit(qdpt_mode.build_supermatrix_function(), static_array_argnums=(0,))
+_compute_supermatrix = gnool_jit(qdpt_mode.build_supermatrix_function(), static_array_argnums=(0,2))
 
 for dummy in range(5):
     CENMULT = CENMULT_(dummy, n0, ell0, omegaref, cenmult_idx, dim_super, dim_blocks)

@@ -1,5 +1,5 @@
 from functools import partial
-
+from collections import namedtuple
 from jax import jit
 import jax.numpy as jnp
 
@@ -35,7 +35,28 @@ def gnool_jit(fun, static_array_argnums=()):
 ###
 
 
-@partial(gnool_jit, static_array_argnums=(0,))
-def f(x):
-  print('re-tracing!')
-  return x ** 2
+@partial(gnool_jit, static_array_argnums=(0,1))
+def f(a,x,y):
+  print('re-tracing f!')
+  return a * (x ** 2 + y ** 2)
+
+
+@partial(gnool_jit, static_array_argnums=(0,1))
+def g(nt,x,y):
+  print('re-tracing g!')
+  a = nt.a
+  return a * (x ** 2 + y ** 2)
+
+x = jnp.array([1,2,3])
+y = jnp.array([4,5,6])
+
+a = 1
+
+__ = f(a,x,y)
+__ = f(a,x,y)
+
+nt = namedtuple('nt','a')
+nt = nt(a)
+
+__ = g(nt,x,y)
+__ = g(nt,x,y)
