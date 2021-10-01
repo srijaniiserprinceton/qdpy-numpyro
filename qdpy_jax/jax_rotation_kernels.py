@@ -256,7 +256,7 @@ t4 = time.time()
 
 print("compute_Tsr()")
 print("JIT version is faster by: ", (t2-t1)/(t4-t3)) 
-print(f"Time taken per iteration (jax jitted) compute_Tsr = {(t4-t3)/Niter:.3e} seconds")
+print(f"Time taken per iteration (jax jitted) compute_Tsr = {(t4-t3):.3e} seconds")
 
 
 # testing get_Cvec() function                                                                                                                                                                           
@@ -273,4 +273,4 @@ t4 = time.time()
 
 print("get_Cvec()")
 print("JIT version is faster by: ", (t2-t1)/(t4-t3))
-print(f"Time taken per iteration (jax jitted) get_Cvec = {(t4-t3)/Niter:.3e} seconds")
+print(f"Time taken per iteration (jax jitted) get_Cvec = {(t4-t3):.3e} seconds")

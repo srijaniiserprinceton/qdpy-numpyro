@@ -170,11 +170,11 @@ t1 = time.time()
 for __ in range(Niter): Tsr = compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2)
 t2 = time.time()
 
-print(f"[compute_Tsr] Time taken per iteration in seconds (no jax): , {(t2-t1)/Niter:.3e} seconds")
+print(f"[compute_Tsr] Time taken per iteration in seconds (no jax): , {(t2-t1):.3e} seconds")
 
 
 
 t3 = time.time()
 for __ in range(Niter): __ = get_Cvec(ell1, ell2, s_arr, r, U1, U2, V1, V2, omegaref)
 t4 = time.time()
-print(f"[get_Cvec] Time taken per iteration in seconds (no jax): , {(t4-t3)/Niter:.3e} seconds")
+print(f"[get_Cvec] Time taken per iteration in seconds (no jax): , {(t4-t3):.3e} seconds")
