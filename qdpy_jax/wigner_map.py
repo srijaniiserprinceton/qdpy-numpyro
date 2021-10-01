@@ -138,14 +138,14 @@ def find_c_RY03(ell1, ell2, ell3, m1, m2, m3):
     
     return c
     '''
-    return regge
+    return regge, R
 
 
 # timing the functions with and without jitting
 if __name__ == "__main__":
     # wigner parameters
-    ell1, ell2, ell3 = 10, 12, 2
-    m1, m2, m3 = 0, 1, -1 
+    ell1, ell2, ell3 = 30, 21, 12
+    m1, m2, m3 = -22, 19, 3 
 
     # timing the functions with and without jitting
     Niter = 100
@@ -161,9 +161,16 @@ if __name__ == "__main__":
     _find_c_RY03 = jax.jit(find_c_RY03)
     __ = _find_c_RY03(ell1, ell2, ell3, m1, m2, m3)
 
+    print(__)
+
     t3 = time.time()
     for __ in range(Niter): c = _find_c_RY03(ell1, ell2, ell3, m1, m2, m3).block_until_ready()
     t4 = time.time()
 
+    L, X, T, B, S = c
 
     print('JIT speeds up by: ', (t2-t1)/(t4-t3))
+
+    c = L*(24+L*(50+L*(35+L*(10+L))))/120 + X*(6+X*(11+X*(6+X)))/24+T*(2+T*(3+T))/6 + B*(B+1)/2+S+1
+
+    print(c)

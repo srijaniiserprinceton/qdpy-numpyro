@@ -46,7 +46,7 @@ def jax_get_Cvec(gvars, qdpt_mode, eigfuncs):
     # for i in range(len_s):
     #    wigvals[:, i] = w3j_vecm(ell1, s_arr[i], ell2, -m, 0*m, m)
      
-    jax.lax.fori_loop(0, len_s,
+    wigvals = jax.lax.fori_loop(0, len_s,
                       lambda i, wigvals: jax.ops.index_update(wigvals,jax.ops.index[:,i],1),
                       wigvals)
    
@@ -87,19 +87,24 @@ def jax_compute_Tsr(gvars, qdpt_mode, eigfuncs):
     Om2 = jax_Omega(qdpt_mode.ell2, 0)
     
     U1, U2, V1, V2 = eigfuncs.U1, eigfuncs.U2, eigfuncs.V1, eigfuncs.V2
-    
-    for i in range(len(s_arr)):
-        s = gvars.s_arr[i]
+
+    # creating internal function for the fori_loop                                                     
+    def func4Tsr_s_loop(i, Tsr):
+        s = s_arr[i]
         ls2fac = L1sq + L2sq - s*(s+1)
         eigfac = U2*V1 + V2*U1 - U1*U2 - 0.5*V1*V2*ls2fac
-        # wigval = w3j(ell1, s, ell2, -1, 0, 1)
-        # using some dummy number until we write the 
-        # function for mapping wigner3js
+        # wigval = w3j(ell1, s, ell2, -1, 0, 1)                                                       
+        # using some dummy number until we write the                                                  
+        # function for mapping wigner3js                                                              
         wigval = 1.0
-        Tsr_at_i = -(1 - jax_minus1pow(qdpt_mode.ell1 + qdpt_mode.ell2 + s)) * \
-                   Om1 * Om2 * wigval * eigfac / gvars.r
+        Tsr_at_i = -(1 - jax_minus1pow(ell1 + ell2 + s)) * \
+                    Om1 * Om2 * wigval * eigfac / r
         Tsr = jax.ops.index_update(Tsr, i, Tsr_at_i)
-        
+
+        return Tsr
+    
+    Tsr = jax.lax.fori_loop(0, len(s_arr), func4Tsr_s_loop, Tsr)
+
     return Tsr
 
 # parameters to be included in the global dictionary later?
@@ -154,7 +159,7 @@ eigfuncs = EIGFUNCS(U1, U2, V1, V2)
 
 Niter = 100
 
-# testing get_Cvec() function                                                                                                                                                           # declaring only qdpt_mode as static argument. It is critical to note that it is
+# testing get_Cvec() function                                                                                                                                                                                     # declaring only qdpt_mode as static argument. It is critical to note that it is
 # better to avoid trying to declare namedtuples containing arrays to be static argument.
 # since for our problem, a changed array will be marked by a changed mode, it is better
 # to club the non-array info in a separate namedtuple than the array info. For example,
@@ -173,3 +178,4 @@ t4 = time.time()
 
 print("get_Cvec()")
 print("JIT version is faster by: ", (t2-t1)/(t4-t3))
+print(f"Time taken per iteration (jax-jitted) get_Cvec = {(t4-t3)/Niter:.3e} seconds")
