@@ -24,23 +24,23 @@ def gnool_jit(fun, static_array_argnums=()):
     def callee(*args):
         args = list(args)
         for i in static_array_argnums:
-            args[i] = args[i].val
+            if isinstance(args[i], tuple):
+                args[i] = args[i].__class__(*[a.val for a in args[i]])
+            else:
+                args[i] = args[i].val
         return fun(*args)
-    
+
     def caller(*args):
         args = list(args)
         for i in static_array_argnums:
-            args[i] = HashableArrayWrapper(args[i])
+            if isinstance(args[i], tuple):
+                all_as = [HashableArrayWrapper(a) for a in args[i]]
+                args[i] = args[i].__class__(*all_as)
+            else:
+                args[i] = HashableArrayWrapper(args[i])
         return callee(*args)
     
     return caller
-
-'''
-@partial(gnool_jit, static_array_argnums=(0,))
-def f(x):
-    print('re-tracing!')
-    return x ** 2
-'''
 
 class qdptMode:
     """Class that handles modes that are perturbed using QDPT. Each class instance                                                                                           
@@ -92,7 +92,6 @@ class qdptMode:
             """Function to assimilate all the neighbour info
             and return the function to compute the SuperMatrix'
             """
-            print(SUBMAT_DICT)
             print('Compiling dummy: ', CENMULT.dummy)
             
             # tiling supermatrix with submatrices
@@ -113,14 +112,20 @@ class qdptMode:
             for ii in range(i, CENMULT.dim_blocks):
                 startx, starty = SM.startx[i,ii], SM.starty[i,ii]
                 endx, endy = SM.endx[i,ii], SM.endy[i,ii]
-                print(startx)
 
-                submat = jnp.ones((SM.endx-SM.startx, SM.endy-SM.starty), dtype='float32')
+                # creating the submatrix
+                submat = jnp.ones((endx-startx, endy-starty), dtype='float32')
 
-                supmat[SM.startx:SM.endx,
-                            SM.starty:SM.endy] = submat
-                supmat[SM.starty:SM.endy,
-                            SM.startx:SM.endx] = jnp.transpose(jnp.conjugate(submat))
+                supmat = jax.ops.index_update(supmat,
+                                              jax.ops.index[startx:endx, starty:endy],
+                                              submat)
+                # to avoid repeated filling of the central blocks
+                supmat = jax.lax.cond(abs(i-ii)>0,
+                                      lambda __: jax.ops.index_update(supmat,
+                                                           jax.ops.index[starty:endy, startx:endx],
+                                                           jnp.transpose(jnp.conjugate(submat))),
+                                      lambda __: supmat,
+                                      operand=None)
 
         return supmat
         
