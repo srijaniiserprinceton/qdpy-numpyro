@@ -1,52 +1,26 @@
 import jax
 import jax.numpy as jnp
- # we still need numpy for the static variables
+# we still need numpy for the static variables
 # for example, variables that conrtol the dimensions of matrices
 import numpy as np   
 from collections import namedtuple
 from functools import partial
 import sys
 import time
+from qdpy_jax import globalvars
 
-# -------- ((( creating GVAR namedtuple---------
-datadir = '/mnt/disk2/samarth/qdpy-numpyro/qdpy_jax'
+#------((( creating the namedtuples of global variables -------
 
-def get_idx(arr, val):
-    return abs(arr - val).argmin()
+GVARS = globalvars.GlobalVars()
+# the global path variables
+GVARS_PATHS = GVARS.get_namedtuple_gvar_paths()
+# the global traced variables
+GVARS_TR = GVARS.get_namedtuple_gvar_traced()
+# the global static variables 
+GVARS_ST = GVARS.get_namedtuple_gvar_static()
 
-precompute = False
-GVAR = namedtuple('globalVars', ['B_0', 'M_sol', 'OM', 'R_sol',
-                                 'l0', 'n0', 'lmin', 'lmax', 'maxiter',
-                                 'fac_lo', 'fac_up', 'fwindow',
-                                 'r', 'rmin', 'rmax', 'rmin_idx', 'rmax_idx',
-                                 'rth', 'smax'])
-GVAR.B_0 = 10.e5 #G
-GVAR.M_sol = 1.989e33 #g
-GVAR.R_sol = 6.956e10 #cm
-GVAR.OM = np.sqrt(4*np.pi*GVAR.R_sol*GVAR.B_0**2/GVAR.M_sol) 
+#--------------((( creating qdptMode namedtuple ----------------
 
-GVAR.n0, GVAR.l0 = 0, 200
-GVAR.lmin, GVAR.lmax = 195, 205
-GVAR.maxiter = 100
-GVAR.fac_lo, GVAR.fac_up = jnp.array([0.9, 0.0, 0.0]), jnp.array([1.1, 2.0, 2.0])
-GVAR.fwindow = 150
-GVAR.r = jnp.asarray(np.loadtxt(f"{datadir}/r.dat"))
-GVAR.rth = 0.98
-GVAR.rmin, GVAR.rmax = 0.0, 1.0
-GVAR.rmin_idx, GVAR.rmax_idx = get_idx(GVAR.r, GVAR.rmin), get_idx(GVAR.r, GVAR.rmax)
-GVAR.smax = 5
-
-nl_all = np.loadtxt(f"{datadir}/nl.dat").astype('int')
-nl_all_list = np.loadtxt(f"{datadir}/nl.dat").astype('int').tolist()
-omega_list = np.loadtxt(f"{datadir}/muhz.dat") * 1e-6 / GVAR.OM
-
-GVAR.nl_all = nl_all
-GVAR.nl_all_list = nl_all_list
-GVAR.omega_list = omega_list
-# --------creating GVAR namedtuple ))) ---------
-
-
-#---------((( creating qdptMode namedtuple -----------
 def nl_idx(n0, l0):
     try:
         idx = GVAR.nl_all_list.index([n0, l0])

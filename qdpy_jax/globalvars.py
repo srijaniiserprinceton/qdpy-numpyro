@@ -84,13 +84,13 @@ class GlobalVars():
             self.rmin = qdPars.rmin
             self.rmax = qdPars.rmax
 
-        self.rmin_idx = self.get_idx(self.r, self.rmin)
+        self.rmin_ind = self.get_ind(self.r, self.rmin)
 
         # removing the grid point corresponding to r=0
         # because Tsr has 1/r factor
         if self.rmin == 0:
-            self.rmin_idx += 1
-        self.rmax_idx = self.get_idx(self.r, self.rmax)
+            self.rmin_ind += 1
+        self.rmax_ind = self.get_ind(self.r, self.rmax)
         # print(f"rmin index = {self.rmin_idx}; rmax index = {self.rmax_idx}")
 
         self.smax = qdPars.smax
@@ -166,9 +166,19 @@ class GlobalVars():
         """Function to created the namedtuple containing the 
         various global attributes that are static arguments.
         """
+        
+        GVAR_STATIC_ = namedtuple('GVAR_STATIC', 'smax\
+                                                  n0\
+                                                  l0')
 
-    def get_idx(self, arr, val):
+        GVAR_STATIC = GVAR_STATIC_(self.smax,
+                                   self.n0,
+                                   self.l0)
+        
+        return GVAR_STATIC
+
+    def get_ind(self, arr, val):
         return abs(arr - val).argmin()
 
     def mask_minmax(self, arr):
-        return arr[self.rmin_idx:self.rmax_idx]
+        return arr[self.rmin_ind:self.rmax_ind]
