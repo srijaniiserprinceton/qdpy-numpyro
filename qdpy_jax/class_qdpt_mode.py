@@ -7,9 +7,11 @@ from collections import namedtuple
 from functools import partial
 import sys
 import time
+# imports from qdpy_jax
 from qdpy_jax import globalvars
+from qdpy_jax import gnool_jit as gjit 
 
-#------((( creating the namedtuples of global variables -------
+#------((( creating the namedtuples of global variables --------
 
 GVARS = globalvars.GlobalVars()
 # the global path variables
@@ -19,11 +21,13 @@ GVARS_TR = GVARS.get_namedtuple_gvar_traced()
 # the global static variables 
 GVARS_ST = GVARS.get_namedtuple_gvar_static()
 
+#------- creating the namedtuples of global variables )))-------
+
 #--------------((( creating qdptMode namedtuple ----------------
 
 def nl_idx(n0, l0):
     try:
-        idx = GVAR.nl_all_list.index([n0, l0])
+        idx = GVARS_TR.nl_all_list.index([n0, l0])
     except ValueError:
         idx = None
         logger.error('Mode not found')
@@ -31,7 +35,7 @@ def nl_idx(n0, l0):
 
 def nl_idx_vec(nl_list):
     nlnum = nl_list.shape[0]
-    nlidx = np.zeros(nlnum, dtype=np.int)
+    nlidx = np.zeros(nlnum, dtype='int32')
     for i in range(nlnum):
         nlidx[i] = nl_idx(nl_list[i][0],
                           nl_list[i][1])
@@ -41,79 +45,91 @@ def get_omega_neighbors(nl_idx):
     nlnum = len(nl_idx)
     omega_neighbors = np.zeros(nlnum)
     for i in range(nlnum):
-        omega_neighbors[i] = GVAR.omega_list[nl_idx[i]]
+        omega_neighbors[i] = GVARS_TR.omega_list[nl_idx[i]]
     return omega_neighbors
 
-def get_mode_neighbors_params(qdMode):
-    omega_list = GVAR.omega_list
-    omega0 = qdMode.omega0
-    nl_all = GVAR.nl_all
-    omega_diff = (omega_list - omega0) * GVAR.OM * 1e6
-    mask_omega = abs(omega_diff) <= GVAR.fwindow 
-    mask_ell = abs(nl_all[:, 1] - qdMode.l0) <= qdMode.smax
+def get_namedtuple_for_cenmult_and_neighbours(n0, ell0):
+    """Function that returns the name tuple for the
+    attributes of the central mode and the neighbours for 
+    that central mode. n0 and ell0 are static since everything
+    else depends on n0 and ell0."""
+
+    # print(f'Assembling namedtuple for ({n0}, {ell0})')
+
+    # unperturbed frequency of central multiplet (n0, ell0)
+    mult_idx = GVARS_TR.nl_all_list.index([n0, ell0])
+    omega0 = GVARS_TR.omega_list[mult_idx]
+
+    
+    omega_list = GVARS_TR.omega_list
+    nl_all = GVARS_TR.nl_all
+    omega_diff = (omega_list - omega0) * GVARS_TR.OM * 1e6
+
+    # defining various masks to minimize the multiplet-couplings
+ 
+    # rejecting modes far in frequency
+    mask_omega = abs(omega_diff) <= GVARS_TR.fwindow 
+    
+    # rejecting modes that don't satisfy triangle inequality
+    mask_ell = abs(nl_all[:, 1] - ell0) <= GVARS_ST.smax
 
     # only even l1-l2 is coupled for odd-s rotation perturbation
-    mask_odd = ((nl_all[:, 1] - qdMode.l0)%2) == 0
-    mask_nb = mask_omega * mask_ell * mask_odd
-    sort_idx = np.argsort(abs(omega_diff[mask_nb]))
-    qdMode.nl_neighbors = nl_all[mask_nb][sort_idx]
-    qdMode.nl_neighbors_idx = nl_idx_vec(qdMode.nl_neighbors)
-    qdMode.omega_neighbors = get_omega_neighbors(qdMode.nl_neighbors_idx)
-    qdMode.num_neighbors = len(qdMode.nl_neighbors_idx)
-    return qdMode
-
-analysis_modes = namedtuple('qdptMode',
-                            ['n0', 'l0', 'smax', 'fwindow',
-                             'omega0', 'idx',
-                             'nl_neighbors',
-                             'nl_neighbors_idx',
-                             'omega_neighbors',
-                             'num_neighbors'])
-
-analysis_modes.n0 = 0
-analysis_modes.l0 = 200
-analysis_modes.smax = 5
-analysis_modes.idx = nl_idx(analysis_modes.n0, analysis_modes.l0)
-analysis_modes.omega0 = GVAR.omega_list[analysis_modes.idx]
-analysis_modes.fwindow = GVAR.fwindow
-analysis_modes = get_mode_neighbors_params(analysis_modes)
-#---------creating qdptMode namedtuple )))-----------
-
-
-def some_hash_function(x):
-    return int(jnp.sum(x))
-
-class HashableArrayWrapper:
-    def __init__(self, val):
-        self.val = val
-    def __hash__(self):
-        return some_hash_function(self.val)
-    def __eq__(self, other):
-        return (isinstance(other, HashableArrayWrapper) and
-                jnp.all(jnp.equal(self.val, other.val)))
-
-def gnool_jit(fun, static_array_argnums=()):
-    @partial(jax.jit, static_argnums=static_array_argnums)
-    def callee(*args):
-        args = list(args)
-        for i in static_array_argnums:
-            if isinstance(args[i], tuple):
-                args[i] = args[i].__class__(*[a.val for a in args[i]])
-            else:
-                args[i] = args[i].val
-        return fun(*args)
-
-    def caller(*args):
-        args = list(args)
-        for i in static_array_argnums:
-            if isinstance(args[i], tuple):
-                all_as = [HashableArrayWrapper(a) for a in args[i]]
-                args[i] = args[i].__class__(*all_as)
-            else:
-                args[i] = HashableArrayWrapper(args[i])
-        return callee(*args)
+    # this is specific to the fact that DR is considered for odd s only
+    mask_odd = ((GVARS_TR.nl_all[:, 1] - ell0)%2) == 0
     
-    return caller
+    # creating the final mask accounting for all of the masks above
+    mask_nb = mask_omega * mask_ell * mask_odd
+
+    # sorting the multiplets in ascending order of distance from (n0, ell0)
+    sort_idx = np.argsort(abs(omega_diff[mask_nb]))
+    
+    # the final attributes that will be stored
+    nl_neighbours = nl_all[mask_nb][sort_idx]
+    nl_neighbours_idx = nl_idx_vec(nl_neighbours)
+    omega_neighbours = get_omega_neighbors(nl_neighbours_idx)
+    num_neighbours = len(nl_neighbours_idx)
+    
+    # creating the namedtuple
+    CENMULT_AND_NBS_ = namedtuple('CENMULT_AND_NBS', ['nl_nbs',
+                                                      'nl_nbs_idx',
+                                                      'omega_nbs',
+                                                      'num_nbs'])
+    
+    CENMULT_AND_NBS = CENMULT_AND_NBS_(nl_neighbours,
+                                       nl_neighbours_idx,
+                                       omega_neighbours,
+                                       num_neighbours)
+    
+    return CENMULT_AND_NBS
+
+# defining the central mode (n0, ell0)
+n0 ,ell0 = 1, 150
+
+# obtaining the namedtuple for the central mode and its neighbours
+get_namedtuple_for_cenmult_and_neighbours_ = jax.jit(get_namedtuple_for_cenmult_and_neighbours,
+                                                     static_argnums = (0,1))
+CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0)
+
+'''
+# Checking jitting
+n0 = 0
+t1 = time.time()
+for ell in range(195, 290):
+    # print(f'Executing {n0}, {ell}')
+    CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell)
+t2 = time.time()
+
+print(f'Compiling in: {t2-t1} seconds')
+
+t3 = time.time()
+for ell in range(195, 290):
+    # print(f'Executing {n0}, {ell}')
+    CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell)
+t4 = time.time()
+
+print(f'Compiling in: {t4-t3} seconds.')
+'''
+#---------creating qdptMode namedtuple )))-----------
 
 class qdptMode:
     """Class that handles modes that are perturbed using QDPT. 

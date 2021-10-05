@@ -32,7 +32,7 @@ class qdParams():
     fwindow =  150 
     # args = FN.create_argparser()
     n0 = 0
-    l0 = 150
+    ell0 = 200
     precompute = False
     use_precomputed = False
 
@@ -106,7 +106,7 @@ class GlobalVars():
         self.fac_lo = np.array([0.9, 0.0, 0.0])
 
         self.n0 = qdPars.n0
-        self.l0 = qdPars.l0
+        self.ell0 = qdPars.ell0
 
     def get_namedtuple_gvar_paths(self):
         """Function to create the namedtuple containing the 
@@ -167,13 +167,9 @@ class GlobalVars():
         various global attributes that are static arguments.
         """
         
-        GVAR_STATIC_ = namedtuple('GVAR_STATIC', 'smax\
-                                                  n0\
-                                                  l0')
+        GVAR_STATIC_ = namedtuple('GVAR_STATIC', 'smax')
 
-        GVAR_STATIC = GVAR_STATIC_(self.smax,
-                                   self.n0,
-                                   self.l0)
+        GVAR_STATIC = GVAR_STATIC_(self.smax)
         
         return GVAR_STATIC
 
