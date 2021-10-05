@@ -8,6 +8,104 @@ from functools import partial
 import sys
 import time
 
+# -------- ((( creating GVAR namedtuple---------
+datadir = '/mnt/disk2/samarth/qdpy-numpyro/qdpy_jax'
+
+def get_idx(arr, val):
+    return abs(arr - val).argmin()
+
+precompute = False
+GVAR = namedtuple('globalVars', ['B_0', 'M_sol', 'OM', 'R_sol',
+                                 'l0', 'n0', 'lmin', 'lmax', 'maxiter',
+                                 'fac_lo', 'fac_up', 'fwindow',
+                                 'r', 'rmin', 'rmax', 'rmin_idx', 'rmax_idx',
+                                 'rth', 'smax'])
+GVAR.B_0 = 10.e5 #G
+GVAR.M_sol = 1.989e33 #g
+GVAR.R_sol = 6.956e10 #cm
+GVAR.OM = np.sqrt(4*np.pi*GVAR.R_sol*GVAR.B_0**2/GVAR.M_sol) 
+
+GVAR.n0, GVAR.l0 = 0, 200
+GVAR.lmin, GVAR.lmax = 195, 205
+GVAR.maxiter = 100
+GVAR.fac_lo, GVAR.fac_up = jnp.array([0.9, 0.0, 0.0]), jnp.array([1.1, 2.0, 2.0])
+GVAR.fwindow = 150
+GVAR.r = jnp.asarray(np.loadtxt(f"{datadir}/r.dat"))
+GVAR.rth = 0.98
+GVAR.rmin, GVAR.rmax = 0.0, 1.0
+GVAR.rmin_idx, GVAR.rmax_idx = get_idx(GVAR.r, GVAR.rmin), get_idx(GVAR.r, GVAR.rmax)
+GVAR.smax = 5
+
+nl_all = np.loadtxt(f"{datadir}/nl.dat").astype('int')
+nl_all_list = np.loadtxt(f"{datadir}/nl.dat").astype('int').tolist()
+omega_list = np.loadtxt(f"{datadir}/muhz.dat") * 1e-6 / GVAR.OM
+
+GVAR.nl_all = nl_all
+GVAR.nl_all_list = nl_all_list
+GVAR.omega_list = omega_list
+# --------creating GVAR namedtuple ))) ---------
+
+
+#---------((( creating qdptMode namedtuple -----------
+def nl_idx(n0, l0):
+    try:
+        idx = GVAR.nl_all_list.index([n0, l0])
+    except ValueError:
+        idx = None
+        logger.error('Mode not found')
+    return idx
+
+def nl_idx_vec(nl_list):
+    nlnum = nl_list.shape[0]
+    nlidx = np.zeros(nlnum, dtype=np.int)
+    for i in range(nlnum):
+        nlidx[i] = nl_idx(nl_list[i][0],
+                          nl_list[i][1])
+    return nlidx
+
+def get_omega_neighbors(nl_idx):
+    nlnum = len(nl_idx)
+    omega_neighbors = np.zeros(nlnum)
+    for i in range(nlnum):
+        omega_neighbors[i] = GVAR.omega_list[nl_idx[i]]
+    return omega_neighbors
+
+def get_mode_neighbors_params(qdMode):
+    omega_list = GVAR.omega_list
+    omega0 = qdMode.omega0
+    nl_all = GVAR.nl_all
+    omega_diff = (omega_list - omega0) * GVAR.OM * 1e6
+    mask_omega = abs(omega_diff) <= GVAR.fwindow 
+    mask_ell = abs(nl_all[:, 1] - qdMode.l0) <= qdMode.smax
+
+    # only even l1-l2 is coupled for odd-s rotation perturbation
+    mask_odd = ((nl_all[:, 1] - qdMode.l0)%2) == 0
+    mask_nb = mask_omega * mask_ell * mask_odd
+    sort_idx = np.argsort(abs(omega_diff[mask_nb]))
+    qdMode.nl_neighbors = nl_all[mask_nb][sort_idx]
+    qdMode.nl_neighbors_idx = nl_idx_vec(qdMode.nl_neighbors)
+    qdMode.omega_neighbors = get_omega_neighbors(qdMode.nl_neighbors_idx)
+    qdMode.num_neighbors = len(qdMode.nl_neighbors_idx)
+    return qdMode
+
+analysis_modes = namedtuple('qdptMode',
+                            ['n0', 'l0', 'smax', 'fwindow',
+                             'omega0', 'idx',
+                             'nl_neighbors',
+                             'nl_neighbors_idx',
+                             'omega_neighbors',
+                             'num_neighbors'])
+
+analysis_modes.n0 = 0
+analysis_modes.l0 = 200
+analysis_modes.smax = 5
+analysis_modes.idx = nl_idx(analysis_modes.n0, analysis_modes.l0)
+analysis_modes.omega0 = GVAR.omega_list[analysis_modes.idx]
+analysis_modes.fwindow = GVAR.fwindow
+analysis_modes = get_mode_neighbors_params(analysis_modes)
+#---------creating qdptMode namedtuple )))-----------
+
+
 def some_hash_function(x):
     return int(jnp.sum(x))
 
@@ -44,11 +142,13 @@ def gnool_jit(fun, static_array_argnums=()):
     return caller
 
 class qdptMode:
-    """Class that handles modes that are perturbed using QDPT. Each class instance                                                                                           
-    corresponds to a central mode (l0, n0). The frequency space is scanned to find out                                                                      
-    all the neighbouring modes (l, n) which interact with the central mode                                                                                             
-    (and amongnst themselves). The supermatrix is constructed for all possible                                                                                   
-    coupling combinations (l, n) <--> (l', n').                                                                                                                      
+    """Class that handles modes that are perturbed using QDPT. 
+    Each class instance corresponds to a central mode (l0, n0). 
+    The frequency space is scanned to find out
+    all the neighbouring modes (l, n) which interact 
+    with the central mode (and amongnst themselves). 
+    The supermatrix is constructed for all possible
+    coupling combinations (l, n) <-> (l', n').
     """
     __all__ = ["get_mode_neighbours_params",
                "build_supermatrix_function"]
@@ -70,18 +170,16 @@ class qdptMode:
         omega_neighbours = NBR_DICT.omega_neighbours
 
         NBR_DICT_FINAL = namedtuple('NBR_DICT_FINAL',
-                                    'nl_neighbours \
-                                    nl_neighbours_idx \
-                                    omega_neighbours')
+                                    ['nl_neighbours',
+                                    'nl_neighbours_idx',
+                                    'omega_neighbours'])
         
         NBR_DICT_FINAL = NBR_DICT_FINAL(nl_neighbours,
-                                    nl_neighbours_idx,
-                                    omega_neighbours)
-
-        
+                                        nl_neighbours_idx,
+                                        omega_neighbours)
 
         return NBR_DICT_FINAL
-    
+
 
     def build_supermatrix_function(self):
         """Function that returns the function to calculate
@@ -94,12 +192,10 @@ class qdptMode:
             and return the function to compute the SuperMatrix'
             """
             # print('Compiling dummy: ', CENMULT.dummy)
-            
             # tiling supermatrix with submatrices
             supmat = self.tile_submatrices(CENMULT, SUBMAT_DICT)
-
             return supmat
-            
+
         return compute_supermatrix
 
     
