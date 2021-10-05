@@ -8,6 +8,7 @@ qdPy_jax.egg-info/top_level.txt
 qdpy_jax/__init__.py
 qdpy_jax/class_Cvec.py
 qdpy_jax/class_qdpt_mode.py
+qdpy_jax/globalvars.py
 qdpy_jax/jax_loop_cond_example.py
 qdpy_jax/jax_rotation_kernels.py
 qdpy_jax/namedtuple_Cvec.py

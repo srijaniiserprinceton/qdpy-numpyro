@@ -1,6 +1,5 @@
 import numpy as np
 import os
-import qdPy.functions as FN
 
 #----------------------------------------------------------------------
 #                       All qts in CGS
@@ -27,13 +26,14 @@ class qdParams():
     # (Since we are using lmax = 300, 0.45*300 \approx 150)
     rmin = 0.0
     rmax = 1.0
+    rth = 0.98
     smax = 5
     fwindow =  150 
-    args = FN.create_argparser()
-    args.n0 = 0
-    args.l0 = 150
-    args.precompute = False
-    args.use_precomputed = False
+    # args = FN.create_argparser()
+    n0 = 0
+    l0 = 150
+    precompute = False
+    use_precomputed = False
 
 
 class gvars_paths():
@@ -45,23 +45,22 @@ class gvars_paths():
         self.outdir = f"{self.scratch_dir}/output_files"
         self.eigdir = f"{self.snrnmais}/eig_files"
         self.progdir = self.local_dir
-        self.hmidata = np.loadtxt(f"{self.snrnmais}/data_files/hmi/6328.36")
+        self.hmidata = np.loadtxt(f"{self.snrnmais}/data_files/hmi.6328.36")
 
 class globalVars():
-    qdPars = qdParams()
-    def __init__(self, rth=0.98, args=qdParams.args, rmin=qdPars.rmin,
-                 rmax=qdPars.rmax, smax=qdPars.smax, fwindow=qdPars.fwindow):
+    def __init__(self): #, rth=0.98, args=qdParams.args, rmin=qdPars.rmin,
+                 #rmax=qdPars.rmax, smax=qdPars.smax, fwindow=qdPars.fwindow):
 
         datadir = f"{dirnames[2]}/data_files"
         
-        self.args = args
+        qdPars = qdParams()
 
         # Frequency unit conversion factor (in Hz (cgs))
         #all quantities in cgs
-        self.M_sol = 1.989e33 #gn,l = 0,200
-        self.R_sol = 6.956e10 #cm
-        self.B_0 = 10e5 #G
-        self.OM = np.sqrt(4*np.pi*self.R_sol*self.B_0**2/self.M_sol) 
+        M_sol = 1.989e33       # in grams
+        R_sol = 6.956e10       # in cm
+        B_0 = 10e5             # in Gauss (base of convection zone)
+        self.OM = np.sqrt(4*np.pi*R_sol*B_0**2/M_sol) 
         # should be 2.096367060263202423e-05 for above numbers
 
         # self.rho = np.loadtxt(f"{self.datadir}/rho.dat")
@@ -71,15 +70,15 @@ class globalVars():
         self.omega_list = np.loadtxt(f"{datadir}/muhz.dat") * 1e-6 / self.OM
 
         # getting indices for minimum and maximum r
-        if args.precompute:
+        if qdPars.precompute:
             self.rmin = 0.0
             self.rmax = rth
-        elif args.use_precomputed:
-            self.rmin = rth
-            self.rmax = rmax
+        elif qdPars.use_precomputed:
+            self.rmin = qdPars.rth
+            self.rmax = qdPars.rmax
         else:
-            self.rmin = rmin
-            self.rmax = rmax
+            self.rmin = qdPars.rmin
+            self.rmax = qdPars.rmax
 
         self.rmin_idx = self.get_idx(self.r, self.rmin)
 
@@ -90,20 +89,20 @@ class globalVars():
         self.rmax_idx = self.get_idx(self.r, self.rmax)
         # print(f"rmin index = {self.rmin_idx}; rmax index = {self.rmax_idx}")
 
-        self.smax = smax
-        self.fwindow = fwindow
+        self.smax = qdPars.smax
+        self.fwindow = qdPars.fwindow
 
         # retaining only region between rmin and rmax
         self.r = self.mask_minmax(self.r)
 
         # rth = r threshold beyond which the profiles are updated. 
-        self.rth = rth
+        self.rth = qdPars.rth
         
         self.fac_up = np.array([1.1, 2.0, 2.0])
         self.fac_lo = np.array([0.9, 0.0, 0.0])
 
-        self.n0 = args.n0
-        self.l0 = args.l0
+        self.n0 = qdPars.n0
+        self.l0 = qdPars.l0
 
     def get_idx(self, arr, val):
         return abs(arr - val).argmin()
