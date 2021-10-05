@@ -102,35 +102,8 @@ def get_namedtuple_for_cenmult_and_neighbours(n0, ell0):
     
     return CENMULT_AND_NBS
 
-# defining the central mode (n0, ell0)
-n0 ,ell0 = 1, 150
-
-# obtaining the namedtuple for the central mode and its neighbours
-get_namedtuple_for_cenmult_and_neighbours_ = jax.jit(get_namedtuple_for_cenmult_and_neighbours,
-                                                     static_argnums = (0,1))
-CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0)
-
-'''
-# Checking jitting
-n0 = 0
-t1 = time.time()
-for ell in range(195, 290):
-    # print(f'Executing {n0}, {ell}')
-    CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell)
-t2 = time.time()
-
-print(f'Compiling in: {t2-t1} seconds')
-
-t3 = time.time()
-for ell in range(195, 290):
-    # print(f'Executing {n0}, {ell}')
-    CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell)
-t4 = time.time()
-
-print(f'Compiling in: {t4-t3} seconds.')
-'''
 #---------creating qdptMode namedtuple )))-----------
-
+'''
 class qdptMode:
     """Class that handles modes that are perturbed using QDPT. 
     Each class instance corresponds to a central mode (l0, n0). 
@@ -308,3 +281,4 @@ for dummy in range(200):
     __ = _compute_supermatrix(CENMULT, NEIGHBOUR_DICT, SUBMAT_DICT).block_until_ready()
 t4 = time.time()
 print(f'Executing 200 supermatrices in: {t4-t3} seconds.')
+'''
