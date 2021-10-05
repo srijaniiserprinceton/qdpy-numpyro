@@ -6,6 +6,7 @@ import numpy as np
 from collections import namedtuple
 from functools import partial
 import sys
+import time
 
 def some_hash_function(x):
     return int(jnp.sum(x))
@@ -92,7 +93,7 @@ class qdptMode:
             """Function to assimilate all the neighbour info
             and return the function to compute the SuperMatrix'
             """
-            print('Compiling dummy: ', CENMULT.dummy)
+            # print('Compiling dummy: ', CENMULT.dummy)
             
             # tiling supermatrix with submatrices
             supmat = self.tile_submatrices(CENMULT, SUBMAT_DICT)
@@ -206,12 +207,18 @@ qdpt_mode = qdptMode(GVAR)
 # jitting function to compute supermatrix
 _compute_supermatrix = gnool_jit(qdpt_mode.build_supermatrix_function(), static_array_argnums=(0,2))
 
-for dummy in range(5):
+t1 = time.time()
+for dummy in range(200):
     CENMULT = CENMULT_(dummy, n0, ell0, omegaref, cenmult_idx, dim_super, dim_blocks)
-    print('Executing dummy: ', dummy)
+    # print('Executing dummy: ', dummy)
     __ = _compute_supermatrix(CENMULT, NEIGHBOUR_DICT, SUBMAT_DICT).block_until_ready()
+t2 = time.time()
+print(f'Compiling 200 supermatrices in: {t2-t1} seconds')
 
-for dummy in range(10):
+t3 = time.time()
+for dummy in range(200):
     CENMULT = CENMULT_(dummy, n0, ell0, omegaref, cenmult_idx, dim_super, dim_blocks)
-    print('Executing dummy: ', dummy)
+    # print('Executing dummy: ', dummy)
     __ = _compute_supermatrix(CENMULT, NEIGHBOUR_DICT, SUBMAT_DICT).block_until_ready()
+t4 = time.time()
+print(f'Executing 200 supermatrices in: {t4-t3} seconds.')
