@@ -18,15 +18,21 @@ def test_build_CENMULT_AND_NBS():
     for ell in range(195, 290):                                                                                                                                                              
         # print(f'Executing {n0}, {ell}')                                                                                                                                                    
         CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell)                                                                                                                
-        t2 = time.time()                                                                                                                                                                         
-        
+    
+    # Arbitrary printing of a value since block_until_ready doesn't work for namedtuple 
+    print(CENMULT_AND_NBS.nl_nbs[0])
+    t2 = time.time()                                                                                                                                                                         
+    
     print(f'Compiling in: {t2-t1} seconds')                                                                                                                                                  
         
     t3 = time.time()                                                                                                                                                                         
     for ell in range(195, 290):                                                                                                                                                              
         # print(f'Executing {n0}, {ell}')                                                                                                                                                    
         CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell)                                                                                                                
-        t4 = time.time()
+    
+    # Arbitrary printing of a value since block_until_ready doesn't work for namedtuple    
+    print(CENMULT_AND_NBS.nl_nbs[0])
+    t4 = time.time()
 
     print(f'Compiling in: {t4-t3} seconds.')                                                                                                                                                 
 

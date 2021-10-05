@@ -54,7 +54,7 @@ def get_namedtuple_for_cenmult_and_neighbours(n0, ell0):
     that central mode. n0 and ell0 are static since everything
     else depends on n0 and ell0."""
 
-    # print(f'Assembling namedtuple for ({n0}, {ell0})')
+    print(f'Assembling namedtuple for ({n0}, {ell0})')
 
     # unperturbed frequency of central multiplet (n0, ell0)
     mult_idx = GVARS_TR.nl_all_list.index([n0, ell0])
