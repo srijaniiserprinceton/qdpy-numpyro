@@ -1,5 +1,6 @@
 import numpy as np
 import os
+from collections import namedtuple
 
 #----------------------------------------------------------------------
 #                       All qts in CGS
@@ -36,22 +37,25 @@ class qdParams():
     use_precomputed = False
 
 
-class gvars_paths():
-    def __init__(self):
+class GlobalVars():
+    """Class that initializes all the global variables
+    just like in the original qdPy. However, the attributes
+    are then split up into namedtuples depending on if we need
+    it as a static or a traced namedtuple."""
+
+    def __init__(self): 
+
         self.local_dir = dirnames[0]
         self.scratch_dir = dirnames[1]
-        self.snrnmais = dirnames[2]
-        self.datadir = f"{self.snrnmais}/data_files"
+        self.snrnmais_dir = dirnames[2]
+        self.datadir = f"{self.snrnmais_dir}/data_files"
         self.outdir = f"{self.scratch_dir}/output_files"
-        self.eigdir = f"{self.snrnmais}/eig_files"
+        self.eigdir = f"{self.snrnmais_dir}/eig_files"
         self.progdir = self.local_dir
-        self.hmidata = np.loadtxt(f"{self.snrnmais}/data_files/hmi.6328.36")
+        self.hmidata = np.loadtxt(f"{self.snrnmais_dir}/data_files/hmi.6328.36")
 
-class globalVars():
-    def __init__(self): #, rth=0.98, args=qdParams.args, rmin=qdPars.rmin,
-                 #rmax=qdPars.rmax, smax=qdPars.smax, fwindow=qdPars.fwindow):
 
-        datadir = f"{dirnames[2]}/data_files"
+        datadir = f"{self.snrnmais_dir}/data_files"
         
         qdPars = qdParams()
 
@@ -103,6 +107,65 @@ class globalVars():
 
         self.n0 = qdPars.n0
         self.l0 = qdPars.l0
+
+    def get_namedtuple_gvar_paths(self):
+        """Function to create the namedtuple containing the 
+        various global paths for reading and writing files.
+        """
+        
+        GVAR_PATHS_ = namedtuple('GVAR_PATHS', 'local_dir\
+                                                scratch_dir\
+                                                snrnmais_dir\
+                                                outdir\
+                                                eigdir\
+                                                progdir\
+                                                hmidata')
+        GVAR_PATHS = GVAR_PATHS_(self.local_dir,
+                                 self.scratch_dir,
+                                 self.snrnmais_dir,
+                                 self.outdir,
+                                 self.eigdir,
+                                 self.progdir,
+                                 self.hmidata)
+        
+        return GVAR_PATHS
+
+    def get_namedtuple_gvar_traced(self):
+        """Function to create the namedtuple containing the 
+        various global attributes that can be traced by JAX.
+        """
+        
+        GVAR_TRACED_ = namedtuple('GVAR_TRACED', 'fwindow\
+                                                  r\
+                                                  rth\
+                                                  rmin_ind\
+                                                  rmax_ind\
+                                                  fac_up\
+                                                  fac_lo\
+                                                  nl_all\
+                                                  nl_all_list\
+                                                  omega_list\
+                                                  OM')
+
+        GVAR_TRACED = GVAR_TRACED_(self.fwindow,
+                                   self.r,
+                                   self.rth,
+                                   self.rmin_ind,
+                                   self.rmax_ind,
+                                   self.fac_up,
+                                   self.fac_lo,
+                                   self.nl_all,
+                                   self.nl_all_list,
+                                   self.omega_list,
+                                   self.OM)
+
+        return GVAR_TRACED
+        
+        
+    def get_namedtuple_gvar_static(self):
+        """Function to created the namedtuple containing the 
+        various global attributes that are static arguments.
+        """
 
     def get_idx(self, arr, val):
         return abs(arr - val).argmin()
