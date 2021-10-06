@@ -41,6 +41,9 @@ for i in range(NMULTS):
     CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0)
     
     SUBMAT_DICT = build_supmat.build_SUBMAT_INDICES(CENMULT_AND_NBS)
+
+    print(SUBMAT_DICT.startx[5,5])
+    continue
     
     supmatrix = build_supermatrix_(CENMULT_AND_NBS, SUBMAT_DICT)
     
