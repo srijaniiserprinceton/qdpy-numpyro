@@ -41,12 +41,13 @@ def gnool_jit(fun, static_array_argnums=()):
 
 
 def func(dim_array):
-    ret_arr = jnp.zeros(dim_array[-1] - dim_array[0])
-    return ret_arr
+    ret_arr = jnp.ones(dim_array[-1] - dim_array[0])
+    print(ret_arr)
+    return jnp.sum(ret_arr)
 
 
-dim_array_jnp = jnp.array([1,5], dtype='int32')
-dim_array_np = np.array(dim_array_jnp)
+dim_array_np = np.array([1,5], dtype='int32')
+dim_array_jnp = jnp.array(dim_array_np.copy())
 
 func_ = gnool_jit(func, static_array_argnums=(0,))
 

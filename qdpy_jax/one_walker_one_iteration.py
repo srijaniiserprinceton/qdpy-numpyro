@@ -1,4 +1,6 @@
 import jax
+import jax.tree_util as tu
+
 from qdpy_jax import gnool_jit as gjit
 from qdpy_jax import build_cenmult_and_nbs as build_CENMULT_AND_NBS 
 from qdpy_jax import build_supermatrix as build_supmat
@@ -39,8 +41,10 @@ for i in range(NMULTS):
     
     # building the namedtuple for the central multiplet and its neighbours
     CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0)
+    CENMULT_AND_NBS = tu.tree_map(lambda x: np.array(x), CENMULT_AND_NBS)
     
     SUBMAT_DICT = build_supmat.build_SUBMAT_INDICES(CENMULT_AND_NBS)
+    SUBMAT_DICT = tu.tree_map(lambda x: np.array(x), SUBMAT_DICT)
 
     print('-----------')
     print(SUBMAT_DICT)
