@@ -89,16 +89,23 @@ def get_namedtuple_for_cenmult_and_neighbours(n0, ell0):
     omega_neighbours = get_omega_neighbors(nl_neighbours_idx)
     num_neighbours = len(nl_neighbours_idx)
     
+    dim_super = 2 * np.sum(nl_neighbours[:,1] + 1)
+    dim_blocks = np.size(omega_neighbours)
+
     # creating the namedtuple
     CENMULT_AND_NBS_ = namedtuple('CENMULT_AND_NBS', ['nl_nbs',
                                                       'nl_nbs_idx',
                                                       'omega_nbs',
-                                                      'num_nbs'])
+                                                      'num_nbs',
+                                                      'dim_blocks',
+                                                      'dim_super'])
     
     CENMULT_AND_NBS = CENMULT_AND_NBS_(nl_neighbours,
                                        nl_neighbours_idx,
                                        omega_neighbours,
-                                       num_neighbours)
+                                       num_neighbours,
+                                       dim_blocks,
+                                       dim_super)
     
     return CENMULT_AND_NBS
 
