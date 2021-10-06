@@ -43,7 +43,7 @@ for i in range(NMULTS):
     SUBMAT_DICT = build_supmat.build_SUBMAT_INDICES(CENMULT_AND_NBS)
 
     print(SUBMAT_DICT.startx[5,5])
-    continue
+    # continue
     
     supmatrix = build_supermatrix_(CENMULT_AND_NBS, SUBMAT_DICT)
     

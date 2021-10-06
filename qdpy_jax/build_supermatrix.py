@@ -8,7 +8,7 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
         of the submatrices inside the supermatrix.
         """
         
-        dim_blocks = np.size(CNM_AND_NBS.omega_nbs)
+        # dim_blocks = np.size(CNM_AND_NBS.omega_nbs)
         
         # supermatix can be tiled with submatrices corresponding to                                                                                                                              
         # (l, n) - (l', n') coupling. The dimensions of the submatrix                                                                                                                            
@@ -22,8 +22,8 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
         # creating the startx, startx, endx, endy for subnatrices                                                                                                                                
         submat_tile_ind = np.zeros((CNM_AND_NBS.dim_blocks, CNM_AND_NBS.dim_blocks, 4), dtype='int32')                                                                                                           
         
-        for ix in range(dim_blocks):                                                                                                                                                             
-                for iy in range(dim_blocks):
+        for ix in range(CNM_AND_NBS.dim_blocks):                                                                                                                                                             
+                for iy in range(CNM_AND_NBS.dim_blocks):
                         submat_tile_ind = jax.ops.index_update(submat_tile_ind,
                                                                jax.ops.index[ix,iy,0],
                                                                int(dimX_submat[0, :ix].sum()))
