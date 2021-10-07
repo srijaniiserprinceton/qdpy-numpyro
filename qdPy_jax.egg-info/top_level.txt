@@ -1,1 +1,2 @@
 qdpy_jax
+tests

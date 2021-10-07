@@ -1,7 +1,3 @@
-import jax
-import jax.numpy as jnp
-# we still need numpy for the static variables
-# for example, variables that conrtol the dimensions of matrices
 import numpy as np   
 from collections import namedtuple
 from functools import partial
@@ -9,7 +5,6 @@ import sys
 import time
 # imports from qdpy_jax
 from qdpy_jax import globalvars
-from qdpy_jax import gnool_jit as gjit 
 
 #------((( creating the namedtuples of global variables --------
 
