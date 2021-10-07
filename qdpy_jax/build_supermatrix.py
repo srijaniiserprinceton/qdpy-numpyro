@@ -66,10 +66,8 @@ class build_supermatrix_functions:
                 def build_supermatrix(CNM_AND_NBS, SUBMAT_DICT):                                                                                                                   
                         """Function to assimilate all the neighbour info                                                                                                                             
                         and return the function to compute the SuperMatrix'                                                                                                                          
-                        """               
-                        print('Inside build_supermatrix()')
-                        print(CNM_AND_NBS)
-                        print(SUBMAT_DICT.startx[0,0])
+                        """
+
                         # building the submatrix dictionary
                         # SUBMAT_DICT = self.build_SUBMAT_DICT(CNM_AND_NBS)
                         
@@ -87,8 +85,6 @@ class build_supermatrix_functions:
 
             supmat = jnp.zeros((CNM_AND_NBS.dim_super, CNM_AND_NBS.dim_super), dtype='float32')                                                                                                      
             
-            print('CNM:', CNM_AND_NBS.dim_super)
-            print('SUBMAT:', SUBMAT_DICT)
 
             for i in range(CNM_AND_NBS.dim_blocks):                                                                                                                                              
                 for ii in range(i, CNM_AND_NBS.dim_blocks):                                                                                                                                      

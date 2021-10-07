@@ -1,5 +1,6 @@
 import jax
 import jax.tree_util as tu
+import time
 
 from qdpy_jax import gnool_jit as gjit
 from qdpy_jax import build_cenmult_and_nbs as build_CENMULT_AND_NBS 
@@ -31,6 +32,8 @@ CENMULT = CENMULT_(n0_arr, ell0_arr, omega0_arr)
 get_namedtuple_for_cenmult_and_neighbours_ = jax.jit(build_CENMULT_AND_NBS.get_namedtuple_for_cenmult_and_neighbours,
                                                      static_argnums = (0,1))
 
+build_SUBMAT_INDICES_ = gjit.gnool_jit(build_supmat.build_SUBMAT_INDICES, static_array_argnums=(0,))
+
 # initialzing the class instance for subpermatrix computation
 build_supmat_funcs = build_supmat.build_supermatrix_functions()    
 build_supermatrix_ = gjit.gnool_jit(build_supmat_funcs.get_func2build_supermatrix(), static_array_argnums=(0,1))
@@ -43,14 +46,33 @@ for i in range(NMULTS):
     CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0)
     CENMULT_AND_NBS = tu.tree_map(lambda x: np.array(x), CENMULT_AND_NBS)
     
-    SUBMAT_DICT = build_supmat.build_SUBMAT_INDICES(CENMULT_AND_NBS)
+    SUBMAT_DICT = build_SUBMAT_INDICES_(CENMULT_AND_NBS)
     SUBMAT_DICT = tu.tree_map(lambda x: np.array(x), SUBMAT_DICT)
+    
+    supmatrix = build_supermatrix_(CENMULT_AND_NBS, SUBMAT_DICT).block_until_ready()
 
-    print('-----------')
-    print(SUBMAT_DICT)
-    print(CENMULT_AND_NBS)
-    print('-----------')
-    # continue
+    print(f'Calculated supermatrix for multiplet = ({n0}, {ell0})')
     
-    supmatrix = build_supermatrix_(CENMULT_AND_NBS, SUBMAT_DICT)
+
+# after compiling
+
+t1 = time.time()
+# looping over the ells
+for i in range(NMULTS):
+    n0, ell0, omega0 = CENMULT.n0_arr[i], CENMULT.ell0_arr[i], CENMULT.omega0_arr[i]
     
+    # building the namedtuple for the central multiplet and its neighbours
+    CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0)
+    CENMULT_AND_NBS = tu.tree_map(lambda x: np.array(x), CENMULT_AND_NBS)
+    
+    SUBMAT_DICT = build_SUBMAT_INDICES_(CENMULT_AND_NBS)
+    SUBMAT_DICT = tu.tree_map(lambda x: np.array(x), SUBMAT_DICT)
+    
+    supmatrix = build_supermatrix_(CENMULT_AND_NBS, SUBMAT_DICT).block_until_ready()
+
+    print(f'Calculated supermatrix for multiplet = ({n0}, {ell0})')
+    
+
+t2 = time.time()
+
+print(f"{t2-t1}")
