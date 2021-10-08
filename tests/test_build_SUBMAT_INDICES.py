@@ -43,17 +43,16 @@ def test_build_SUBMAT_INDICES():
         CNM_AND_NBS = build_CENMULT_AND_NBS_np.get_namedtuple_for_cenmult_and_neighbours(n0, ell0)
 
         tc1 = time.time()
-        SUBMAT_DICT = build_SUBMAT_INDICES_(CNM_AND_NBS)                                                                                 
+        SUBMAT_DICT = build_SUBMAT_INDICES_(CNM_AND_NBS)
         result += SUBMAT_DICT.startx[0,0]
         tc2 = time.time()
     
         tc += (tc2-tc1)
-                                                                                                               
     
     # Arbitrary printing of a value since block_until_ready doesn't work for namedtuple 
     print("[JAX]: ", result)
-    print(f'Compiling in: {tc} seconds')                                                                                                                                        
-        
+    print(f'Compiling in: {tc} seconds')
+
     #------------------------------------------------------------------------------------------------
     # EXECUTING JAX
     te = 0.0
@@ -66,10 +65,10 @@ def test_build_SUBMAT_INDICES():
         SUBMAT_DICT = build_SUBMAT_INDICES_(CNM_AND_NBS)                                                                                 
         result += SUBMAT_DICT.startx[0,0]
         te2 = time.time()
-    
+
         te += (te2-te1)
         
-    
+
     # Arbitrary printing of a value since block_until_ready doesn't work for namedtuple    
     print("[JAX-JIT]: ", result)
     print(f'Executing in: {te} seconds.')                                                                                                                                         
