@@ -4,6 +4,13 @@ import jax
 import jax.numpy as jnp
 from collections import namedtuple
 import sys
+import os
+
+
+current_dir = os.path.dirname(os.path.realpath(__file__))
+package_dir = os.path.dirname(current_dir)
+data_dir = f"{package_dir}/qdpy_jax"
+
 
 def jax_Omega(ell, N):
     """Computes Omega_N^\ell"""
@@ -122,7 +129,7 @@ s_arr = jnp.array([1,3,5], dtype='int32')
 rmin = 0.3
 rmax = 1.0
 
-r = np.loadtxt('r.dat') # the radial grid
+r = np.loadtxt(f'{data_dir}/r.dat') # the radial grid
 
 # finding the indices for rmin and rmax
 rmin_ind = np.argmin(np.abs(r - rmin))
@@ -132,7 +139,7 @@ rmax_ind = np.argmin(np.abs(r - rmax)) + 1
 r = r[rmin_ind:rmax_ind]
 
 # the rotation profile
-wsr = np.loadtxt('w.dat')
+wsr = np.loadtxt(f'{data_dir}/w.dat')
 wsr = wsr[:,rmin_ind:rmax_ind]
 wsr = jnp.array(wsr)   # converting to device array once
 
@@ -143,8 +150,8 @@ ell1, ell2 = 200, 200
 # finding omegaref
 omegaref = 1
 
-U = np.loadtxt('U3672.dat')
-V = np.loadtxt('V3672.dat')
+U = np.loadtxt(f'{data_dir}/U3672.dat')
+V = np.loadtxt(f'{data_dir}/V3672.dat')
 
 U = U[rmin_ind:rmax_ind]
 V = V[rmin_ind:rmax_ind]
