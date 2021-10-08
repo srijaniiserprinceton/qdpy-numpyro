@@ -119,14 +119,14 @@ for ell in ell0_arr:
     ARGS.l0 = ell
     analysis_modes = qdcls.qdptMode(GVAR, SPL_DICT)
     
-    print(analysis_modes.nl_neighbors,
-          analysis_modes.nl_neighbors_idx,
-          analysis_modes.omega_neighbors)
+    # print(analysis_modes.nl_neighbors,
+          # analysis_modes.nl_neighbors_idx,
+          # analysis_modes.omega_neighbors)
     
     supmat = analysis_modes.create_supermatrix()
     
-    print(supmat.dimX_submat,
-          supmat.dimY_submat)
+    # print(supmat.dimX_submat,
+          # supmat.dimY_submat)
     
 
 t2 = time.time()
