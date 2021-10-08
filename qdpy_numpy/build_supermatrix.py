@@ -33,9 +33,9 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
                                               'endy']) 
 
     SUBMAT_DICT = SUBMAT_DICT_(submat_tile_ind[:,:,0],
-                                submat_tile_ind[:,:,1],
-                                submat_tile_ind[:,:,2],
-                                submat_tile_ind[:,:,3]) 
+                               submat_tile_ind[:,:,1],
+                               submat_tile_ind[:,:,2],
+                               submat_tile_ind[:,:,3]) 
 
     return SUBMAT_DICT
 
@@ -78,14 +78,14 @@ class build_supermatrix_functions:
                 for ii in range(i, CNM_AND_NBS.dim_blocks):                                                                                                                                      
                     startx, starty = SUBMAT_DICT.startx[i,ii], SUBMAT_DICT.starty[i,ii]                                                                                                                        
                     endx, endy = SUBMAT_DICT.endx[i,ii], SUBMAT_DICT.endy[i,ii]                                                                                                                                
-                    
                     # creating the submatrix                                                                                                                                                 
                     submat = np.ones((endx-startx, endy-starty), dtype='float32')                                                                                                           
-                    
+
                     supmat[startx:endx, starty:endy] = submat                                                                                                                                    
-                    # to avoid repeated filling of the central blocks                                                                                                                        
+                    # to avoid repeated filling of the central blocks                                                                                                                       
+
                     if(abs(i-ii)>0):
-                        supmat[starty:endy, startx:endx] = np.transpose(np.conjugate(submat)),                                                                                        
+                        supmat[starty:endy, startx:endx] = np.transpose(np.conjugate(submat))                                                                                        
                     else: supmat = supmat
                                           
             return supmat      
