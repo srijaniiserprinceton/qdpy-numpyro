@@ -129,52 +129,51 @@ def get_Cvec(ell1, ell2, s_arr, r, U1, U2, V1, V2, omegaref):
     
     return Cvec
 
+if __name__ == "__main__":
+    # parameters to be included in the global dictionary later?
+    s_arr = np.array([1,3,5], dtype='int')
 
+    rmin = 0.3
+    rmax = 1.0
 
-# parameters to be included in the global dictionary later?
-s_arr = np.array([1,3,5], dtype='int')
+    r = np.loadtxt('r.dat') # the radial grid
 
-rmin = 0.3
-rmax = 1.0
+    # finding the indices for rmin and rmax
+    rmin_ind = np.argmin(np.abs(r - rmin))
+    rmax_ind = np.argmin(np.abs(r - rmax)) + 1
 
-r = np.loadtxt('r.dat') # the radial grid
+    # clipping radial grid
+    r = r[rmin_ind:rmax_ind]
 
-# finding the indices for rmin and rmax
-rmin_ind = np.argmin(np.abs(r - rmin))
-rmax_ind = np.argmin(np.abs(r - rmax)) + 1
+    # using fixed modes (0,200)-(0,200) coupling for testing
+    n1, n2 = 0, 0
+    ell1, ell2 = 200, 200
 
-# clipping radial grid
-r = r[rmin_ind:rmax_ind]
+    U = np.loadtxt('U3672.dat')
+    V = np.loadtxt('V3672.dat')
 
-# using fixed modes (0,200)-(0,200) coupling for testing
-n1, n2 = 0, 0
-ell1, ell2 = 200, 200
+    U = U[rmin_ind:rmax_ind]
+    V = V[rmin_ind:rmax_ind]
 
-U = np.loadtxt('U3672.dat')
-V = np.loadtxt('V3672.dat')
+    wsr = np.loadtxt('w.dat')
+    wsr = wsr[:,rmin_ind:rmax_ind]
 
-U = U[rmin_ind:rmax_ind]
-V = V[rmin_ind:rmax_ind]
+    U1, U2 = U, U
+    V1, V2 = V, V
 
-wsr = np.loadtxt('w.dat')
-wsr = wsr[:,rmin_ind:rmax_ind]
+    omegaref = 1234.
 
-U1, U2 = U, U
-V1, V2 = V, V
+    Niter = 100
 
-omegaref = 1234.
+    t1 = time.time()
+    for __ in range(Niter): Tsr = compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2)
+    t2 = time.time()
 
-Niter = 100
+    print(f"[compute_Tsr] Time taken per iteration in seconds (no jax): , " +
+          f"{(t2-t1):.3e} seconds")
 
-t1 = time.time()
-for __ in range(Niter): Tsr = compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2)
-t2 = time.time()
-
-print(f"[compute_Tsr] Time taken per iteration in seconds (no jax): , {(t2-t1):.3e} seconds")
-
-
-
-t3 = time.time()
-for __ in range(Niter): __ = get_Cvec(ell1, ell2, s_arr, r, U1, U2, V1, V2, omegaref)
-t4 = time.time()
-print(f"[get_Cvec] Time taken per iteration in seconds (no jax): , {(t4-t3):.3e} seconds")
+    t3 = time.time()
+    for __ in range(Niter): __ = get_Cvec(ell1, ell2, s_arr, r, U1, U2, V1, V2, omegaref)
+    t4 = time.time()
+    print(f"[get_Cvec] Time taken per iteration in seconds (no jax): , " +
+          f"{(t4-t3):.3e} seconds")
