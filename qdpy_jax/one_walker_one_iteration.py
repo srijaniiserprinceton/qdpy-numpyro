@@ -4,23 +4,23 @@ from collections import namedtuple
 import numpy as np
 import time
 
-'''
 # old package in numpy
 import qdPy
 from qdPy import globalvars as gvar
 from qdPy import qdclasses as qdcls
 from qdPy import w_Bsplines as w_Bsp
-'''
 
 # new package in jax.numpy
 from qdpy_jax import gnool_jit as gjit
 from qdpy_jax import build_cenmult_and_nbs as build_CENMULT_AND_NBS 
 from qdpy_jax import build_supermatrix as build_supmat
 
+
+
 # the radial branch [choosing f-branch for testing purposes]
 # this array of multiplets needs to be built separately from hmi file
 # ell0_arr = np.arange(195, 290, dtype='int32')
-ell0_arr = np.arange(195, 200, dtype='int32')
+ell0_arr = np.arange(195, 197, dtype='int32')
 n0_arr = np.zeros_like(ell0_arr, dtype='int32')
 
 NMULTS = len(ell0_arr)
@@ -58,6 +58,7 @@ for i in range(NMULTS):
     # building the namedtuple for the central multiplet and its neighbours
     CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0)
     CENMULT_AND_NBS = tu.tree_map(lambda x: np.array(x), CENMULT_AND_NBS)
+    print(CENMULT_AND_NBS)
     
     SUBMAT_DICT = build_SUBMAT_INDICES_(CENMULT_AND_NBS)
     SUBMAT_DICT = tu.tree_map(lambda x: np.array(x), SUBMAT_DICT)
@@ -88,7 +89,7 @@ for i in range(NMULTS):
 t2e = time.time()
 
 
-'''
+
 class Args():
     def __init__(self,
                  n0=0,
@@ -127,7 +128,7 @@ for ell in ell0_arr:
     
     # print(supmat.dimX_submat,
           # supmat.dimY_submat)
-    
+
 
 t2 = time.time()
 
@@ -136,7 +137,7 @@ print(f'[jax-execute] Time taken = {(t2e-t1e):.3e} seconds')
 print(f'[  numpy    ] Time taken = {(t2-t1):.3e} seconds')
 print(f'Speedup = {(t2-t1)/(t2e-t1e):.3f}x')
 
-'''
-
+"""
 print(f'[jax-compile] Time taken = {(t2c-t1c):.3e} seconds')
 print(f'[jax-execute] Time taken = {(t2e-t1e):.3e} seconds')
+"""

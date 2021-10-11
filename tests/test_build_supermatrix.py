@@ -1,7 +1,7 @@
 import time 
 from qdpy_jax import gnool_jit as gjit
 from qdpy_jax import build_supermatrix as build_supermatrix_jax
-from qdpy_numpy import build_supermatrix as build_supermatrix_np                                                                                                                
+from qdpy_numpy import build_supermatrix as build_supermatrix_np
 from qdpy_numpy import build_cenmult_and_nbs as build_CENMULT_AND_NBS_np
 
 def test_build_supermatrix():
@@ -41,17 +41,15 @@ def test_build_supermatrix():
     t2c = time.time()
     
     # Arbitrary printing of a value since block_until_ready doesn't work for namedtuple 
-    print(f'[JAX] Compiling in: {(t2c-t1c)} seconds')                                                                                                                                        
-        
+    print(f'[JAX] Compiling in: {(t2c-t1c)} seconds')
     #------------------------------------------------------------------------------------------------
     # EXECUTING JAX
     t1e = time.time()
     for ell0 in range(ell_min, ell_max+1):                                                                                                                                              
         # getting the argument for this function
         CNM_AND_NBS = build_CENMULT_AND_NBS_np.get_namedtuple_for_cenmult_and_neighbours(n0, ell0)
-        SUBMAT_DICT = build_supermatrix_np.build_SUBMAT_INDICES(CNM_AND_NBS)                                                                                 
+        SUBMAT_DICT = build_supermatrix_np.build_SUBMAT_INDICES(CNM_AND_NBS)
         supmatrix = build_supermatrix_(CNM_AND_NBS, SUBMAT_DICT).block_until_ready()
-        
     
     t2e = time.time()
         
@@ -62,8 +60,7 @@ def test_build_supermatrix():
     tn = t2n-t1n
 
     
-    print(f'[JAX-JIT] Executing in: {te} seconds.')                                                                                                                                         
-
+    print(f'[JAX-JIT] Executing in: {te} seconds.')
     #-----------------------------------------------------------------------------------------------
     print(f'Speedup of JAX-JIT vs. JAX: {(tc)/(te)}')
     print(f'Speedup of JAX-JIT vs. NumPy: {(tn)/(te)}')
