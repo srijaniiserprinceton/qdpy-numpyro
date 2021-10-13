@@ -52,10 +52,19 @@ def test_build_CENMULT_AND_NBS():
     te = t2e - t1e
     tn = t2n - t1n
 
+    # the preferred method                                                                                                                                                              
+    t_preferred = 0.0
     if(te < tn):
+        t_preferred = te
         print('USE JAX-JIT!')
     else:
+        t_preferred = tn
         print('USE NUMPY!')
+
+
+    # the total contribution to compute time for 1500 iterations of MCMC                                                                                                                
+    print('Total time taken for 1500 iterations: ', (t_preferred * 1500./(60.)), ' minutes.')
+
 
 if __name__ == '__main__':
     test_build_CENMULT_AND_NBS()

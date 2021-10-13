@@ -78,11 +78,19 @@ def test_build_SUBMAT_INDICES():
     print(f'Speedup of JAX-JIT vs. NumPy: {(tn)/(te):.4f}X')
 
     print('=========================================')
-
+    
+    # the preferred method
+    t_preferred = 0.0
     if(te < tn):
+        t_preferred = te
         print('USE JAX-JIT!')
     else:
+        t_preferred = tn
         print('USE NUMPY!')
+
+        
+    # the total contribution to compute time for 1500 iterations of MCMC
+    print('Total time taken for 1500 iterations: ', (t_preferred * 1500./(60.)), ' minutes.')
 
 if __name__ == '__main__':
     test_build_SUBMAT_INDICES()

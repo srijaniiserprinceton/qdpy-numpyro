@@ -1,6 +1,7 @@
 import numpy as np
 import os
 from collections import namedtuple
+import jax.numpy as jnp
 
 #----------------------------------------------------------------------
 #                       All qts in CGS
@@ -96,30 +97,44 @@ class GlobalVars():
         self.smax = qdPars.smax
         self.fwindow = qdPars.fwindow
 
+        # the rotation profile                                                                                                                                                        
+        wsr = np.loadtxt(f'{self.datadir}/w.dat')
+
         # retaining only region between rmin and rmax
         self.r = self.mask_minmax(self.r)
-
-        # rth = r threshold beyond which the profiles are updated. 
-        self.rth = qdPars.rth
+        wsr = wsr[:,rmin_ind:rmax_ind]
         
+        # the factor to be multiplied to make the upper and lower 
+        # bounds of the model space to be explored
         self.fac_up = np.array([1.1, 2.0, 2.0])
         self.fac_lo = np.array([0.9, 0.0, 0.0])
 
+
+        # converting to device array once
+        self.wsr = jnp.array(wsr)   
+        self.r = jnp.array(self.r)
+        self.omega_list = jnp.array(self.omega_list)
+        self.fac_up = jnp.array(self.fac_up)
+        self.fac_lo = jnp.array(self.fac_lo)
+        
+        # rth = r threshold beyond which the profiles are updated. 
+        self.rth = qdPars.rth
+        
         self.n0 = qdPars.n0
         self.ell0 = qdPars.ell0
-
+        
     def get_namedtuple_gvar_paths(self):
         """Function to create the namedtuple containing the 
         various global paths for reading and writing files.
         """
         
-        GVAR_PATHS_ = namedtuple('GVAR_PATHS', 'local_dir\
-                                                scratch_dir\
-                                                snrnmais_dir\
-                                                outdir\
-                                                eigdir\
-                                                progdir\
-                                                hmidata')
+        GVAR_PATHS_ = namedtuple('GVAR_PATHS', ['local_dir',
+                                                'scratch_dir',
+                                                'snrnmais_dir',
+                                                'outdir',
+                                                'eigdir',
+                                                'progdir',
+                                                'hmidata'])
         GVAR_PATHS = GVAR_PATHS_(self.local_dir,
                                  self.scratch_dir,
                                  self.snrnmais_dir,
@@ -135,17 +150,18 @@ class GlobalVars():
         various global attributes that can be traced by JAX.
         """
         
-        GVAR_TRACED_ = namedtuple('GVAR_TRACED', 'fwindow\
-                                                  r\
-                                                  rth\
-                                                  rmin_ind\
-                                                  rmax_ind\
-                                                  fac_up\
-                                                  fac_lo\
-                                                  nl_all\
-                                                  nl_all_list\
-                                                  omega_list\
-                                                  OM')
+        GVAR_TRACED_ = namedtuple('GVAR_TRACED', ['fwindow',
+                                                  'r',
+                                                  'rth',
+                                                  'rmin_ind',
+                                                  'rmax_ind',
+                                                  'fac_up',
+                                                  'fac_lo',
+                                                  'nl_all',
+                                                  'nl_all_list',
+                                                  'omega_list',
+                                                  'wsr',
+                                                  'OM'])
 
         GVAR_TRACED = GVAR_TRACED_(self.fwindow,
                                    self.r,
@@ -157,6 +173,7 @@ class GlobalVars():
                                    self.nl_all,
                                    self.nl_all_list,
                                    self.omega_list,
+                                   self.wsr,
                                    self.OM)
 
         return GVAR_TRACED
@@ -167,7 +184,7 @@ class GlobalVars():
         various global attributes that are static arguments.
         """
         
-        GVAR_STATIC_ = namedtuple('GVAR_STATIC', 'smax')
+        GVAR_STATIC_ = namedtuple('GVAR_STATIC', ['smax'])
 
         GVAR_STATIC = GVAR_STATIC_(self.smax)
         

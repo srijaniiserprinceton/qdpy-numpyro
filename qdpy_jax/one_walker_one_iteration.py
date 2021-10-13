@@ -16,6 +16,16 @@ from qdpy_jax import build_cenmult_and_nbs as build_CENMULT_AND_NBS
 from qdpy_jax import build_supermatrix as build_supmat
 
 
+#------((( creating the namedtuples of global variables --------                                                                                                          
+GVARS = globalvars.GlobalVars()
+# the global path variables                                                                                                                                                         
+GVARS_PATHS = GVARS.get_namedtuple_gvar_paths()
+# the global traced variables                                                                                                                                                  
+GVARS_TR = GVARS.get_namedtuple_gvar_traced()
+# the global static variables                                                                                                                                                          
+GVARS_ST = GVARS.get_namedtuple_gvar_static()
+#------- creating the namedtuples of global variables )))-------   
+
 
 # the radial branch [choosing f-branch for testing purposes]
 # this array of multiplets needs to be built separately from hmi file
@@ -46,7 +56,7 @@ build_SUBMAT_INDICES_ = gjit.gnool_jit(build_supmat.build_SUBMAT_INDICES, static
 
 # initialzing the class instance for subpermatrix computation
 build_supmat_funcs = build_supmat.build_supermatrix_functions()    
-build_supermatrix_ = gjit.gnool_jit(build_supmat_funcs.get_func2build_supermatrix(), static_array_argnums=(0,1))
+build_supermatrix_ = gjit.gnool_jit(build_supmat_funcs.get_func2build_supermatrix(), static_array_argnums=(0,1,2))
 
 # COMPILING JAX
 # looping over the ells
@@ -82,7 +92,7 @@ for i in range(NMULTS):
     SUBMAT_DICT = build_SUBMAT_INDICES_(CENMULT_AND_NBS)
     SUBMAT_DICT = tu.tree_map(lambda x: np.array(x), SUBMAT_DICT)
 
-    supmatrix = build_supermatrix_(CENMULT_AND_NBS, SUBMAT_DICT).block_until_ready()
+    supmatrix = build_supermatrix_(GVAR_ST, CENMULT_AND_NBS, SUBMAT_DICT).block_until_ready()
 
     print(f'Calculated supermatrix for multiplet = ({n0}, {ell0})')
     
