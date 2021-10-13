@@ -74,8 +74,8 @@ def test_build_SUBMAT_INDICES():
     print(f'Executing in: {te} seconds.')                                                                                                                                         
 
     #-----------------------------------------------------------------------------------------------
-    print(f'Speedup of JAX-JIT vs. JAX: {(tc)/(te)}')
-    print(f'Speedup of JAX-JIT vs. NumPy: {(tn)/(te)}')
+    print(f'Speedup of JAX-JIT vs. JAX  : {(tc)/(te):.4f}X')
+    print(f'Speedup of JAX-JIT vs. NumPy: {(tn)/(te):.4f}X')
 
     print('=========================================')
 

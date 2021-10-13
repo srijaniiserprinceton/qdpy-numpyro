@@ -32,60 +32,56 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
                                               'endx',
                                               'endy']) 
 
-    SUBMAT_DICT = SUBMAT_DICT_(submat_tile_ind[:,:,0],
-                               submat_tile_ind[:,:,1],
-                               submat_tile_ind[:,:,2],
-                               submat_tile_ind[:,:,3]) 
+    SUBMAT_DICT = SUBMAT_DICT_(submat_tile_ind[:, :, 0],
+                               submat_tile_ind[:, :, 1],
+                               submat_tile_ind[:, :, 2],
+                               submat_tile_ind[:, :, 3]) 
 
     return SUBMAT_DICT
 
         
 
 class build_supermatrix_functions:                                                                                                                                                
-        """Function that returns the function to calculate                                                                                                                               
-        the superMatrix prior to solving eigenvalue problem.                                                                                                                             
-        This function is spefic to the central multiplet. So,                                                                                                                            
-        CENMULT needs to be a static argument.                                                                                                                                           
+        """Function that returns the function to calculate
+        the superMatrix prior to solving eigenvalue problem.
+        This function is spefic to the central multiplet. So,
+        CENMULT needs to be a static argument.
         """                           
         def __init__(self):
             pass
         
         def get_func2build_supermatrix(self):
-                def build_supermatrix(CNM_AND_NBS, SUBMAT_DICT):                                                                                                                   
-                        """Function to assimilate all the neighbour info                                                                                                                             
-                        and return the function to compute the SuperMatrix'                                                                                                                          
+                def build_supermatrix(CNM_AND_NBS, SUBMAT_DICT):
+                        """Function to assimilate all the neighbour info
+                        and return the function to compute the SuperMatrix'
                         """
-
                         # building the submatrix dictionary
                         # SUBMAT_DICT = self.build_SUBMAT_DICT(CNM_AND_NBS)
-                        
-                        # tiling supermatrix with submatrices                                                                                                                                        
-                        supmat = self.tile_submatrices(CNM_AND_NBS, SUBMAT_DICT)                                                                                                                         
-                        
+                        # tiling supermatrix with submatrices
+                        supmat = self.tile_submatrices(CNM_AND_NBS, SUBMAT_DICT)
                         return supmat
                         
                 return build_supermatrix
         
         def tile_submatrices(self, CNM_AND_NBS, SUBMAT_DICT):                                                                                                                                             
-            """Function to loop over the submatrix blocks and tile in the                                                                                                                    
-            submatrices into the supermatrix.                                                                                                                                                
-            """                                                                                                                                                                              
-
-            supmat = np.zeros((CNM_AND_NBS.dim_super, CNM_AND_NBS.dim_super), dtype='float32')                                                                                                      
+            """Function to loop over the submatrix blocks and tile in the
+            submatrices into the supermatrix.
+            """
+            supmat = np.zeros((CNM_AND_NBS.dim_super, 
+				CNM_AND_NBS.dim_super), dtype='float32')
             
 
-            for i in range(CNM_AND_NBS.dim_blocks):                                                                                                                                              
-                for ii in range(i, CNM_AND_NBS.dim_blocks):                                                                                                                                      
-                    startx, starty = SUBMAT_DICT.startx[i,ii], SUBMAT_DICT.starty[i,ii]                                                                                                                        
-                    endx, endy = SUBMAT_DICT.endx[i,ii], SUBMAT_DICT.endy[i,ii]                                                                                                                                
-                    # creating the submatrix                                                                                                                                                 
-                    submat = np.ones((endx-startx, endy-starty), dtype='float32')                                                                                                           
+            for i in range(CNM_AND_NBS.dim_blocks):
+                for ii in range(i, CNM_AND_NBS.dim_blocks):
+                    startx, starty = SUBMAT_DICT.startx[i,ii], SUBMAT_DICT.starty[i,ii]
+                    endx, endy = SUBMAT_DICT.endx[i,ii], SUBMAT_DICT.endy[i,ii]
+                    # creating the submatrix
+                    submat = np.ones((endx-startx, endy-starty), dtype='float32')
 
-                    supmat[startx:endx, starty:endy] = submat                                                                                                                                    
+                    supmat[startx:endx, starty:endy] = submat
                     # to avoid repeated filling of the central blocks                                                                                                                       
 
                     if(abs(i-ii)>0):
-                        supmat[starty:endy, startx:endx] = np.transpose(np.conjugate(submat))                                                                                        
+                        supmat[starty:endy, startx:endx] = np.transpose(np.conjugate(submat))
                     else: supmat = supmat
-                                          
             return supmat      
