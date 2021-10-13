@@ -123,6 +123,7 @@ class compute_submatrix:
         
         return Tsr
 
+'''
 # parameters to be included in the global dictionary later?
 s_arr = jnp.array([1,3,5], dtype='int32')
 
@@ -199,3 +200,4 @@ t4 = time.time()
 print("get_Cvec()")
 print("JIT version is faster by: ", (t2-t1)/(t4-t3))
 print(f"Time taken per iteration (jax-jitted) get_Cvec = {(t4-t3)/Niter:.3e} seconds")
+'''

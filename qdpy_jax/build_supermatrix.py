@@ -5,7 +5,9 @@ import os
 import jax.numpy as jnp
 from jax.lax import fori_loop as foril
 from collections import namedtuple
+from functools import partial
 
+from qdpy_jax import gnool_jit as gjit
 from qdpy_jax import class_Cvec as cvec
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -25,25 +27,14 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
     # is (2l+1, 2l'+1)
     dim_blocks = CNM_AND_NBS.dim_blocks
 
-    dimX_submat = 2*CNM_AND_NBS.nl_nbs[:, 1].reshape(1, dim_blocks) \
-            * np.ones((dim_blocks, 1), dtype='int32') + 1
-    dimY_submat = 2*CNM_AND_NBS.nl_nbs[:, 1].reshape(dim_blocks, 1) \
-            * np.ones((1, dim_blocks), dtype='int32') + 1
-
-    '''
-    sum_dim = np.zeros((dim_blocks, 4), dtype='int32')
-    for i in range(dim_blocks):
-        sum_dim[i, 0] = np.sum(dimX_submat[0, :i])
-        sum_dim[i, 1] = np.sum(dimY_submat[:i, 0])
-        sum_dim[i, 2] = np.sum(dimX_submat[0, :int(i+1)])
-        sum_dim[i, 3] = np.sum(dimY_submat[:int(i+1), 0])
+    dimX_submat = 2*CNM_AND_NBS.nl_nbs[:, 1].reshape(1, CNM_AND_NBS.dim_blocks) \
+            * np.ones((CNM_AND_NBS.dim_blocks, 1), dtype='int32') + 1
+    dimY_submat = dimX_submat.T
     
-    sum_dim = jnp.asarray(sum_dim)
-    '''
 
-    sum_dim = jnp.zeros((dim_blocks, 4), dtype='int32')
+    sum_dim = jnp.zeros((CNM_AND_NBS.dim_blocks, 4), dtype='int32')
 
-    for i in range(dim_blocks):
+    for i in range(CNM_AND_NBS.dim_blocks):
         sum_dim = jax.ops.index_update(sum_dim,
                                        jax.ops.index[i, 0],
                                        jnp.sum(dimX_submat[0, :i]))
@@ -56,60 +47,39 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
         sum_dim = jax.ops.index_update(sum_dim,
                                        jax.ops.index[i, 3],
                                        jnp.sum(dimY_submat[:i+1, 0]))
+    
 
     # creating the startx, startx, endx, endy for submatrices
-    submat_tile_ind = np.zeros((dim_blocks, dim_blocks, 4), dtype='int32')
-    def update_submat_ind_i(i, submat_tile_ind):
-        submat_tile_ind = foril(0, CNM_AND_NBS.dim_blocks,
-                                lambda ii, submat_tile_ind:\
-                                jax.ops.index_update(submat_tile_ind,
-                                                     jax.ops.index[i, ii, 0],
-                                                     sum_dim[ii, 0]),
-                                submat_tile_ind)
+    submat_tile_ind = np.zeros((CNM_AND_NBS.dim_blocks, CNM_AND_NBS.dim_blocks, 4), dtype='int32')
+
+    def update_submat_ind_ix(ix, submat_tile_ind):
+        def update_submat_ind_iy(iy, submat_tile_ind):
+            submat_tile_ind = jax.ops.index_update(submat_tile_ind,
+                                                   jax.ops.index[ix, iy, 0],
+                                                   sum_dim[iy, 0])
+                                                    
+            submat_tile_ind = jax.ops.index_update(submat_tile_ind,
+                                                   jax.ops.index[ix, iy, 2],
+                                                   sum_dim[iy, 2])
+            
+            submat_tile_ind = jax.ops.index_update(submat_tile_ind,
+                                                   jax.ops.index[ix, iy, 1],\
+                                                   sum_dim[iy, 1])
+            
+            submat_tile_ind =  jax.ops.index_update(submat_tile_ind,
+                                                    jax.ops.index[ix, iy, 3],\
+                                                    sum_dim[iy, 3])
+            
+            return submat_tile_ind
+
+        submat_tile_int = jax.lax.fori_loop(0, CNM_AND_NBS.dim_blocks,
+                                            update_submat_ind_iy, submat_tile_ind)
         
-        submat_tile_ind = foril(0, CNM_AND_NBS.dim_blocks,
-                                lambda ii, submat_tile_ind:\
-                                jax.ops.index_update(submat_tile_ind,
-                                                     jax.ops.index[i, ii, 2],
-                                                     sum_dim[ii, 2]),
-                                submat_tile_ind)
-
-        submat_tile_ind = \
-            foril(0, CNM_AND_NBS.dim_blocks,
-                  lambda ii, submat_tile_ind:\
-                  jax.ops.index_update(submat_tile_ind,
-                                       jax.ops.index[i, ii, 1],\
-                                       sum_dim[ii, 1]),
-                  submat_tile_ind)
-
-        submat_tile_ind = \
-            foril(0, CNM_AND_NBS.dim_blocks,
-                  lambda ii, submat_tile_ind:\
-                  jax.ops.index_update(submat_tile_ind,
-                                       jax.ops.index[i, ii, 3],\
-                                       sum_dim[ii, 3]),
-                  submat_tile_ind)
         return submat_tile_ind
+    
 
     submat_tile_ind = jax.lax.fori_loop(0, CNM_AND_NBS.dim_blocks,
-                                        update_submat_ind_i, submat_tile_ind)
-
-    '''
-    for ix in range(CNM_AND_NBS.dim_blocks):
-        for iy in range(CNM_AND_NBS.dim_blocks):
-            submat_tile_ind = jax.ops.index_update(submat_tile_ind,
-                                                   jax.ops.index[ix,iy,0],
-                                                   int(dimX_submat[0, :ix].sum()))
-            submat_tile_ind = jax.ops.index_update(submat_tile_ind,
-                                                   jax.ops.index[ix,iy,1],
-                                                   int(dimY_submat[:iy, 0].sum()))
-            submat_tile_ind = jax.ops.index_update(submat_tile_ind,
-                                                   jax.ops.index[ix,iy,2],
-                                                   int(dimX_submat[0, :int(ix+1)].sum()))
-            submat_tile_ind = jax.ops.index_update(submat_tile_ind,
-                                                   jax.ops.index[ix,iy,3],
-                                                   int(dimY_submat[:int(iy+1), 0].sum()))
-    '''
+                                        update_submat_ind_ix, submat_tile_ind)
 
 
     # return submat_tile_ind
@@ -160,8 +130,6 @@ class build_supermatrix_functions:
                             CNM_AND_NBS.dim_super), dtype='float32')
 
 
-        #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        # parameters to be included in the global dictionary later?
         s_arr = jnp.array([1,3,5], dtype='int32')
 
         rmin = 0.3
