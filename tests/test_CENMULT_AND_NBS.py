@@ -2,12 +2,22 @@ import time
 from jax import jit
 from qdpy_jax import build_cenmult_and_nbs as build_CENMULT_AND_NBS_jax
 from qdpy_numpy import build_cenmult_and_nbs as build_CENMULT_AND_NBS_np                                                                                                                
+from qdpy_jax import globalvars
+
+#------((( creating the namedtuples of global variables --------                                                                                                                        
+GVARS = globalvars.GlobalVars()
+# extracting only the required global variables                                                                                                                             
+# for the multiplets of interest                                                                                                                                      
+GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
+# deleting all large arrays which won't be used anymore                                                                                                                
+del GVARS
+
 
 def test_build_CENMULT_AND_NBS():
     
     # obtaining the namedtuple for the central mode and its neighbours                                                                                                         
     get_namedtuple_for_cenmult_and_neighbours_ = jit(build_CENMULT_AND_NBS_jax.get_namedtuple_for_cenmult_and_neighbours,
-                                                     static_argnums = (0,1))
+                                                     static_argnums = (0,1,2))
 
     # defining the radial order
     n0 = 0
@@ -27,8 +37,8 @@ def test_build_CENMULT_AND_NBS():
     # COMPILING JAX
     t1c = time.time()                                                                                                                                                               
     for ell0 in range(195, 290):                                                                                                                                               
-        CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0)                                                                                                       
-    
+        CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0, GVARS_ST, GVARS_TR)                                                                                   
+        
     # Arbitrary printing of a value since block_until_ready doesn't work for namedtuple 
     print("[JAX]: ", CENMULT_AND_NBS.nl_nbs[0])
     t2c = time.time()                                                                                                                                                               
@@ -38,7 +48,7 @@ def test_build_CENMULT_AND_NBS():
     # EXECUTING JAX
     t1e = time.time()                                                                                                                                                            
     for ell0 in range(195, 290):                                                                                                                                                     
-        CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0)                                                                                                        
+        CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0, GVARS_ST, GVARS_TR)                                                                                     
     
     # Arbitrary printing of a value since block_until_ready doesn't work for namedtuple    
     print("[JAX-JIT]: ", CENMULT_AND_NBS.nl_nbs[0])
