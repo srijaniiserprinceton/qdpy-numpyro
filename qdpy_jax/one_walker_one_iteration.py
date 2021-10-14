@@ -14,10 +14,10 @@ from qdPy import w_Bsplines as w_Bsp
 from qdpy_jax import gnool_jit as gjit
 from qdpy_jax import build_cenmult_and_nbs as build_CENMULT_AND_NBS 
 from qdpy_jax import build_supermatrix as build_supmat
-
+from qdpy_jax import globalvars as gvar_jax
 
 #------((( creating the namedtuples of global variables --------                                                                                                          
-GVARS = globalvars.GlobalVars()
+GVARS = gvar_jax.GlobalVars()
 # the global path variables                                                                                                                                                         
 GVARS_PATHS = GVARS.get_namedtuple_gvar_paths()
 # the global traced variables                                                                                                                                                  

@@ -3,6 +3,8 @@ import os
 from collections import namedtuple
 import jax.numpy as jnp
 
+from qdpy_jax import load_multiplets
+
 #----------------------------------------------------------------------
 #                       All qts in CGS
 # M_sol = 1.989e33 g
@@ -26,14 +28,17 @@ class qdParams():
     # (1) the correct normalization
     # (2) a1 = \omega_0 ( 1 - 1/ell ) scaling
     # (Since we are using lmax = 300, 0.45*300 \approx 150)
+    
+    # the radial orders present
+    radial_orders = np.array([0], dtype='int32')
+    # the bounds on angular degree for each radial order
+    ell_bounds = np.array([[195, 210]], dtype='int32')
+    
     rmin = 0.0
     rmax = 1.0
     rth = 0.98
     smax = 5
     fwindow =  150 
-    # args = FN.create_argparser()
-    n0 = 0
-    ell0 = 200
     precompute = False
     use_precomputed = False
 
@@ -98,11 +103,30 @@ class GlobalVars():
         self.fwindow = qdPars.fwindow
 
         # the rotation profile                                                                                                                                                        
-        wsr = np.loadtxt(f'{self.datadir}/w.dat')
+        self.wsr = np.loadtxt(f'{self.datadir}/w_s/w.dat')
+
+        # generating the multiplets which we will use
+        n_arr, ell_arr = self.get_mult_arrays(load_from_file=False,
+                                             radial_orders=qdPars.radial_orders,
+                                             ell_bounds=qdPars.ell_bounds)
+
+        print(n_arr, ell_arr)
+        # getting the pruned multiplets
+        self.pruned_multiplets = load_multiplets.load_multiplets(self, n_arr, ell_arr)
+
+        # not needed anymore
+        del self.omega_list
+        del self.nl_all
+        del self.nl_all_list
 
         # retaining only region between rmin and rmax
         self.r = self.mask_minmax(self.r)
-        wsr = wsr[:,rmin_ind:rmax_ind]
+        self.wsr = self.mask_minmax(self.wsr)
+        self.pruned_multiplets.U_arr = self.mask_minmax(self.pruned_multiplets.U_arr, axis=1)
+        self.pruned_multiplets.V_arr = self.mask_minmax(self.pruned_multiplets.V_arr, axis=1)
+
+
+        print(self.pruned_multiplets.U_arr.shape)
         
         # the factor to be multiplied to make the upper and lower 
         # bounds of the model space to be explored
@@ -111,18 +135,69 @@ class GlobalVars():
 
 
         # converting to device array once
-        self.wsr = jnp.array(wsr)   
+        self.wsr = jnp.array(self.wsr)   
         self.r = jnp.array(self.r)
-        self.omega_list = jnp.array(self.omega_list)
+        self.pruned_multiplets.nl_pruned = jnp.array(self.pruned_multiplets.nl_pruned)
+        self.pruned_multiplets.omega_pruned = jnp.array(self.pruned_multiplets.omega_pruned)
+        self.pruned_multiplets.U_arr = jnp.array(self.pruned_multiplets.U_arr)
+        self.pruned_multiplets_V_arr = jnp.array(self.pruned_multiplets.V_arr)
         self.fac_up = jnp.array(self.fac_up)
         self.fac_lo = jnp.array(self.fac_lo)
         
         # rth = r threshold beyond which the profiles are updated. 
         self.rth = qdPars.rth
         
-        self.n0 = qdPars.n0
-        self.ell0 = qdPars.ell0
+    def get_all_GVAR(self):
+        '''Builds and returns the relevant dictionaries.
+        At the location of this function call, the GVARS
+        class instance containing all the other miscellaneous 
+        arrays like nl_all and omega_list should be deleted.
+        '''
+
+        # the global path variables                                                                                                                                                              
+        GVAR_PATHS = self.get_namedtuple_gvar_paths()
+        # the global traced variables                                                                                                                                                            
+        GVAR_TR = self.get_namedtuple_gvar_traced()
+        # the global static variables                                                                                                                                                            
+        GVAR_ST = self.get_namedtuple_gvar_static()
+    
+        # returns the relevant dictionaries
+        return GVAR_PATHS, GVAR_TR, GVAR_ST 
         
+    def get_mult_arrays(self, load_from_file=False, 
+                        radial_orders=np.array([0]), ell_bounds=np.array([195, 210])):
+        '''Creates the n array and ell array. If discontonuous ell then load from a 
+        pregenerated file.
+        
+        Parameters:
+        -----------
+        load_from_file: boolean
+                        Whether to just load n_arr and ell_arr from a pregenerated file.
+        radial_orders: array_like
+                        An array of all the radial orders for which ell_arr will be generated.
+        ell_bounds: array_like
+                        An array of bounds of angular degrees for each radial order in `radial_orders`.
+        '''
+        
+        n_arr = np.array([], dtype='int32')
+        ell_arr = np.array([], dtype='int32')
+        
+        # loading from a file. Must be saved in the (nmults, 2) shape
+        if(load_from_file):
+            mults = np.load('qdpy_multiplets.npy')
+            n_arr, ell_arr = mults[:, 0], mults[:, 1]
+        
+        # creating the arrays when the ells are continuous in each radial orders
+        else:
+            for i, n in enumerate(radial_orders):
+                ell_min, ell_max = ell_bounds[i]
+                for ell in range(ell_min, ell_max+1):
+                    n_arr = np.append(n_arr, n)
+                    ell_arr = np.append(ell_arr, ell)
+
+        return n_arr, ell_arr
+            
+       
     def get_namedtuple_gvar_paths(self):
         """Function to create the namedtuple containing the 
         various global paths for reading and writing files.
@@ -157,11 +232,12 @@ class GlobalVars():
                                                   'rmax_ind',
                                                   'fac_up',
                                                   'fac_lo',
-                                                  'nl_all',
-                                                  'nl_all_list',
-                                                  'omega_list',
+                                                  'nl_pruned',
+                                                  'omega_pruned',
                                                   'wsr',
-                                                  'OM'])
+                                                  'OM',
+                                                  'U_arr',
+                                                  'V_arr'])
 
         GVAR_TRACED = GVAR_TRACED_(self.fwindow,
                                    self.r,
@@ -170,11 +246,12 @@ class GlobalVars():
                                    self.rmax_ind,
                                    self.fac_up,
                                    self.fac_lo,
-                                   self.nl_all,
-                                   self.nl_all_list,
-                                   self.omega_list,
+                                   self.pruned_multiplets.nl_pruned,
+                                   self.pruned_multiplets.omega_pruned,
                                    self.wsr,
-                                   self.OM)
+                                   self.OM,
+                                   self.pruned_multiplets.U_arr,
+                                   self.pruned_multiplets.V_arr)
 
         return GVAR_TRACED
         
@@ -193,5 +270,8 @@ class GlobalVars():
     def get_ind(self, arr, val):
         return abs(arr - val).argmin()
 
-    def mask_minmax(self, arr):
-        return arr[self.rmin_ind:self.rmax_ind]
+    def mask_minmax(self, arr, axis=0):
+        # if we want to clip the second axis (example in U_arr and V_arr)
+        if(axis==1):
+            return arr[:, self.rmin_ind:self.rmax_ind]
+        else: return arr[self.rmin_ind:self.rmax_ind]
