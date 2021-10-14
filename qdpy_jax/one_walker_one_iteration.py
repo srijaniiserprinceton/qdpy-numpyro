@@ -3,12 +3,15 @@ import jax.tree_util as tu
 from collections import namedtuple
 import numpy as np
 import time
+import sys
 
+'''
 # old package in numpy
 import qdPy
 from qdPy import globalvars as gvar
 from qdPy import qdclasses as qdcls
 from qdPy import w_Bsplines as w_Bsp
+'''
 
 # new package in jax.numpy
 from qdpy_jax import gnool_jit as gjit
@@ -18,39 +21,27 @@ from qdpy_jax import globalvars as gvar_jax
 
 #------((( creating the namedtuples of global variables --------                                                                                                          
 GVARS = gvar_jax.GlobalVars()
-# the global path variables                                                                                                                                                         
-GVARS_PATHS = GVARS.get_namedtuple_gvar_paths()
-# the global traced variables                                                                                                                                                  
-GVARS_TR = GVARS.get_namedtuple_gvar_traced()
-# the global static variables                                                                                                                                                          
-GVARS_ST = GVARS.get_namedtuple_gvar_static()
+# extracting only the required global variables
+# for the multiplets of interest                                                                                                                                                       
+GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
+# deleting all large arrays which won't be used anymore
+del GVARS
+
 #------- creating the namedtuples of global variables )))-------   
-
-
-# the radial branch [choosing f-branch for testing purposes]
-# this array of multiplets needs to be built separately from hmi file
-# ell0_arr = np.arange(195, 290, dtype='int32')
-ell0_arr = np.arange(195, 197, dtype='int32')
-n0_arr = np.zeros_like(ell0_arr, dtype='int32')
-
-NMULTS = len(ell0_arr)
-
-# finding the omega0 for all the multiplets
-omega0_arr = np.zeros(len(ell0_arr))
-
-for i in range(NMULTS):
-    omega0_arr[i] = 1
 
 # namedtuple containing the central multiplet and its frequencies
 CENMULT_ = namedtuple('CENMULT', ['n0_arr',
                                   'ell0_arr',
                                   'omega0_arr'])
 
-CENMULT = CENMULT_(n0_arr, ell0_arr, omega0_arr)
+CENMULT = CENMULT_(GVARS_ST.nl_pruned[:,0],
+                   GVARS_ST.nl_pruned[:,1],
+                   GVARS_ST.omega_pruned)
+
 
 # jitting various functions
-get_namedtuple_for_cenmult_and_neighbours_ = jax.jit(build_CENMULT_AND_NBS.get_namedtuple_for_cenmult_and_neighbours,
-                                                     static_argnums = (0,1))
+get_namedtuple_for_cenmult_and_neighbours_ = gjit.gnool_jit(build_CENMULT_AND_NBS.get_namedtuple_for_cenmult_and_neighbours,
+                                                            static_array_argnums = (0,1,2))
 
 build_SUBMAT_INDICES_ = gjit.gnool_jit(build_supmat.build_SUBMAT_INDICES, static_array_argnums=(0,))
 
@@ -62,12 +53,13 @@ build_supermatrix_ = gjit.gnool_jit(build_supmat_funcs.get_func2build_supermatri
 # looping over the ells
 t1c = time.time()
 
-for i in range(NMULTS):
+for i in range(GVARS_TR.nmults):
     n0, ell0, omega0 = CENMULT.n0_arr[i], CENMULT.ell0_arr[i], CENMULT.omega0_arr[i]
 
     # building the namedtuple for the central multiplet and its neighbours
-    CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0)
+    CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0, GVARS_ST, GVARS_TR)
     CENMULT_AND_NBS = tu.tree_map(lambda x: np.array(x), CENMULT_AND_NBS)
+
     print(CENMULT_AND_NBS)
     
     SUBMAT_DICT = build_SUBMAT_INDICES_(CENMULT_AND_NBS)
@@ -86,7 +78,7 @@ for i in range(NMULTS):
     n0, ell0, omega0 = CENMULT.n0_arr[i], CENMULT.ell0_arr[i], CENMULT.omega0_arr[i]
 
     # building the namedtuple for the central multiplet and its neighbours
-    CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0)
+    CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0, GVARS_ST, GVARS_TR)
     CENMULT_AND_NBS = tu.tree_map(lambda x: np.array(x), CENMULT_AND_NBS)
 
     SUBMAT_DICT = build_SUBMAT_INDICES_(CENMULT_AND_NBS)
@@ -98,6 +90,7 @@ for i in range(NMULTS):
     
 t2e = time.time()
 
+sys.exit()
 
 
 class Args():

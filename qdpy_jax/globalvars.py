@@ -97,7 +97,7 @@ class GlobalVars():
         if self.rmin == 0:
             self.rmin_ind += 1
         self.rmax_ind = self.get_ind(self.r, self.rmax)
-        # print(f"rmin index = {self.rmin_idx}; rmax index = {self.rmax_idx}")
+        
 
         self.smax = qdPars.smax
         self.fwindow = qdPars.fwindow
@@ -110,7 +110,7 @@ class GlobalVars():
                                              radial_orders=qdPars.radial_orders,
                                              ell_bounds=qdPars.ell_bounds)
 
-        print(n_arr, ell_arr)
+    
         # getting the pruned multiplets
         self.pruned_multiplets = load_multiplets.load_multiplets(self, n_arr, ell_arr)
 
@@ -125,8 +125,6 @@ class GlobalVars():
         self.pruned_multiplets.U_arr = self.mask_minmax(self.pruned_multiplets.U_arr, axis=1)
         self.pruned_multiplets.V_arr = self.mask_minmax(self.pruned_multiplets.V_arr, axis=1)
 
-
-        print(self.pruned_multiplets.U_arr.shape)
         
         # the factor to be multiplied to make the upper and lower 
         # bounds of the model space to be explored
@@ -135,6 +133,7 @@ class GlobalVars():
 
 
         # converting to device array once
+        '''
         self.wsr = jnp.array(self.wsr)   
         self.r = jnp.array(self.r)
         self.pruned_multiplets.nl_pruned = jnp.array(self.pruned_multiplets.nl_pruned)
@@ -143,7 +142,7 @@ class GlobalVars():
         self.pruned_multiplets_V_arr = jnp.array(self.pruned_multiplets.V_arr)
         self.fac_up = jnp.array(self.fac_up)
         self.fac_lo = jnp.array(self.fac_lo)
-        
+        '''
         # rth = r threshold beyond which the profiles are updated. 
         self.rth = qdPars.rth
         
@@ -225,31 +224,25 @@ class GlobalVars():
         various global attributes that can be traced by JAX.
         """
         
-        GVAR_TRACED_ = namedtuple('GVAR_TRACED', ['fwindow',
-                                                  'r',
+        GVAR_TRACED_ = namedtuple('GVAR_TRACED', ['r',
                                                   'rth',
                                                   'rmin_ind',
                                                   'rmax_ind',
                                                   'fac_up',
                                                   'fac_lo',
-                                                  'nl_pruned',
-                                                  'omega_pruned',
+                                                  'nmults',
                                                   'wsr',
-                                                  'OM',
                                                   'U_arr',
                                                   'V_arr'])
 
-        GVAR_TRACED = GVAR_TRACED_(self.fwindow,
-                                   self.r,
+        GVAR_TRACED = GVAR_TRACED_(self.r,
                                    self.rth,
                                    self.rmin_ind,
                                    self.rmax_ind,
                                    self.fac_up,
                                    self.fac_lo,
-                                   self.pruned_multiplets.nl_pruned,
-                                   self.pruned_multiplets.omega_pruned,
+                                   len(self.pruned_multiplets.omega_pruned),
                                    self.wsr,
-                                   self.OM,
                                    self.pruned_multiplets.U_arr,
                                    self.pruned_multiplets.V_arr)
 
@@ -261,9 +254,17 @@ class GlobalVars():
         various global attributes that are static arguments.
         """
         
-        GVAR_STATIC_ = namedtuple('GVAR_STATIC', ['smax'])
+        GVAR_STATIC_ = namedtuple('GVAR_STATIC', ['smax',
+                                                  'nl_pruned',
+                                                  'omega_pruned',
+                                                  'fwindow',
+                                                  'OM'])
 
-        GVAR_STATIC = GVAR_STATIC_(self.smax)
+        GVAR_STATIC = GVAR_STATIC_(self.smax,
+                                   self.pruned_multiplets.nl_pruned,
+                                   self.pruned_multiplets.omega_pruned,
+                                   self.fwindow,
+                                   self.OM)
         
         return GVAR_STATIC
 

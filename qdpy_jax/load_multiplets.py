@@ -42,8 +42,6 @@ class load_multiplets:
         '''
         nmults = len(self.nl_pruned)
 
-        print(self.nl_pruned.shape)
-
         U_arr = np.zeros((nmults, len(self.GVAR.r)))
         V_arr = np.zeros((nmults, len(self.GVAR.r)))
 

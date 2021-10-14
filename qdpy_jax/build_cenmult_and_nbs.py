@@ -14,20 +14,19 @@ from qdpy_jax import gnool_jit as gjit
 #------((( creating the namedtuples of global variables --------
 
 GVARS = globalvars.GlobalVars()
-# the global path variables
-GVARS_PATHS = GVARS.get_namedtuple_gvar_paths()
-# the global traced variables
-GVARS_TR = GVARS.get_namedtuple_gvar_traced()
-# the global static variables 
-GVARS_ST = GVARS.get_namedtuple_gvar_static()
+# extracting only the required global variables                                                                                                                                          
+# for the multiplets of interest                                                                                                                                                         
+GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
+# deleting all large arrays which won't be used anymore                                                                                                                                  
+del GVARS
 
 #------- creating the namedtuples of global variables )))-------
 
 #--------------((( creating qdptMode namedtuple ----------------
 
-def nl_idx(n0, l0):
+def nl_idx(n0, ell0):
     try:
-        idx = GVARS_TR.nl_all_list.index([n0, l0])
+        idx = GVARS_ST.nl_pruned.tolist().index([n0,ell0]) 
     except ValueError:
         idx = None
         logger.error('Mode not found')
@@ -45,35 +44,36 @@ def get_omega_neighbors(nl_idx):
     nlnum = len(nl_idx)
     omega_neighbors = np.zeros(nlnum)
     for i in range(nlnum):
-        omega_neighbors[i] = GVARS_TR.omega_list[nl_idx[i]]
+        omega_neighbors[i] = GVARS_ST.omega_pruned[nl_idx[i]]
     return omega_neighbors
 
-def get_namedtuple_for_cenmult_and_neighbours(n0, ell0):
+def get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST, GVARS_TR):
     """Function that returns the name tuple for the
     attributes of the central mode and the neighbours for 
     that central mode. n0 and ell0 are static since everything
     else depends on n0 and ell0."""
 
-    # unperturbed frequency of central multiplet (n0, ell0)
-    mult_idx = GVARS_TR.nl_all_list.index([n0, ell0])
-    omega0 = GVARS_TR.omega_list[mult_idx]
-
+    omega_pruned = GVARS_ST.omega_pruned
+    nl_pruned = GVARS_ST.nl_pruned
     
-    omega_list = GVARS_TR.omega_list
-    nl_all = GVARS_TR.nl_all
-    omega_diff = (omega_list - omega0) * GVARS_TR.OM * 1e6
+    # unperturbed frequency of central multiplet (n0, ell0)
+    mult_idx = np.in1d(nl_pruned[:, 0], n0) * np.in1d(nl_pruned[:, 1], ell0)
+    omega0 = omega_pruned[mult_idx]
+    
+    # frequency distances from central multiplet
+    omega_diff = (omega_pruned - omega0) * GVARS_ST.OM * 1e6
 
     # defining various masks to minimize the multiplet-couplings
  
     # rejecting modes far in frequency
-    mask_omega = abs(omega_diff) <= GVARS_TR.fwindow 
+    mask_omega = abs(omega_diff) <= GVARS_ST.fwindow 
     
     # rejecting modes that don't satisfy triangle inequality
-    mask_ell = abs(nl_all[:, 1] - ell0) <= GVARS_ST.smax
+    mask_ell = abs(nl_pruned[:, 1] - ell0) <= GVARS_ST.smax
 
     # only even l1-l2 is coupled for odd-s rotation perturbation
-    # this is specific to the fact that DR is considered for odd s only
-    mask_odd = ((GVARS_TR.nl_all[:, 1] - ell0)%2) == 0
+    # this is specific to the fact that dr is considered for odd s only
+    mask_odd = ((nl_pruned[:, 1] - ell0)%2) == 0
     
     # creating the final mask accounting for all of the masks above
     mask_nb = mask_omega * mask_ell * mask_odd
@@ -82,7 +82,7 @@ def get_namedtuple_for_cenmult_and_neighbours(n0, ell0):
     sort_idx = np.argsort(abs(omega_diff[mask_nb]))
     
     # the final attributes that will be stored
-    nl_neighbours = nl_all[mask_nb][sort_idx]
+    nl_neighbours = nl_pruned[mask_nb][sort_idx]
     nl_neighbours_idx = nl_idx_vec(nl_neighbours)
     omega_neighbours = get_omega_neighbors(nl_neighbours_idx)
     num_neighbours = len(nl_neighbours_idx)
