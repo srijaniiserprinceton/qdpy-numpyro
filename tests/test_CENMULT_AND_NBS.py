@@ -3,6 +3,7 @@ from jax import jit
 from qdpy_jax import build_cenmult_and_nbs as build_CENMULT_AND_NBS_jax
 from qdpy_numpy import build_cenmult_and_nbs as build_CENMULT_AND_NBS_np                                                                                                                
 from qdpy_jax import globalvars
+from qdpy_jax import gnool_jit as gjit
 
 #------((( creating the namedtuples of global variables --------                                                                                                                        
 GVARS = globalvars.GlobalVars()
@@ -16,8 +17,8 @@ del GVARS
 def test_build_CENMULT_AND_NBS():
     
     # obtaining the namedtuple for the central mode and its neighbours                                                                                                         
-    get_namedtuple_for_cenmult_and_neighbours_ = jit(build_CENMULT_AND_NBS_jax.get_namedtuple_for_cenmult_and_neighbours,
-                                                     static_argnums = (0,1,2))
+    get_namedtuple_for_cenmult_and_neighbours_ = gjit.gnool_jit(build_CENMULT_AND_NBS_jax.get_namedtuple_for_cenmult_and_neighbours,
+                                                                static_array_argnums = (0,1,2))
 
     # defining the radial order
     n0 = 0
@@ -25,7 +26,8 @@ def test_build_CENMULT_AND_NBS():
     #-----------------------------------------------------------------------------------------------
     # RUNNING IN STANDARD NUMPY
     t1n = time.time()                                                                                                                                                               
-    for ell0 in range(195, 290):                                                                                                                                               
+    for i in range(GVARS_TR.nmults):                                                                                                                                               
+        n0, ell0 = GVARS_ST.nl_pruned[i, 0], GVARS_ST.nl_pruned[i, 1]
         CENMULT_AND_NBS = build_CENMULT_AND_NBS_np.get_namedtuple_for_cenmult_and_neighbours(n0, ell0)                                                                                  
     
     # Arbitrary printing of a value since block_until_ready doesn't work for namedtuple 
@@ -36,7 +38,8 @@ def test_build_CENMULT_AND_NBS():
     #------------------------------------------------------------------------------------------------
     # COMPILING JAX
     t1c = time.time()                                                                                                                                                               
-    for ell0 in range(195, 290):                                                                                                                                               
+    for i in range(GVARS_TR.nmults):
+        n0, ell0 = GVARS_ST.nl_pruned[i, 0], GVARS_ST.nl_pruned[i, 1]
         CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0, GVARS_ST, GVARS_TR)                                                                                   
         
     # Arbitrary printing of a value since block_until_ready doesn't work for namedtuple 
@@ -47,7 +50,8 @@ def test_build_CENMULT_AND_NBS():
     #------------------------------------------------------------------------------------------------
     # EXECUTING JAX
     t1e = time.time()                                                                                                                                                            
-    for ell0 in range(195, 290):                                                                                                                                                     
+    for i in range(GVARS_TR.nmults):
+        n0, ell0 = GVARS_ST.nl_pruned[i, 0], GVARS_ST.nl_pruned[i, 1]
         CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0, GVARS_ST, GVARS_TR)                                                                                     
     
     # Arbitrary printing of a value since block_until_ready doesn't work for namedtuple    

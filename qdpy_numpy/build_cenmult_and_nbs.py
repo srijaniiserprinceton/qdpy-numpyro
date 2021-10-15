@@ -55,8 +55,6 @@ def get_namedtuple_for_cenmult_and_neighbours(n0, ell0):
     # unperturbed frequency of central multiplet (n0, ell0)
     mult_idx = np.in1d(nl_pruned[:, 0], n0) * np.in1d(nl_pruned[:, 1], ell0)
     omega0 = GVARS_ST.omega_pruned[mult_idx]
-    
-    print(omega_pruned.shape, omega0.shape)
 
     omega_diff = (omega_pruned - omega0) * GVARS_ST.OM * 1e6
 

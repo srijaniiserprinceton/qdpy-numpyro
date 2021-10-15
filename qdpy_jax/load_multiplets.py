@@ -53,8 +53,7 @@ class load_multiplets:
             idx = self.GVAR.nl_all_list.index([n, ell])
 
             U_arr[i] = np.loadtxt(f'{eigdir}/U{idx}.dat')
-            V_arr[i] = np.loadtxt(f'{eigdir}/U{idx}.dat')
+            V_arr[i] = np.loadtxt(f'{eigdir}/V{idx}.dat')
 
-        # clipping the eigenfunction to the desired radius range
-        self.U_arr = U_arr[self.GVAR.rmin_ind: self.GVAR.rmax_ind]
-        self.V_arr = V_arr[self.GVAR.rmin_ind: self.GVAR.rmax_ind]
+        self.U_arr = U_arr
+        self.V_arr = V_arr
