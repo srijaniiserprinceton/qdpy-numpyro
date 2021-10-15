@@ -24,7 +24,7 @@ def find_c_RY03(ell1, ell2, ell3, m1, m2, m3):
     R = jnp.array([[-ell1 + ell2 + ell3, ell1 - ell2 + ell3, ell1 + ell2 - ell3],
                    [ell1 - m1, ell2 - m2, ell3 - m3],
                    [ell1 + m1, ell2 + m2, ell3 + m3]]) 
-    
+
     # converting it to the Eqn.(2.11) form according to the step in
     # ~https://github.com/csdms-contrib/slepian_alpha/blob/master/wignersort.m~
 
@@ -44,6 +44,7 @@ def find_c_RY03(ell1, ell2, ell3, m1, m2, m3):
     R = jnp.roll(R, -temp[0], axis=0)
     R = jnp.roll(R, -temp[1], axis=1)
 
+
     # finding the location of the largest element L
     L_cont_ind = jnp.argmax(R)
     L_row_ind, L_col_ind = ind2sub(L_cont_ind, 3, 3)
@@ -56,14 +57,17 @@ def find_c_RY03(ell1, ell2, ell3, m1, m2, m3):
     # col swapping operations. Defining the miscellaneous
     # internal functions for jax.lax.cond
 
+
     def true_func_1(R_and_oddperm):
         R, oddperm = R_and_oddperm
         R = jnp.transpose(R)
         def true_func_1_true_func(R_and_oddperm):
             R, oddperm = R_and_oddperm
-            R = jax.ops.index_update(R,jax.ops.index[:,1:3],jnp.fliplr(R[:,1:3]))
+            R_out = R
+            R_out = jax.ops.index_update(R_out, jax.ops.index[:,1], R[:,2])
+            R_out = jax.ops.index_update(R_out, jax.ops.index[:,2], R[:,1])
             oddperm = jax.ops.index_add(oddperm,0,1)
-            return R, oddperm
+            return R_out, oddperm
             
         R_and_oddperm = jax.lax.cond(temp[0] == 2,
                                      true_func_1_true_func,
@@ -75,9 +79,11 @@ def find_c_RY03(ell1, ell2, ell3, m1, m2, m3):
     def false_func_1(R_and_oddperm):
         def false_func_1_true_func(R_and_oddperm):
             R, oddperm = R_and_oddperm
-            R = jax.ops.index_update(R,jax.ops.index[:,1:3],jnp.fliplr(R[:,1:3]))
+            R_out = R
+            R_out = jax.ops.index_update(R_out, jax.ops.index[:,1], R[:,2])
+            R_out = jax.ops.index_update(R_out, jax.ops.index[:,2], R[:,1])
             oddperm = jax.ops.index_add(oddperm,0,1)
-            return R, oddperm
+            return R_out, oddperm
 
         R_and_oddperm = jax.lax.cond(temp[1] == 2,
                                      false_func_1_true_func,
@@ -89,16 +95,20 @@ def find_c_RY03(ell1, ell2, ell3, m1, m2, m3):
     def true_func_2(R_and_oddperm):
         R, oddperm = R_and_oddperm
         oddperm = jax.ops.index_update(oddperm, 0, 1-oddperm[0])
-        R = jax.ops.index_update(R,jax.ops.index[1:3,:],jnp.flipud(R[1:3,:]))
-        return (R, oddperm)
+        R_out = R
+        R_out = jax.ops.index_update(R_out, jax.ops.index[1,:], R[2,:])
+        R_out = jax.ops.index_update(R_out, jax.ops.index[2,:], R[1,:])
+        return (R_out, oddperm)
 
     def false_func_2(R_and_oddperm):
         R, oddperm = R_and_oddperm
         def false_func_2_true_func(R_and_oddperm):
             R, oddperm = R_and_oddperm
-            R = jax.ops.index_update(R,jax.ops.index[1:3,:],jnp.flipud(R[1:3,:]))
+            R_out = R
+            R_out = jax.ops.index_update(R_out, jax.ops.index[1,:], R[2,:])
+            R_out = jax.ops.index_update(R_out, jax.ops.index[2,:], R[1,:])
             oddperm = jax.ops.index_update(oddperm, 0, 1-oddperm[0])
-            return (R, oddperm)
+            return (R_out, oddperm)
             
         R_and_oddperm = jax.lax.cond((R[2,1] == R[1,1])*(R[2,2] < R[1,2]),
                      false_func_2_true_func,
@@ -112,65 +122,59 @@ def find_c_RY03(ell1, ell2, ell3, m1, m2, m3):
                               false_func_1,
                               operand=(R, oddperm))
 
+    
     R, oddperm = jax.lax.cond(R[2,1] < R[1,1],
                               true_func_2,
                               false_func_2,
                               operand=(R, oddperm))
     
+
     # extracting regge params
     regge = jnp.array([R[0,1], R[1,0], R[2,2], R[1,1], R[0,0]])
-    
+
     # variable stores '0' is unsuccessful
     did_it_work = jax.lax.cond(issorted(regge),
                                lambda __: 1, 
                                lambda __: 0,
                                operand=None)
 
-    '''
+    
     # initializing the Regge free parameters from the matrix R
     L, X, T, B, S = regge
     
     #RY03 Eqn.(2.13)
     
-    c=L*(24+L*(50+L*(35+L*(10+L))))/120 + \
-       X*(6+X*(11+X*(6+X)))/24+T*(2+T*(3+T))/6 + \
-       B*(B+1)/2+S+1
+    c = L*(24+L*(50+L*(35+L*(10+L))))/120 + \
+        X*(6+X*(11+X*(6+X)))/24+T*(2+T*(3+T))/6 + \
+        B*(B+1)/2+S+1
     
     return c
-    '''
-    return regge, R
 
 
 # timing the functions with and without jitting
 if __name__ == "__main__":
     # wigner parameters
-    ell1, ell2, ell3 = 30, 21, 12
-    m1, m2, m3 = -22, 19, 3 
+    ell1, ell2, ell3 = 10, 10, 12
+    m1, m2, m3 = 9, 3, -12
 
     # timing the functions with and without jitting
-    Niter = 100
-
-    print(find_c_RY03(ell1, ell2, ell3, m1, m2, m3))
+    Niter = 1000
 
     # timing the unjitted version
-    t1 = time.time()
-    for __ in range(Niter): c = find_c_RY03(ell1, ell2, ell3, m1, m2, m3).block_until_ready()
-    t2 = time.time()
+    c = find_c_RY03(ell1, ell2, ell3, m1, m2, m3)
 
+    
     # timing the jitted version
     _find_c_RY03 = jax.jit(find_c_RY03)
     __ = _find_c_RY03(ell1, ell2, ell3, m1, m2, m3)
 
-    print(__)
-
+    
     t3 = time.time()
-    for __ in range(Niter): c = _find_c_RY03(ell1, ell2, ell3, m1, m2, m3).block_until_ready()
+    for __ in range(Niter): c = _find_c_RY03(ell1, ell2, ell3, m1, m2, m3)
     t4 = time.time()
 
-    L, X, T, B, S = c
-
-    print('JIT speeds up by: ', (t2-t1)/(t4-t3))
-
-    c = L*(24+L*(50+L*(35+L*(10+L))))/120 + X*(6+X*(11+X*(6+X)))/24+T*(2+T*(3+T))/6 + B*(B+1)/2+S+1
+    print('Time taken for a million computations in hours:', (t4-t3) / Niter * 1.2e9 / 3600)
 
     print(c)
+
+    
