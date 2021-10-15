@@ -90,6 +90,9 @@ for i in range(GVARS_TR.nmults):
     
 t2e = time.time()
 
+t_projected_jit = (t2e-t1e) / GVARS_TR.nmults * 1500 * 200./60.
+print('Time taken in seconds by jax-jitted for entire simulation:', t_projected_jit)
+
 sys.exit()
 
 
