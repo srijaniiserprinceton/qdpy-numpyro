@@ -59,13 +59,12 @@ for i in range(GVARS_TR.nmults):
     # building the namedtuple for the central multiplet and its neighbours
     CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0, GVARS_ST, GVARS_TR)
     CENMULT_AND_NBS = tu.tree_map(lambda x: np.array(x), CENMULT_AND_NBS)
-
-    print(CENMULT_AND_NBS)
     
     SUBMAT_DICT = build_SUBMAT_INDICES_(CENMULT_AND_NBS)
     SUBMAT_DICT = tu.tree_map(lambda x: np.array(x), SUBMAT_DICT)
     
-    supmatrix = build_supermatrix_(CENMULT_AND_NBS, SUBMAT_DICT).block_until_ready()
+    supmatrix = build_supermatrix_(CENMULT_AND_NBS, SUBMAT_DICT,
+                                   GVARS_ST, GVARS_TR).block_until_ready()
 
     print(f'Calculated supermatrix for multiplet = ({n0}, {ell0})')
 
@@ -74,7 +73,7 @@ t2c = time.time()
 # EXECUTING JAX
 t1e = time.time()
 
-for i in range(NMULTS):
+for i in range(GVARS_TR.nmults):
     n0, ell0, omega0 = CENMULT.n0_arr[i], CENMULT.ell0_arr[i], CENMULT.omega0_arr[i]
 
     # building the namedtuple for the central multiplet and its neighbours
@@ -84,7 +83,8 @@ for i in range(NMULTS):
     SUBMAT_DICT = build_SUBMAT_INDICES_(CENMULT_AND_NBS)
     SUBMAT_DICT = tu.tree_map(lambda x: np.array(x), SUBMAT_DICT)
 
-    supmatrix = build_supermatrix_(GVAR_ST, CENMULT_AND_NBS, SUBMAT_DICT).block_until_ready()
+    supmatrix = build_supermatrix_(CENMULT_AND_NBS, SUBMAT_DICT,
+                                   GVARS_ST, GVARS_TR).block_until_ready()
 
     print(f'Calculated supermatrix for multiplet = ({n0}, {ell0})')
     

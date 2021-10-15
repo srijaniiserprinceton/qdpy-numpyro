@@ -109,7 +109,7 @@ class build_supermatrix_functions:
         pass
 
     def get_func2build_supermatrix(self):
-        def build_supermatrix(CNM_AND_NBS, SUBMAT_DICT):
+        def build_supermatrix(CNM_AND_NBS, SUBMAT_DICT, GVARS_ST, GVARS_TR):
             """Function to assimilate all the neighbour info
             and return the function to compute the SuperMatrix'
             """
@@ -118,22 +118,19 @@ class build_supermatrix_functions:
             # SUBMAT_DICT = self.build_SUBMAT_DICT(CNM_AND_NBS)
 
             # tiling supermatrix with submatrices
-            supmat = self.tile_submatrices(CNM_AND_NBS, SUBMAT_DICT)
+            supmat = self.tile_submatrices(CNM_AND_NBS, SUBMAT_DICT,
+                                           GVARS_ST, GVARS_TR)
             return supmat
         return build_supermatrix
 
-    def tile_submatrices(self, GVAR_TR, GVAR_ST, CNM_AND_NBS, SUBMAT_DICT):
+    def tile_submatrices(self, CNM_AND_NBS, SUBMAT_DICT, GVARS_ST, GVARS_TR):
         """Function to loop over the submatrix blocks and tile in the
         submatrices into the supermatrix.
         """
 
         supmat = jnp.zeros((CNM_AND_NBS.dim_super,
                             CNM_AND_NBS.dim_super), dtype='float32')
-
-
-        # [1, 3, ..., smax]
-        s_arr = jnp.arange(1,GVAR_ST.smax+1,2)
-    
+            
         # finding omegaref. This is the frequency of the central mode
         # our sorting puts the central mode at the first index in nl_neighbours
         omegaref = CNM_AND_NBS.omega_nbs[0]
@@ -144,27 +141,32 @@ class build_supermatrix_functions:
                 idx1 = CNM_AND_NBS.nl_nbs_idx[i]
                 idx2 = CNM_AND_NBS.nl_nbs_idx[ii]
 
+                '''
                 U1 = np.loadtxt(f'{eig_dir}/U{idx1}.dat')
                 V1 = np.loadtxt(f'{eig_dir}/V{idx1}.dat')
 
                 U1 = U1[rmin_ind:rmax_ind]
                 V1 = V1[rmin_ind:rmax_ind]
                 U2, V2 = U1, V1
+                '''
+                U1, V1 = GVARS_TR.U_arr[idx1], GVARS_TR.V_arr[idx1]
+                U2, V2 = GVARS_TR.U_arr[idx2], GVARS_TR.V_arr[idx2]
 
-                r = jnp.array(r)
                 U1, V1 = jnp.array(U1), jnp.array(V1)
                 U2, V2 = jnp.array(U2), jnp.array(V2)
 
-                ell1 = CNM_AND_NBS.nl_nbs[0, 1]
-                ell2 = CNM_AND_NBS.nl_nbs[1, 1]
-
+                # because ii starts from i, we only scan
+                # the region where ell2 >= ell1
+                ell1 = CNM_AND_NBS.nl_nbs[i, 1]
+                ell2 = CNM_AND_NBS.nl_nbs[ii, 1]
+                
                 # creating the named tuples
                 GVAR = namedtuple('GVAR', 'r wsr s_arr')
                 QDPT_MODE = namedtuple('QDPT_MODE', 'ell1 ell2 omegaref')
                 EIGFUNCS = namedtuple('EIGFUNCS', 'U1 U2 V1 V2')
 
                 # initializing namedtuples. This could be done from a separate file later
-                gvars = GVAR(r, wsr, s_arr)
+                gvars = GVAR(GVARS_TR.r, GVARS_TR.wsr, GVARS_ST.s_arr)
                 qdpt_mode = QDPT_MODE(ell1, ell2, omegaref)
                 eigfuncs = EIGFUNCS(U1, U2, V1, V2)
 

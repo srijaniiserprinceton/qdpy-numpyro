@@ -69,7 +69,8 @@ def get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST, GVARS_TR):
     mask_omega = abs(omega_diff) <= GVARS_ST.fwindow 
     
     # rejecting modes that don't satisfy triangle inequality
-    mask_ell = abs(nl_pruned[:, 1] - ell0) <= GVARS_ST.smax
+    smax = GVARS_ST.s_arr[-1]
+    mask_ell = abs(nl_pruned[:, 1] - ell0) <= smax
 
     # only even l1-l2 is coupled for odd-s rotation perturbation
     # this is specific to the fact that dr is considered for odd s only

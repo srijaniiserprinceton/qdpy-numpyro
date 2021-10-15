@@ -100,6 +100,8 @@ class GlobalVars():
         
 
         self.smax = qdPars.smax
+        self.s_arr = np.arange(1, self.smax+1, 2)
+        
         self.fwindow = qdPars.fwindow
 
         # the rotation profile                                                                                                                                                        
@@ -121,7 +123,7 @@ class GlobalVars():
 
         # retaining only region between rmin and rmax
         self.r = self.mask_minmax(self.r)
-        self.wsr = self.mask_minmax(self.wsr)
+        self.wsr = self.mask_minmax(self.wsr, axis=1)
         self.pruned_multiplets.U_arr = self.mask_minmax(self.pruned_multiplets.U_arr, axis=1)
         self.pruned_multiplets.V_arr = self.mask_minmax(self.pruned_multiplets.V_arr, axis=1)
 
@@ -254,13 +256,13 @@ class GlobalVars():
         various global attributes that are static arguments.
         """
         
-        GVAR_STATIC_ = namedtuple('GVAR_STATIC', ['smax',
+        GVAR_STATIC_ = namedtuple('GVAR_STATIC', ['s_arr',
                                                   'nl_pruned',
                                                   'omega_pruned',
                                                   'fwindow',
                                                   'OM'])
 
-        GVAR_STATIC = GVAR_STATIC_(self.smax,
+        GVAR_STATIC = GVAR_STATIC_(self.s_arr,
                                    self.pruned_multiplets.nl_pruned,
                                    self.pruned_multiplets.omega_pruned,
                                    self.fwindow,

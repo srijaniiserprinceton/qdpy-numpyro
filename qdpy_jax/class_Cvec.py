@@ -5,7 +5,7 @@ import jax.numpy as jnp
 from collections import namedtuple
 import sys
 import os
-
+from functools import partial
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
@@ -49,8 +49,10 @@ class compute_submatrix:
     def jax_get_Cvec(self):
         def get_func_Cvec(qdpt_mode, eigfuncs):
             """Computing the non-zero components of the submatrix"""
-            # ell = jnp.minimum(ell1, ell2)
-            ell = qdpt_mode.ell1   # !!!!!!!!!!! a temporary fix. This needs to be taken care of
+
+            # ell = jnp.minimum(qdpt_mode.ell1, qdpt_mode.ell2)
+            # ell = qdpt_mode.ell1   # !!!!!!!!!!! a temporary fix. This needs to be taken care of
+            ell = qdpt_mode.ell1
             m = jnp.arange(-ell, ell+1)
             
             len_s = jnp.size(self.s_arr)
@@ -76,7 +78,6 @@ class compute_submatrix:
             # wsr[2, :] *= 0.0 # setting w5 = 0                                                                                                                               
             # wsr /= 2.0                                                                                                                                                    
             # integrand = Tsr * wsr * (self.sup.gvar.rho * self.sup.gvar.r**2)[NAX, :]                                                                                  
-
             integrand = Tsr * self.wsr   # since U and V are scaled by sqrt(rho) * r                                                                                             
             
             #### TO BE REPLACED WITH SIMPSON #####
@@ -105,6 +106,7 @@ class compute_submatrix:
         U1, U2, V1, V2 = eigfuncs.U1, eigfuncs.U2, eigfuncs.V1, eigfuncs.V2
         
         # creating internal function for the fori_loop                                                     
+        '''
         def func4Tsr_s_loop(i, Tsr):
             s = self.s_arr[i]
             ls2fac = L1sq + L2sq - s*(s+1)
@@ -118,8 +120,21 @@ class compute_submatrix:
             Tsr = jax.ops.index_update(Tsr, i, Tsr_at_i)
             
             return Tsr
+        '''
+        for i, s in enumerate(self.s_arr):
+            ls2fac = L1sq + L2sq - s*(s+1)                                                   
+            eigfac = U2*V1 + V2*U1 - U1*U2 - 0.5*V1*V2*ls2fac                                 
+            # wigval = w3j(ell1, s, ell2, -1, 0, 1)                                           
+            # using some dummy number until we write the                
+            # function for mapping wigner3js                                           
+            wigval = 1.0                                                                      
             
-        Tsr = jax.lax.fori_loop(0, len(s_arr), func4Tsr_s_loop, Tsr)
+            Tsr_at_i = -(1 - jax_minus1pow(qdpt_mode.ell1 + qdpt_mode.ell2 + s))\
+                       *Om1 * Om2 * wigval * eigfac / self.r                 
+            
+            Tsr = jax.ops.index_update(Tsr, i, Tsr_at_i)
+    
+        # Tsr = jax.lax.fori_loop(0, len(self.s_arr), func4Tsr_s_loop, Tsr)
         
         return Tsr
 
