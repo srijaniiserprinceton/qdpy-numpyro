@@ -25,6 +25,8 @@ def find_c_RY03(ell1, ell2, ell3, m1, m2, m3):
                    [ell1 - m1, ell2 - m2, ell3 - m3],
                    [ell1 + m1, ell2 + m2, ell3 + m3]]) 
 
+    print(R)
+
     # converting it to the Eqn.(2.11) form according to the step in
     # ~https://github.com/csdms-contrib/slepian_alpha/blob/master/wignersort.m~
 
@@ -138,6 +140,7 @@ def find_c_RY03(ell1, ell2, ell3, m1, m2, m3):
                                lambda __: 0,
                                operand=None)
 
+    print(R)
     
     # initializing the Regge free parameters from the matrix R
     L, X, T, B, S = regge
@@ -154,7 +157,7 @@ def find_c_RY03(ell1, ell2, ell3, m1, m2, m3):
 # timing the functions with and without jitting
 if __name__ == "__main__":
     # wigner parameters
-    ell1, ell2, ell3 = 10, 10, 12
+    ell1, ell2, ell3 = 10, 11, 12
     m1, m2, m3 = 9, 3, -12
 
     # timing the functions with and without jitting
@@ -173,7 +176,7 @@ if __name__ == "__main__":
     for __ in range(Niter): c = _find_c_RY03(ell1, ell2, ell3, m1, m2, m3)
     t4 = time.time()
 
-    print('Time taken for a million computations in hours:', (t4-t3) / Niter * 1.2e9 / 3600)
+    print('Time taken for a 1.2 billion computations in hours:', (t4-t3) / Niter * 1.2e9 / 3600)
 
     print(c)
 
