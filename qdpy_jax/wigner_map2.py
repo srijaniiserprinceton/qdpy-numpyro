@@ -16,6 +16,7 @@ def issorted(a):
 def ind2sub(cont_ind, nrows, ncols):
     return cont_ind//nrows, cont_ind%ncols
 
+@jnp.vectorize
 def find_idx(ell1, s, ell2, m):
     # New method for specific use-case of qdPy
     # /ell1 s ell2\
@@ -57,7 +58,13 @@ def foril_func(i):
 if __name__ == "__main__":
     # wigner parameters
     ell1, s, ell2 = 12, 3, 10
-    m = -9
+    # m = -9
+    m = jnp.arange(ell1)
+    ell1 = ell1*jnp.ones_like(m)
+    s = s*jnp.ones_like(m)
+    ell2 = ell2*jnp.ones_like(m)
+
+    # timing the functions with and without jitting
 
     # timing the functions with and without jitting
     Niter = 10000
