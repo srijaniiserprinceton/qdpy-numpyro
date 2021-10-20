@@ -15,6 +15,7 @@ def issorted(a):
 def ind2sub(cont_ind, nrows, ncols):
     return cont_ind//nrows, cont_ind%ncols
 
+@jnp.vectorize
 def find_c_RY03(ell1, ell2, ell3, m1, m2, m3):
     # following Rasch and Yu, 2003 (RY03)
     # /ell1 ell2 ell3\
@@ -157,8 +158,14 @@ def find_c_RY03(ell1, ell2, ell3, m1, m2, m3):
 # timing the functions with and without jitting
 if __name__ == "__main__":
     # wigner parameters
-    ell1, ell2, ell3 = 10, 11, 12
-    m1, m2, m3 = 9, 3, -12
+    ell1, ell2, ell3 = 100, 33, 122
+    m1, m2, m3 = -9, 0, 9
+    # m1 = jnp.arange(ell1)
+    # m2 = jnp.zeros_like(m1)
+    # m3 = -jnp.arange(ell1)
+    # ell1 = ell1*jnp.ones_like(m1)
+    # ell2 = ell2*jnp.ones_like(m1)
+    # ell3 = ell3*jnp.ones_like(m1)
 
     # timing the functions with and without jitting
     Niter = 1000
@@ -176,8 +183,7 @@ if __name__ == "__main__":
     for __ in range(Niter): c = _find_c_RY03(ell1, ell2, ell3, m1, m2, m3)
     t4 = time.time()
 
-    print('Time taken for a 1.2 billion computations in hours:', (t4-t3) / Niter * 1.2e9 / 3600)
+    print('Time taken for a 1.2 billion computations in hours:',
+          (t4-t3) / Niter * 1.2e9 / 3600)
 
     print(c)
-
-    
