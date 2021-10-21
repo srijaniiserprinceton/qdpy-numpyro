@@ -57,17 +57,17 @@ def foril_func(i):
 # timing the functions with and without jitting
 if __name__ == "__main__":
     # wigner parameters
-    ell1, s, ell2 = 12, 3, 10
-    # m = -9
-    m = jnp.arange(ell1)
-    ell1 = ell1*jnp.ones_like(m)
-    s = s*jnp.ones_like(m)
-    ell2 = ell2*jnp.ones_like(m)
+    ell1, s, ell2 = 120, 3, 122
+    m = -9
+    # m = jnp.arange(-ell1, ell1+1)
+    # ell1 = ell1*jnp.ones_like(m)
+    # s = s*jnp.ones_like(m)
+    # ell2 = ell2*jnp.ones_like(m)
 
     # timing the functions with and without jitting
 
     # timing the functions with and without jitting
-    Niter = 10000
+    Niter = 1000
 
     # timing the unjitted version
     c = find_idx(ell1, s, ell2, m)
