@@ -8,41 +8,41 @@ import sys
 import time
 
 # imports from qdpy_jax
-from qdpy_jax import globalvars
+# from qdpy_jax import globalvars
 from qdpy_jax import gnool_jit as gjit 
 
-GVARS = globalvars.GlobalVars()
-GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
-del GVARS
-
-def nl_idx(n0, ell0):
-    try:
-        idx = GVARS_ST.nl_pruned.tolist().index([n0, ell0]) 
-    except ValueError:
-        idx = None
-        logger.error('Mode not found')
-    return idx
-
-def nl_idx_vec(nl_list):
-    nlnum = nl_list.shape[0]
-    nlidx = np.zeros(nlnum, dtype='int32')
-    for i in range(nlnum):
-        nlidx[i] = nl_idx(nl_list[i][0],
-                          nl_list[i][1])
-    return nlidx
-
-def get_omega_neighbors(nl_idx):
-    nlnum = len(nl_idx)
-    omega_neighbors = np.zeros(nlnum)
-    for i in range(nlnum):
-        omega_neighbors[i] = GVARS_ST.omega_pruned[nl_idx[i]]
-    return omega_neighbors
+# GVARS = globalvars.GlobalVars()
+# GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
+# del GVARS
 
 def get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST, GVARS_TR):
     """Function that returns the name tuple for the
     attributes of the central mode and the neighbours for 
     that central mode. n0 and ell0 are static since everything
     else depends on n0 and ell0."""
+
+    def nl_idx(n0, ell0):
+        try:
+            idx = GVARS_ST.nl_pruned.tolist().index([n0, ell0]) 
+        except ValueError:
+            idx = None
+            logger.error('Mode not found')
+        return idx
+
+    def nl_idx_vec(nl_list):
+        nlnum = nl_list.shape[0]
+        nlidx = np.zeros(nlnum, dtype='int32')
+        for i in range(nlnum):
+            nlidx[i] = nl_idx(nl_list[i][0],
+                            nl_list[i][1])
+        return nlidx
+
+    def get_omega_neighbors(nl_idx):
+        nlnum = len(nl_idx)
+        omega_neighbors = np.zeros(nlnum)
+        for i in range(nlnum):
+            omega_neighbors[i] = GVARS_ST.omega_pruned[nl_idx[i]]
+        return omega_neighbors
 
     omega_pruned = GVARS_ST.omega_pruned
     nl_pruned = GVARS_ST.nl_pruned

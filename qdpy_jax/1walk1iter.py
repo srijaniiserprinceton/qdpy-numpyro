@@ -78,6 +78,17 @@ for i in range(GVARS_TR.nmults):
     print(f'Calculated supermatrix for multiplet = ({n0}, {ell0})')
 t2e = time.time()
 
-t_projected_jit = (t2e-t1e) / GVARS_TR.nmults * 1500 * 200./3600.
+factor4niter = 1500 * 200./3600.
+t_projected_jit = (t2e-t1e) / GVARS_TR.nmults * factor4niter
+t_projected_eigval = 2. * factor4niter
 print(f'Time taken in seconds by jax-jitted execution' +
       f' of entire simulation (1500 iterations) = {t_projected_jit:.2f} hours')
+
+print(f'Assuming 2 seconds per eigenvalue problem solving, the' +
+      f'total time taken for EV solver (1500 iterations) = {t_projected_eigval:.2f} hours')
+
+print('------------------')
+print(f'Total time taken (1500 iterations) = ' +
+      f'{(t_projected_jit + t_projected_eigval)/24.:.2f} days')
+
+print(f'Fraction of time taken for setting up EV = {t_projected_jit/t_projected_eigval:.3f}')
