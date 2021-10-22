@@ -53,18 +53,15 @@ def find_idx(ell1, s, ell2, m):
 def foril_func(i):
     return i, _find_idx(ell1, s, ell2, m)
 
-
 # timing the functions with and without jitting
 if __name__ == "__main__":
     # wigner parameters
-    ell1, s, ell2 = 120, 3, 122
-    m = -9
-    # m = jnp.arange(-ell1, ell1+1)
-    # ell1 = ell1*jnp.ones_like(m)
-    # s = s*jnp.ones_like(m)
-    # ell2 = ell2*jnp.ones_like(m)
-
-    # timing the functions with and without jitting
+    ell1, s, ell2 = 220, 5, 222
+    # m = -9
+    m = jnp.arange(-ell1, ell1+1)
+    ell1 = ell1*jnp.ones_like(m)
+    s = s*jnp.ones_like(m)
+    ell2 = ell2*jnp.ones_like(m)
 
     # timing the functions with and without jitting
     Niter = 1000
@@ -72,15 +69,13 @@ if __name__ == "__main__":
     # timing the unjitted version
     c = find_idx(ell1, s, ell2, m)
 
-    
     # timing the jitted version
     _find_idx = jax.jit(find_idx)
     __ = _find_idx(ell1, s, ell2, m)
 
-    
     t3 = time.time()
     for __ in range(Niter): idx1, idx2, fac = _find_idx(ell1, s, ell2, m)
     t4 = time.time()
 
-    print('Time taken for a 1.2 billion computations in hours:',
-          (t4-t3) / Niter * 1.2e9 / 3600)
+    print(f'Time taken for a 1.2 billion computations in hours:' +
+          f' {(t4-t3) / Niter * 1.2e9 / 3600:.2f}')

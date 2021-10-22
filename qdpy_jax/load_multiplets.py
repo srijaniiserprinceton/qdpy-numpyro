@@ -1,10 +1,11 @@
 import numpy as np
+from qdpy_jax import globalvars as gvar_jax
 
 class load_multiplets:
     '''Picks out the multiplets and creates a  
     the list of multiplets and their original
     index in the naming convention of files.
-    
+
     Parameters:
     -----------
     GVARS: dictionary
@@ -26,7 +27,6 @@ class load_multiplets:
         self.prune_multiplets(n_arr, ell_arr)
         self.load_eigs()
 
-
     def prune_multiplets(self, n_arr, ell_arr):
         nl_all = self.GVAR.nl_all
         # building a mask to prune only the desired multiplets
@@ -35,7 +35,6 @@ class load_multiplets:
         # the desired multiplets 
         self.nl_pruned = nl_all[mask_mults]
         self.omega_pruned = self.GVAR.omega_list[mask_mults]
-        
     
     def load_eigs(self):
         '''Loading the eigenfunctions only for the pruned multiplets.

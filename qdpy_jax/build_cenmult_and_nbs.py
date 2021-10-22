@@ -1,32 +1,23 @@
 import jax
-import jax.numpy as jnp
-# we still need numpy for the static variables
-# for example, variables that conrtol the dimensions of matrices
 import numpy as np   
+import jax.numpy as jnp
 from collections import namedtuple
 from functools import partial
+
 import sys
 import time
+
 # imports from qdpy_jax
 from qdpy_jax import globalvars
 from qdpy_jax import gnool_jit as gjit 
 
-#------((( creating the namedtuples of global variables --------
-
 GVARS = globalvars.GlobalVars()
-# extracting only the required global variables                                                                                                                                          
-# for the multiplets of interest                                                                                                                                                         
 GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
-# deleting all large arrays which won't be used anymore                                                                                                                                  
 del GVARS
-
-#------- creating the namedtuples of global variables )))-------
-
-#--------------((( creating qdptMode namedtuple ----------------
 
 def nl_idx(n0, ell0):
     try:
-        idx = GVARS_ST.nl_pruned.tolist().index([n0,ell0]) 
+        idx = GVARS_ST.nl_pruned.tolist().index([n0, ell0]) 
     except ValueError:
         idx = None
         logger.error('Mode not found')
@@ -64,7 +55,6 @@ def get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST, GVARS_TR):
     omega_diff = (omega_pruned - omega0) * GVARS_ST.OM * 1e6
 
     # defining various masks to minimize the multiplet-couplings
- 
     # rejecting modes far in frequency
     mask_omega = abs(omega_diff) <= GVARS_ST.fwindow 
     
