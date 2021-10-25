@@ -77,6 +77,10 @@ for i in range(len(GVARS.n0_arr)):
                                                         wig_list, idx1_list,
                                                         idx2_list)
 
+wig_idx_full = np.zeros((len(wig_list), 2), dtype=np.int32)
+wig_idx_full[:, 0] = idx1_list
+wig_idx_full[:, 1] = idx2_list
+
 nl_pruned, nl_idx_pruned, omega_pruned = get_pruned_multiplets(nl_pruned,
                                                                omega_pruned,
                                                                GVARS_ST.nl_all)
@@ -89,6 +93,7 @@ lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
                                      nl_idx_pruned,
                                      omega_pruned)
 
+
 GVARS_PRUNED_TR = jf.create_namedtuple('GVARS_TR',
                                        ['r',
                                         'rth',
@@ -98,7 +103,8 @@ GVARS_PRUNED_TR = jf.create_namedtuple('GVARS_TR',
                                         'fac_lo',
                                         'wsr',
                                         'U_arr',
-                                        'V_arr'],
+                                        'V_arr',
+                                        'wig_list'],
                                        (GVARS_TR.r,
                                         GVARS_TR.rth,
                                         GVARS_TR.rmin_ind,
@@ -107,7 +113,8 @@ GVARS_PRUNED_TR = jf.create_namedtuple('GVARS_TR',
                                         GVARS_TR.fac_lo,
                                         GVARS_TR.wsr,
                                         lm.U_arr,
-                                        lm.V_arr))
+                                        lm.V_arr,
+                                        np.array(wig_list)))
 
 GVARS_PRUNED_ST = jf.create_namedtuple('GVARS_ST',
                                        ['s_arr',
@@ -115,21 +122,19 @@ GVARS_PRUNED_ST = jf.create_namedtuple('GVARS_ST',
                                         'nl_idx_pruned',
                                         'omega_list',
                                         'fwindow',
-                                        'OM'],
+                                        'OM',
+                                        'wig_idx1',
+                                        'wig_idx2',
+                                        'wig_idx_full'],
                                        (GVARS_ST.s_arr,
                                         lm.nl_pruned,
                                         lm.nl_idx_pruned,
                                         lm.omega_pruned,
                                         GVARS_ST.fwindow,
-                                        GVARS_ST.OM))
-
-WIGNERS_ST = jf.create_namedtuple('WIGNERS',
-                                  ['wig_list',
-                                   'idx1_list',
-                                   'idx2_list'],
-                                  (wig_list,
-                                   idx1_list,
-                                   idx2_list))
+                                        GVARS_ST.OM,
+                                        np.array(idx1_list, dtype=np.int32),
+                                        np.array(idx2_list, dtype=np.int32),
+                                        wig_idx_full))
 
 nmults = len(GVARS.n0_arr)
 

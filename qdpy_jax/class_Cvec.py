@@ -8,6 +8,9 @@ import os
 from functools import partial
 from jax.lax import fori_loop as foril
 
+from qdpy_jax import wigner_map2 as wigmap
+from qdpy_jax import gnool_jit as gjit
+
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
 data_dir = f"{package_dir}/qdpy_jax"
@@ -39,36 +42,50 @@ def jax_gamma(ell):
     """Computes gamma_ell"""
     return jnp.sqrt((2*ell + 1)/4/jnp.pi)
 
+# _find_idx = gjit.gnool_jit(wigmap.find_idx, static_array_argnums=(3.))
+
 
 class compute_submatrix:
     def __init__(self, gvars):
         self.r = gvars.r
         self.s_arr = gvars.s_arr
         self.wsr = gvars.wsr
-        
+
     def jax_get_Cvec(self):
-        def get_func_Cvec(qdpt_mode, eigfuncs):
+        def get_func_Cvec(qdpt_mode, eigfuncs, wigs):
             """Computing the non-zero components of the submatrix"""
 
-            # ell = jnp.minimum(qdpt_mode.ell1, qdpt_mode.ell2)
-            # ell = qdpt_mode.ell1   # !!!!!!!!!!! a temporary fix.
-            #This needs to be taken care of
+            wig_idx_full = wigs.wig_idx_full.tolist()
+            lenidx = len(wig_idx_full)
 
-            # ell = jax.lax.cond(qdpt_mode.ell1 > qdpt_mode.ell2,
-            #                    lambda ell: qdpt_mode.ell2,
-            #                    lambda ell: qdpt_mode.ell1,
-            #                    operand=None)
+            ell1 = qdpt_mode.ell1
+            ell2 = qdpt_mode.ell2
             ell = qdpt_mode.ellmin
             m = jnp.arange(-ell, ell+1)
             len_s = jnp.size(self.s_arr)
             wigvals = jnp.zeros((2*ell+1, len_s))
-            
-            # for i in range(len_s):
-            #    wigvals[:, i] = w3j_vecm(ell1, s_arr[i], ell2, -m, 0*m, m)
-            
-            wigvals = foril(0, len_s, lambda i, wigvals:\
-                            jax.ops.index_update(wigvals,jax.ops.index[:,i],1), wigvals)
-            
+
+            '''
+            def modify_wig(iess, wigvals):
+                idx1, idx2, fac = _find_idx(ell1, s_arr[iess], ell2, m)
+                def modify_wig_ell(iell, wigvals):
+                    idx = wig_idx_full.index([idx1[iell], idx2[iell]])
+                    return jax.ops.index_update(wigvals,
+                                                jax.ops.index[iell],
+                                                fac[iell]*wigs.wigs_list[iell])
+                                                
+                wigvals = jax.ops.index_update(wigvals,
+                                               jax.ops.index[:, iess],
+                                               foril(0, lenidx,
+                                                     modify_wig_ell, wigvals))
+                return wigvals
+            wigvals = foril(0, len_s, modify_wig, wigvals)
+            '''
+
+            wigvals = foril(0, len_s, lambda i, __:
+                            jax.ops.index_update(wigvals,
+                                                 jax.ops.index[:, i], 1), wigvals)
+
             # Tsr = jax_compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2)
             Tsr = self.jax_compute_Tsr(qdpt_mode, eigfuncs)
             # -1 factor from definition of toroidal field
@@ -82,35 +99,35 @@ class compute_submatrix:
             # wsr /= 2.0
             # integrand = Tsr * wsr * (self.sup.gvar.rho * self.sup.gvar.r**2)[NAX, :]
             integrand = Tsr * self.wsr   # since U and V are scaled by sqrt(rho) * r
-            
+
             #### TO BE REPLACED WITH SIMPSON #####
             integral = jnp.trapz(integrand, axis=1, x=self.r)
-            
+
             prod_gammas = (jax_gamma(qdpt_mode.ell1) *
                            jax_gamma(qdpt_mode.ell2) *
                            jax_gamma(self.s_arr))
             omegaref = qdpt_mode.omegaref
             Cvec = (jax_minus1pow_vec(m) * 8*jnp.pi *
                     qdpt_mode.omegaref * (wigvals @ (prod_gammas * integral)))
-            
+
             return Cvec
-            
+
         return get_func_Cvec
-        
+
     #def jax_compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2):
     def jax_compute_Tsr(self, qdpt_mode, eigfuncs): 
         """Computing the kernels which are used for obtaining the
         submatrix elements.
         """
         Tsr = jnp.zeros((len(self.s_arr), len(self.r)))
-        
+
         L1sq = qdpt_mode.ell1*(qdpt_mode.ell1+1)
         L2sq = qdpt_mode.ell2*(qdpt_mode.ell2+1)
         Om1 = jax_Omega(qdpt_mode.ell1, 0)
         Om2 = jax_Omega(qdpt_mode.ell2, 0)
-        
+
         U1, U2, V1, V2 = eigfuncs.U1, eigfuncs.U2, eigfuncs.V1, eigfuncs.V2
-        
+
         # creating internal function for the foril
         def func4Tsr_s_loop(i, iplist):
             Tsr, s_arr = iplist
@@ -127,7 +144,7 @@ class compute_submatrix:
             Tsr_at_i = -(1 - jax_minus1pow(ell1 + ell2 + s)) * \
                        Om1 * Om2 * wigval * eigfac / r
             Tsr = jax.ops.index_update(Tsr, i, Tsr_at_i)
-            
+
             return (Tsr, s_arr)
         '''
         for i, s in enumerate(self.s_arr):
@@ -142,7 +159,6 @@ class compute_submatrix:
                        *Om1 * Om2 * wigval * eigfac / self.r
             Tsr = jax.ops.index_update(Tsr, i, Tsr_at_i)
         '''
-    
         Tsr, s_arr = foril(0, len(self.s_arr), func4Tsr_s_loop, (Tsr, self.s_arr))
         return Tsr
 

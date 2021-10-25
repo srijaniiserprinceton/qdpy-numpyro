@@ -156,6 +156,7 @@ class build_supermatrix_functions:
                                              (GVARS_TR.r,
                                               GVARS_TR.wsr,
                                               GVARS_ST.s_arr))
+
                 qdpt_mode = jf.create_namedtuple('QDPT_MODE',
                                                  ['ell1',
                                                   'ell2',
@@ -172,8 +173,18 @@ class build_supermatrix_functions:
                                                 (U1, U2,
                                                  V1, V2))
 
+                wigs = jf.create_namedtuple('WIGNERS',
+                                            ['wig_list',
+                                             'wig_idx1',
+                                             'wig_idx2',
+                                             'wig_idx_full'],
+                                            (GVARS_TR.wig_list,
+                                             GVARS_ST.wig_idx1,
+                                             GVARS_ST.wig_idx2,
+                                             GVARS_ST.wig_idx_full))
+
                 get_submat = cvec.compute_submatrix(gvars)
-                submatdiag = get_submat.jax_get_Cvec()(qdpt_mode, eigfuncs)
+                submatdiag = get_submat.jax_get_Cvec()(qdpt_mode, eigfuncs, wigs)
 
                 startx, starty = SUBMAT_DICT.startx[i,ii], SUBMAT_DICT.starty[i,ii]
                 endx, endy = SUBMAT_DICT.endx[i,ii], SUBMAT_DICT.endy[i,ii]

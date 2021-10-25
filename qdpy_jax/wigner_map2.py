@@ -91,13 +91,11 @@ def get_wigners(nl_nbs, wig_list, idx1_list, idx2_list):
                     exists = False
 
                 if not exists:
-                    print(f'{ell1} {s} {ell2}')
                     wigvals = w3j_vecm(ell1, s, ell2, -m, 0*m, m)
                     idx1_list.extend(list(idx1))
                     idx2_list.extend(list(idx2))
                     wig_list.extend(list(wigvals))
     return wig_list, idx1_list, idx2_list
-
 
 
 # function to check if the elements of a 1D array are sorted
