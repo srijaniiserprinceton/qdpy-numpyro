@@ -9,6 +9,7 @@ from functools import partial
 
 from qdpy_jax import gnool_jit as gjit
 from qdpy_jax import class_Cvec as cvec
+from qdpy_jax import jax_functions as jf
 
 '''
 current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -22,37 +23,6 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
     """Returns the namedtuple containing the tiling information
     of the submatrices inside the supermatrix.
     """
-    # dim_blocks = np.size(CNM_AND_NBS.omega_nbs)
-    # supermatix can be tiled with submatrices corresponding to
-    # (l, n) - (l', n') coupling. The dimensions of the submatrix
-    # is (2l+1, 2l'+1)
-    dim_blocks = CNM_AND_NBS.dim_blocks
-
-    dimX_submat = 2*CNM_AND_NBS.nl_nbs[:, 1].reshape(1, CNM_AND_NBS.dim_blocks) \
-            * np.ones((CNM_AND_NBS.dim_blocks, 1), dtype='int32') + 1
-    dimY_submat = dimX_submat.T
-    
-
-    sum_dim = jnp.zeros((CNM_AND_NBS.dim_blocks, 4), dtype='int32')
-
-    for i in range(CNM_AND_NBS.dim_blocks):
-        sum_dim = jax.ops.index_update(sum_dim,
-                                       jax.ops.index[i, 0],
-                                       jnp.sum(dimX_submat[0, :i]))
-        sum_dim = jax.ops.index_update(sum_dim,
-                                       jax.ops.index[i, 1],
-                                       jnp.sum(dimY_submat[:i, 0]))
-        sum_dim = jax.ops.index_update(sum_dim,
-                                       jax.ops.index[i, 2],
-                                       jnp.sum(dimX_submat[0, :i+1]))
-        sum_dim = jax.ops.index_update(sum_dim,
-                                       jax.ops.index[i, 3],
-                                       jnp.sum(dimY_submat[:i+1, 0]))
-    
-
-    # creating the startx, startx, endx, endy for submatrices
-    submat_tile_ind = np.zeros((CNM_AND_NBS.dim_blocks, CNM_AND_NBS.dim_blocks, 4), dtype='int32')
-
     def update_submat_ind_ix(ix, submat_tile_ind):
         def update_submat_ind_iy(iy, submat_tile_ind):
             submat_tile_ind = jax.ops.index_update(submat_tile_ind,
@@ -77,27 +47,52 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
                                             update_submat_ind_iy, submat_tile_ind)
         
         return submat_tile_ind
-    
+
+    # dim_blocks = np.size(CNM_AND_NBS.omega_nbs)
+    # supermatix can be tiled with submatrices corresponding to
+    # (l, n) - (l', n') coupling. The dimensions of the submatrix
+    # is (2l+1, 2l'+1)
+    dim_blocks = CNM_AND_NBS.dim_blocks
+
+    dimX_submat = 2*CNM_AND_NBS.nl_nbs[:, 1].reshape(1, CNM_AND_NBS.dim_blocks) \
+            * np.ones((CNM_AND_NBS.dim_blocks, 1), dtype='int32') + 1
+    dimY_submat = dimX_submat.T
+
+    sum_dim = jnp.zeros((CNM_AND_NBS.dim_blocks, 4), dtype='int32')
+
+    for i in range(CNM_AND_NBS.dim_blocks):
+        sum_dim = jax.ops.index_update(sum_dim,
+                                       jax.ops.index[i, 0],
+                                       jnp.sum(dimX_submat[0, :i]))
+        sum_dim = jax.ops.index_update(sum_dim,
+                                       jax.ops.index[i, 1],
+                                       jnp.sum(dimY_submat[:i, 0]))
+        sum_dim = jax.ops.index_update(sum_dim,
+                                       jax.ops.index[i, 2],
+                                       jnp.sum(dimX_submat[0, :i+1]))
+        sum_dim = jax.ops.index_update(sum_dim,
+                                       jax.ops.index[i, 3],
+                                       jnp.sum(dimY_submat[:i+1, 0]))
+
+    # creating the startx, startx, endx, endy for submatrices
+    submat_tile_ind = np.zeros((CNM_AND_NBS.dim_blocks,
+                                CNM_AND_NBS.dim_blocks, 4), dtype='int32')
 
     submat_tile_ind = jax.lax.fori_loop(0, CNM_AND_NBS.dim_blocks,
                                         update_submat_ind_ix, submat_tile_ind)
 
-
-    # return submat_tile_ind
-    # defining the namedtuple
-    SUBMAT_DICT_ = namedtuple('SUBMAT_DICT', ['startx',
-                                              'starty',
-                                              'endx',
-                                              'endy']) 
-
-    SUBMAT_DICT = SUBMAT_DICT_(submat_tile_ind[:, :, 0],
-                               submat_tile_ind[:, :, 1],
-                               submat_tile_ind[:, :, 2],
-                               submat_tile_ind[:, :, 3]) 
-
+    # creating the submat-dictionary namedtuple
+    SUBMAT_DICT = jf.create_namedtuple('SUBMAT_DICT',
+                                       ['startx',
+                                        'starty',
+                                        'endx',
+                                        'endy'],
+                                       (submat_tile_ind[:, :, 0],
+                                        submat_tile_ind[:, :, 1],
+                                        submat_tile_ind[:, :, 2],
+                                        submat_tile_ind[:, :, 3])) 
     return SUBMAT_DICT
 
-        
 
 class build_supermatrix_functions:
     """Function that returns the function to calculate
@@ -127,7 +122,6 @@ class build_supermatrix_functions:
         """Function to loop over the submatrix blocks and tile in the
         submatrices into the supermatrix.
         """
-
         supmat = jnp.zeros((CNM_AND_NBS.dim_super,
                             CNM_AND_NBS.dim_super), dtype='float32')
             
@@ -137,18 +131,12 @@ class build_supermatrix_functions:
 
         for i in range(CNM_AND_NBS.dim_blocks):
             for ii in range(i, CNM_AND_NBS.dim_blocks):
-                #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
                 idx1 = CNM_AND_NBS.nl_nbs_idx[i]
                 idx2 = CNM_AND_NBS.nl_nbs_idx[ii]
 
-                '''
-                U1 = np.loadtxt(f'{eig_dir}/U{idx1}.dat')
-                V1 = np.loadtxt(f'{eig_dir}/V{idx1}.dat')
+                idx1 = GVARS_ST.nl_idx_pruned.tolist().index(CNM_AND_NBS.nl_nbs_idx[i])
+                idx2 = GVARS_ST.nl_idx_pruned.tolist().index(CNM_AND_NBS.nl_nbs_idx[ii])
 
-                U1 = U1[rmin_ind:rmax_ind]
-                V1 = V1[rmin_ind:rmax_ind]
-                U2, V2 = U1, V1
-                '''
                 U1, V1 = GVARS_TR.U_arr[idx1], GVARS_TR.V_arr[idx1]
                 U2, V2 = GVARS_TR.U_arr[idx2], GVARS_TR.V_arr[idx2]
 
@@ -161,18 +149,32 @@ class build_supermatrix_functions:
                 ell2 = CNM_AND_NBS.nl_nbs[ii, 1]
                 
                 # creating the named tuples
-                GVAR = namedtuple('GVAR', 'r wsr s_arr')
-                QDPT_MODE = namedtuple('QDPT_MODE', 'ell1 ell2 omegaref')
-                EIGFUNCS = namedtuple('EIGFUNCS', 'U1 U2 V1 V2')
+                gvars = jf.create_namedtuple('GVAR',
+                                             ['r',
+                                              'wsr',
+                                              's_arr'],
+                                             (GVARS_TR.r,
+                                              GVARS_TR.wsr,
+                                              GVARS_ST.s_arr))
+                qdpt_mode = jf.create_namedtuple('QDPT_MODE',
+                                                 ['ell1',
+                                                  'ell2',
+                                                  'ellmin',
+                                                  'omegaref'],
+                                                 (ell1,
+                                                  ell2,
+                                                  min(ell1, ell2),
+                                                  omegaref))
 
-                # initializing namedtuples. This could be done from a separate file later
-                gvars = GVAR(GVARS_TR.r, GVARS_TR.wsr, GVARS_ST.s_arr)
-                qdpt_mode = QDPT_MODE(ell1, ell2, omegaref)
-                eigfuncs = EIGFUNCS(U1, U2, V1, V2)
+                eigfuncs = jf.create_namedtuple('EIGFUNCS',
+                                                ['U1', 'U2',
+                                                 'V1', 'V2'],
+                                                (U1, U2,
+                                                 V1, V2))
 
                 get_submat = cvec.compute_submatrix(gvars)
                 submatdiag = get_submat.jax_get_Cvec()(qdpt_mode, eigfuncs)
-                #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
                 startx, starty = SUBMAT_DICT.startx[i,ii], SUBMAT_DICT.starty[i,ii]
                 endx, endy = SUBMAT_DICT.endx[i,ii], SUBMAT_DICT.endy[i,ii]
 
@@ -185,7 +187,6 @@ class build_supermatrix_functions:
                 supmat = jax.ops.index_update(supmat,
                                               jax.ops.index[:100, :100],
                                               jnp.diag(submatdiag[:100]))
-
 
                 # to avoid repeated filling of the central blocks
                 supmat = jax.lax.cond(abs(i-ii)>0,\

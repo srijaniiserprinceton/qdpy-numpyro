@@ -1,5 +1,6 @@
 import numpy as np
 from qdpy_jax import globalvars as gvar_jax
+from qdpy_jax import build_cenmult_and_nbs as CNBS
 
 class load_multiplets:
     '''Picks out the multiplets and creates a  
@@ -16,30 +17,20 @@ class load_multiplets:
            Array of angular degree for the multiplets.
     '''
 
-    def __init__(self, GVAR, n_arr, ell_arr):
-        
+    def __init__(self, GVAR, nl_pruned, nl_idx_pruned, omega_pruned):
         self.GVAR = GVAR
-        self.nl_pruned = None
-        self.omega_pruned = None
+        self.nl_pruned = nl_pruned
+        self.omega_pruned = omega_pruned
+        self.nl_idx_pruned = nl_idx_pruned
         self.U_arr = None
         self.V_arr = None
-        
-        self.prune_multiplets(n_arr, ell_arr)
         self.load_eigs()
-
-    def prune_multiplets(self, n_arr, ell_arr):
-        nl_all = self.GVAR.nl_all
-        # building a mask to prune only the desired multiplets
-        mask_mults = np.in1d(nl_all[:, 0], n_arr) * np.in1d(nl_all[:, 1], ell_arr)
-
-        # the desired multiplets 
-        self.nl_pruned = nl_all[mask_mults]
-        self.omega_pruned = self.GVAR.omega_list[mask_mults]
     
     def load_eigs(self):
-        '''Loading the eigenfunctions only for the pruned multiplets.
-        '''
+        '''Loading the eigenfunctions only for the pruned multiplets.'''
         nmults = len(self.nl_pruned)
+        rmin_idx = self.GVAR.rmin_ind
+        rmax_idx = self.GVAR.rmax_ind
 
         U_arr = np.zeros((nmults, len(self.GVAR.r)))
         V_arr = np.zeros((nmults, len(self.GVAR.r)))
@@ -48,11 +39,9 @@ class load_multiplets:
         eigdir = self.GVAR.eigdir
 
         for i in range(nmults):
-            n, ell = self.nl_pruned[i,0], self.nl_pruned[i,1]
-            idx = self.GVAR.nl_all_list.index([n, ell])
-
-            U_arr[i] = np.loadtxt(f'{eigdir}/U{idx}.dat')
-            V_arr[i] = np.loadtxt(f'{eigdir}/V{idx}.dat')
+            idx = self.nl_idx_pruned[i]
+            U_arr[i] = np.loadtxt(f'{eigdir}/U{idx}.dat')[rmin_idx:rmax_idx]
+            V_arr[i] = np.loadtxt(f'{eigdir}/V{idx}.dat')[rmin_idx:rmax_idx]
 
         self.U_arr = U_arr
         self.V_arr = V_arr

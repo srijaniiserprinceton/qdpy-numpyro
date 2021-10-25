@@ -9,13 +9,14 @@ import time
 
 # imports from qdpy_jax
 # from qdpy_jax import globalvars
-from qdpy_jax import gnool_jit as gjit 
+from qdpy_jax import gnool_jit as gjit
+from qdpy_jax import jax_functions as jf
 
 # GVARS = globalvars.GlobalVars()
 # GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 # del GVARS
 
-def get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST, GVARS_TR):
+def get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS):
     """Function that returns the name tuple for the
     attributes of the central mode and the neighbours for 
     that central mode. n0 and ell0 are static since everything
@@ -23,7 +24,7 @@ def get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST, GVARS_TR):
 
     def nl_idx(n0, ell0):
         try:
-            idx = GVARS_ST.nl_pruned.tolist().index([n0, ell0]) 
+            idx = GVARS.nl_all.tolist().index([n0, ell0]) 
         except ValueError:
             idx = None
             logger.error('Mode not found')
@@ -41,30 +42,30 @@ def get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST, GVARS_TR):
         nlnum = len(nl_idx)
         omega_neighbors = np.zeros(nlnum)
         for i in range(nlnum):
-            omega_neighbors[i] = GVARS_ST.omega_pruned[nl_idx[i]]
+            omega_neighbors[i] = GVARS.omega_list[nl_idx[i]]
         return omega_neighbors
 
-    omega_pruned = GVARS_ST.omega_pruned
-    nl_pruned = GVARS_ST.nl_pruned
+    omega_list = GVARS.omega_list
+    nl_all = GVARS.nl_all
     
     # unperturbed frequency of central multiplet (n0, ell0)
-    mult_idx = np.in1d(nl_pruned[:, 0], n0) * np.in1d(nl_pruned[:, 1], ell0)
-    omega0 = omega_pruned[mult_idx]
+    mult_idx = np.in1d(nl_all[:, 0], n0) * np.in1d(nl_all[:, 1], ell0)
+    omega0 = omega_list[mult_idx]
     
     # frequency distances from central multiplet
-    omega_diff = (omega_pruned - omega0) * GVARS_ST.OM * 1e6
+    omega_diff = (omega_list - omega0) * GVARS.OM * 1e6
 
     # defining various masks to minimize the multiplet-couplings
     # rejecting modes far in frequency
-    mask_omega = abs(omega_diff) <= GVARS_ST.fwindow 
+    mask_omega = abs(omega_diff) <= GVARS.fwindow 
     
     # rejecting modes that don't satisfy triangle inequality
-    smax = GVARS_ST.s_arr[-1]
-    mask_ell = abs(nl_pruned[:, 1] - ell0) <= smax
+    smax = GVARS.s_arr[-1]
+    mask_ell = abs(nl_all[:, 1] - ell0) <= smax
 
     # only even l1-l2 is coupled for odd-s rotation perturbation
     # this is specific to the fact that dr is considered for odd s only
-    mask_odd = ((nl_pruned[:, 1] - ell0)%2) == 0
+    mask_odd = ((nl_all[:, 1] - ell0)%2) == 0
     
     # creating the final mask accounting for all of the masks above
     mask_nb = mask_omega * mask_ell * mask_odd
@@ -73,7 +74,7 @@ def get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST, GVARS_TR):
     sort_idx = np.argsort(abs(omega_diff[mask_nb]))
     
     # the final attributes that will be stored
-    nl_neighbours = nl_pruned[mask_nb][sort_idx]
+    nl_neighbours = nl_all[mask_nb][sort_idx]
     nl_neighbours_idx = nl_idx_vec(nl_neighbours)
     omega_neighbours = get_omega_neighbors(nl_neighbours_idx)
     num_neighbours = len(nl_neighbours_idx)
@@ -81,20 +82,18 @@ def get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST, GVARS_TR):
     dim_super = 2 * np.sum(nl_neighbours[:,1] + 1)
     dim_blocks = np.size(omega_neighbours)
 
-    # creating the namedtuple
-    CENMULT_AND_NBS_ = namedtuple('CENMULT_AND_NBS', ['nl_nbs',
-                                                      'nl_nbs_idx',
-                                                      'omega_nbs',
-                                                      'num_nbs',
-                                                      'dim_blocks',
-                                                      'dim_super'])
-    
-    CENMULT_AND_NBS = CENMULT_AND_NBS_(nl_neighbours,
-                                       nl_neighbours_idx,
-                                       omega_neighbours,
-                                       num_neighbours,
-                                       dim_blocks,
-                                       dim_super)
-    
-    return CENMULT_AND_NBS
+    CENMULT_AND_NBS = jf.create_namedtuple('CENMULT_AND_NBS',
+                                           ['nl_nbs',
+                                            'nl_nbs_idx',
+                                            'omega_nbs',
+                                            'num_nbs',
+                                            'dim_blocks',
+                                            'dim_super'],
+                                           (nl_neighbours,
+                                            nl_neighbours_idx,
+                                            omega_neighbours,
+                                            num_neighbours,
+                                            dim_blocks,
+                                            dim_super))
 
+    return CENMULT_AND_NBS

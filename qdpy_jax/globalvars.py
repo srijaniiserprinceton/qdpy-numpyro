@@ -5,6 +5,7 @@ import os
 
 # loading custom libraries/classes
 from qdpy_jax import load_multiplets
+from qdpy_jax import jax_functions as jf
 
 #----------------------------------------------------------------------
 #                       All qts in CGS
@@ -14,6 +15,7 @@ from qdpy_jax import load_multiplets
 # B_0 = 10e5 G
 # OM = np.sqrt(4*np.pi*R_sol*B_0**2/M_sol)
 # rho_0 = M_sol/(4pi R_sol^3/3) = 1.41 ~ 1g/cc (for kernel calculation)
+# should be 2.096367060263202423e-05 for above numbers
 #----------------------------------------------------------------------
 # taking [:-2] since we are ignoring the file name and current dirname
 # this is specific to the way the directory structure is constructed
@@ -89,7 +91,6 @@ class GlobalVars():
         R_sol = 6.956e10       # in cm
         B_0 = 10e5             # in Gauss (base of convection zone)
         self.OM = np.sqrt(4*np.pi*R_sol*B_0**2/M_sol) 
-        # should be 2.096367060263202423e-05 for above numbers
 
         # self.rho = np.loadtxt(f"{self.datadir}/rho.dat")
         self.r = np.loadtxt(f"{datadir}/r.dat")
@@ -126,29 +127,30 @@ class GlobalVars():
         n_arr, ell_arr = self.get_mult_arrays(load_from_file=False,
                                              radial_orders=qdPars.radial_orders,
                                              ell_bounds=qdPars.ell_bounds)
+        self.n0_arr, self.ell0_arr = n_arr, ell_arr
 
-        # getting the pruned multiplets
-        self.pruned_multiplets = load_multiplets.load_multiplets(self, n_arr, ell_arr)
+        # rth = r threshold beyond which the profiles are updated. 
+        self.rth = qdPars.rth
 
-        # not needed anymore
-        del self.omega_list
-        del self.nl_all
-        del self.nl_all_list
-
-        # retaining only region between rmin and rmax
-        self.r = self.mask_minmax(self.r)
-        self.wsr = self.mask_minmax(self.wsr, axis=1)
-        self.pruned_multiplets.U_arr = self.mask_minmax(self.pruned_multiplets.U_arr,
-                                                        axis=1)
-        self.pruned_multiplets.V_arr = self.mask_minmax(self.pruned_multiplets.V_arr,
-                                                        axis=1)
-
-        
         # the factor to be multiplied to make the upper and lower 
         # bounds of the model space to be explored
         self.fac_up = np.array([1.1, 2.0, 2.0])
         self.fac_lo = np.array([0.9, 0.0, 0.0])
 
+        # # getting the pruned multiplets
+        # self.pruned_multiplets = load_multiplets.load_multiplets(self, n_arr, ell_arr)
+        # # not needed anymore
+        # del self.omega_list
+        # del self.nl_all
+        # del self.nl_all_list
+
+        # retaining only region between rmin and rmax
+        self.r = self.mask_minmax(self.r)
+        self.wsr = self.mask_minmax(self.wsr, axis=1)
+        # self.pruned_multiplets.U_arr = self.mask_minmax(self.pruned_multiplets.U_arr,
+                                                        # axis=1)
+        # self.pruned_multiplets.V_arr = self.mask_minmax(self.pruned_multiplets.V_arr,
+                                                        # axis=1)
 
         # converting to device array once
         '''
@@ -161,8 +163,6 @@ class GlobalVars():
         self.fac_up = jnp.array(self.fac_up)
         self.fac_lo = jnp.array(self.fac_lo)
         '''
-        # rth = r threshold beyond which the profiles are updated. 
-        self.rth = qdPars.rth
 
     def get_all_GVAR(self):
         '''Builds and returns the relevant dictionaries.
@@ -213,64 +213,59 @@ class GlobalVars():
         """Function to create the namedtuple containing the 
         various global paths for reading and writing files.
         """
-        GVAR_PATHS_ = namedtuple('GVAR_PATHS', ['local_dir',
-                                                'scratch_dir',
-                                                'snrnmais_dir',
-                                                'outdir',
-                                                'eigdir',
-                                                'progdir',
-                                                'hmidata'])
-        GVAR_PATHS = GVAR_PATHS_(self.local_dir,
-                                 self.scratch_dir,
-                                 self.snrnmais_dir,
-                                 self.outdir,
-                                 self.eigdir,
-                                 self.progdir,
-                                 self.hmidata)
+        GVAR_PATHS = jf.create_namedtuple('GVAR_PATHS',
+                                          ['local_dir',
+                                           'scratch_dir',
+                                           'snrnmais_dir',
+                                           'outdir',
+                                           'eigdir',
+                                           'progdir',
+                                           'hmidata'],
+                                          (self.local_dir,
+                                           self.scratch_dir,
+                                           self.snrnmais_dir,
+                                           self.outdir,
+                                           self.eigdir,
+                                           self.progdir,
+                                           self.hmidata))
         return GVAR_PATHS
 
     def get_namedtuple_gvar_traced(self):
         """Function to create the namedtuple containing the 
         various global attributes that can be traced by JAX.
         """
-        GVAR_TRACED_ = namedtuple('GVAR_TRACED', ['r',
-                                                  'rth',
-                                                  'rmin_ind',
-                                                  'rmax_ind',
-                                                  'fac_up',
-                                                  'fac_lo',
-                                                  'nmults',
-                                                  'wsr',
-                                                  'U_arr',
-                                                  'V_arr'])
-
-        GVAR_TRACED = GVAR_TRACED_(self.r,
-                                   self.rth,
-                                   self.rmin_ind,
-                                   self.rmax_ind,
-                                   self.fac_up,
-                                   self.fac_lo,
-                                   len(self.pruned_multiplets.omega_pruned),
-                                   self.wsr,
-                                   self.pruned_multiplets.U_arr,
-                                   self.pruned_multiplets.V_arr)
+        GVAR_TRACED = jf.create_namedtuple('GVAR_TRACED',
+                                           ['r',
+                                            'rth',
+                                            'rmin_ind',
+                                            'rmax_ind',
+                                            'fac_up',
+                                            'fac_lo',
+                                            'wsr'],
+                                           (self.r,
+                                            self.rth,
+                                            self.rmin_ind,
+                                            self.rmax_ind,
+                                            self.fac_up,
+                                            self.fac_lo,
+                                            self.wsr))
         return GVAR_TRACED
 
     def get_namedtuple_gvar_static(self):
         """Function to created the namedtuple containing the 
         various global attributes that are static arguments.
         """
-        GVAR_STATIC_ = namedtuple('GVAR_STATIC', ['s_arr',
-                                                  'nl_pruned',
-                                                  'omega_pruned',
-                                                  'fwindow',
-                                                  'OM'])
-
-        GVAR_STATIC = GVAR_STATIC_(self.s_arr,
-                                   self.pruned_multiplets.nl_pruned,
-                                   self.pruned_multiplets.omega_pruned,
-                                   self.fwindow,
-                                   self.OM)
+        GVAR_STATIC = jf.create_namedtuple('GVAR_STATIC',
+                                           ['s_arr',
+                                            'nl_all',
+                                            'omega_list',
+                                            'fwindow',
+                                            'OM'],
+                                           (self.s_arr,
+                                            self.nl_all,
+                                            self.omega_list,
+                                            self.fwindow,
+                                            self.OM))
         return GVAR_STATIC
 
     def get_ind(self, arr, val):
@@ -280,4 +275,5 @@ class GlobalVars():
         # if we want to clip the second axis (example in U_arr and V_arr)
         if(axis==1):
             return arr[:, self.rmin_ind:self.rmax_ind]
-        else: return arr[self.rmin_ind:self.rmax_ind]
+        else:
+            return arr[self.rmin_ind:self.rmax_ind]
