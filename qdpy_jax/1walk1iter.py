@@ -61,6 +61,8 @@ wig_list = []
 idx1_list = []
 idx2_list = []
 
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# this block obtains the pruned nl and corresponding omega
 for i in range(len(GVARS.n0_arr)):
     n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
 
@@ -88,6 +90,7 @@ nl_pruned, nl_idx_pruned, omega_pruned = get_pruned_multiplets(nl_pruned,
 nl_pruned = np.array(nl_pruned).astype('int')
 nl_idx_pruned = np.array(nl_idx_pruned).astype('int')
 omega_pruned = np.array(omega_pruned)
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
                                      nl_idx_pruned,
