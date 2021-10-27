@@ -147,7 +147,6 @@ class build_supermatrix_functions:
                 # the region where ell2 >= ell1
                 ell1 = CNM_AND_NBS.nl_nbs[i, 1]
                 ell2 = CNM_AND_NBS.nl_nbs[ii, 1]
-                print(ell1, ell2)
                 
                 # creating the named tuples
                 gvars = jf.create_namedtuple('GVAR',
@@ -181,68 +180,43 @@ class build_supermatrix_functions:
                                              GVARS_ST.wig_idx_full))
 
                 get_submat = cvec.compute_submatrix(gvars)
+
                 submatdiag = get_submat.jax_get_Cvec()(qdpt_mode, eigfuncs, wigs)
 
                 startx, starty = SUBMAT_DICT.startx[i,ii], SUBMAT_DICT.starty[i,ii]
                 endx, endy = SUBMAT_DICT.endx[i,ii], SUBMAT_DICT.endy[i,ii]
 
-                # creating the submatrix
-                print(f'startx = {startx}, starty = {starty}' +
-                      f' endx = {endx}, endy = {endy}')
-                submat = jnp.ones((endx-startx, endy-starty), dtype='float32')
+                # creating the rectangular submatrix
+                submat = jnp.zeros((endx-startx, endy-starty), dtype='float32')
 
+                # ell1 goes along the x-axis of the matrix and ell2 goes along the y-axis
                 dell = ell1 - ell2
                 absdell = np.abs(dell)
-                print(submat.shape, absdell, jnp.diag(submatdiag)[absdell:-absdell, :].shape)
-                #!!!!!!!!!!!!!!THIS NEEDS TO BE FIXED!!!!!!!!!!!!!!!!!!!!!#
-                '''
-                def true_func(sm):
-                    print(f"inside true_func, absdell = {absdell}")
-                    sm = jax.lax.cond(absdell == 0,
-                                      lambda __: jnp.diag(submatdiag),
-                                      lambda __: jax.ops.index_update(sm,
-                                                        jax.ops.index[absdell:-absdell, :],
-                                                        jnp.diag(submatdiag)),
-                                          operand=None)
-                    return sm
 
-                def false_func(sm):
-                    sm = jax.ops.index_update(sm,
-                                              jax.ops.index[:, absdell:-absdell],
-                                              jnp.diag(submatdiag),
-                                              operand=None)
-                    return sm
+                # tiling the diagonal submatdiag into the rect submatrix
+                # submat clipping index in the order of x_left, x_right, y_up, y_down
+                sm_clip_ind = np.array([0, 0], dtype='int')
+                
+                
+                def dell_not_zero_func(sm_clip_ind):
+                    sm_clip_ind = jax.lax.cond(dell > 0,
+                                               lambda __: np.array([absdell, 0]),
+                                               lambda __: np.array([0, absdell]),
+                                               operand = None)
 
- 
-                submat = jax.lax.cond(dell > 0,
-                                      true_func,
-                                      false_func,
-                                      operand=submat)
-                '''
+                    return sm_clip_ind
 
-                def false_func(sm):
-                    def tfunc2(sm2):
-                        sm2 = jax.ops.index_update(sm2,
-                                                   jax.ops.index[absdell:-absdell, :],
-                                                   jnp.diag(submatdiag))
-                        return sm2
+                
+                sm_clip_ind = jax.lax.cond(dell == 0,
+                                           lambda sm_clip_ind: sm_clip_ind,
+                                           dell_not_zero_func,
+                                           operand = sm_clip_ind)
+                                        
+    
+                submat = jax.lax.dynamic_update_slice(submat,
+                                                      jnp.diag(submatdiag),
+                                                      (sm_clip_ind[0], sm_clip_ind[1]))
 
-                    def ffunc2(sm2):
-                        sm2 = jax.ops.index_update(sm2,
-                                                   jax.ops.index[:, absdell:-absdell],
-                                                   jnp.diag(submatdiag))
-                        return sm2
-
-                    sm = jax.lax.cond(dell > 0,
-                                      ffunc2,
-                                      tfunc2,
-                                      operand=sm)
-                    return sm
-
-                submat = jax.lax.cond(absdell == 0,
-                                      lambda submat: jnp.diag(submatdiag),
-                                      false_func,
-                                      operand=submat)
 
                 supmat = jax.ops.index_update(supmat,
                                               jax.ops.index[startx:endx, starty:endy],
@@ -251,9 +225,9 @@ class build_supermatrix_functions:
                 # to avoid repeated filling of the central blocks
                 supmat = jax.lax.cond(abs(i-ii)>0,\
                                       lambda __: jax.ops.index_update(supmat,
-                                        jax.ops.index[starty:endy, startx:endx],
-                                        jnp.transpose(jnp.conjugate(submat))),
-                                        lambda __: supmat, operand=None)
+                                                                      jax.ops.index[starty:endy, startx:endx],
+                                                                      jnp.transpose(jnp.conjugate(submat))),
+                                      lambda __: supmat, operand=None)
 
 
         return supmat

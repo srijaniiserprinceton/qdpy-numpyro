@@ -114,10 +114,6 @@ for i in range(len(GVARS.n0_arr)):
     CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0, GVARS_ST)
     CENMULT_AND_NBS = tu.tree_map(lambda x: np.array(x), CENMULT_AND_NBS)
     SUBMAT_DICT = build_SUBMAT_INDICES_(CENMULT_AND_NBS)
-    print(f"startx = {SUBMAT_DICT.startx}")
-    print(f"starty = {SUBMAT_DICT.starty}")
-    print(f"endx = {SUBMAT_DICT.endx}")
-    print(f"endy = {SUBMAT_DICT.endy}")
     SUBMAT_DICT = tu.tree_map(lambda x: np.array(x), SUBMAT_DICT)
 
     supmatrix = build_supermatrix_(CENMULT_AND_NBS,
@@ -153,7 +149,7 @@ t_projected_eigval = 2. * factor4niter
 print(f'Time taken in seconds by jax-jitted execution' +
       f' of entire simulation (1500 iterations) = {t_projected_jit:.2f} hours')
 
-print(f'Assuming 2 seconds per eigenvalue problem solving, the' +
+print(f'Assuming 2 seconds per eigenvalue problem solving, the ' +
       f'total time taken for EV solver (1500 iterations) = {t_projected_eigval:.2f} hours')
 
 print('------------------')
