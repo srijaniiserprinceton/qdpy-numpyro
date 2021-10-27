@@ -175,12 +175,8 @@ class build_supermatrix_functions:
 
                 wigs = jf.create_namedtuple('WIGNERS',
                                             ['wig_list',
-                                             'wig_idx1',
-                                             'wig_idx2',
                                              'wig_idx_full'],
                                             (GVARS_TR.wig_list,
-                                             GVARS_ST.wig_idx1,
-                                             GVARS_ST.wig_idx2,
                                              GVARS_ST.wig_idx_full))
 
                 get_submat = cvec.compute_submatrix(gvars)
@@ -195,6 +191,8 @@ class build_supermatrix_functions:
                                               jax.ops.index[startx:endx,
                                                             starty:endy],
                                               submat)
+
+                #!!!!!!!!!!!!!!THIS NEEDS TO BE FIXED!!!!!!!!!!!!!!!!!!!!!#
                 supmat = jax.ops.index_update(supmat,
                                               jax.ops.index[:100, :100],
                                               jnp.diag(submatdiag[:100]))

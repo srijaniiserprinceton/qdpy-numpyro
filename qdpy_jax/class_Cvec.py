@@ -10,6 +10,10 @@ from jax.lax import fori_loop as foril
 
 from qdpy_jax import wigner_map2 as wigmap
 from qdpy_jax import gnool_jit as gjit
+from qdpy_jax import prune_multiplets
+from qdpy_jax import load_multiplets
+from qdpy_jax import globalvars as gvar_jax
+from qdpy_jax import jax_functions as jf
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
@@ -42,49 +46,78 @@ def jax_gamma(ell):
     """Computes gamma_ell"""
     return jnp.sqrt((2*ell + 1)/4/jnp.pi)
 
-# _find_idx = gjit.gnool_jit(wigmap.find_idx, static_array_argnums=(3.))
-
+# _find_idx = gjit.gnool_jit(wigmap.find_idx, static_array_argnums=(3,))
+_find_idx = jax.jit(wigmap.find_idx)
 
 class compute_submatrix:
     def __init__(self, gvars):
         self.r = gvars.r
-        self.s_arr = gvars.s_arr
+        self.s_arr = jnp.array(gvars.s_arr)
         self.wsr = gvars.wsr
 
     def jax_get_Cvec(self):
         def get_func_Cvec(qdpt_mode, eigfuncs, wigs):
             """Computing the non-zero components of the submatrix"""
 
-            wig_idx_full = wigs.wig_idx_full.tolist()
-            lenidx = len(wig_idx_full)
+            lenidx = len(wigs.wig_idx_full)
 
             ell1 = qdpt_mode.ell1
             ell2 = qdpt_mode.ell2
             ell = qdpt_mode.ellmin
             m = jnp.arange(-ell, ell+1)
+            len_m = len(m)
             len_s = jnp.size(self.s_arr)
-            wigvals = jnp.zeros((2*ell+1, len_s))
+            wigvals = jnp.zeros((len_m, len_s))
 
             '''
             def modify_wig(iess, wigvals):
-                idx1, idx2, fac = _find_idx(ell1, s_arr[iess], ell2, m)
+                idx1, idx2, fac = _find_idx(ell1, self.s_arr[iess], ell2, m)
+
                 def modify_wig_ell(iell, wigvals):
-                    idx = wig_idx_full.index([idx1[iell], idx2[iell]])
-                    return jax.ops.index_update(wigvals,
-                                                jax.ops.index[iell],
-                                                fac[iell]*wigs.wigs_list[iell])
-                                                
+                    idx = jnp.argmin(jnp.abs(wig_idx_full-idx1[iell]) + jnp.abs(wig_idx_full-idx2[iell]))
+                    # idx = wig_idx_full.index([idx1[iell], idx2[iell]])
+                    #return jax.ops.index_update(wigvals,
+                    #                           jax.ops.index[iell],
+                    #                            fac[iell]*wigs.wigs_list[iell])
+                    
+                    return fac[idx] * wigs.wig_list[idx]
+                    
                 wigvals = jax.ops.index_update(wigvals,
                                                jax.ops.index[:, iess],
                                                foril(0, lenidx,
                                                      modify_wig_ell, wigvals))
                 return wigvals
+
             wigvals = foril(0, len_s, modify_wig, wigvals)
             '''
+            def modify_wig_ell(iem, func_params):
+                wigvals_iem, idx1, idx2, fac = func_params
+                idx = jnp.argmin(jnp.abs(wigs.wig_idx_full[:,0]-idx1[iem])
+                                 + jnp.abs(wigs.wig_idx_full[:,1]-idx2[iem]))                                                                                        
+                
 
+                wigvals_iem = jax.ops.index_update(wigvals_iem,                                                                                                                                 
+                                               jax.ops.index[idx],                                                                    
+                                               fac[idx] * wigs.wig_list[idx])  
+
+                return (wigvals_iem, idx1, idx2, fac)
+
+            for i, s in enumerate(self.s_arr):
+                idx1, idx2, fac = _find_idx(ell1, s, ell2, m)
+                
+                wigvals_iem = jnp.zeros((len_m))
+                wigvals_iem, __, __, __ = foril(0, len_m, modify_wig_ell, (wigvals_iem, idx1, idx2, fac))
+
+                wigvals = jax.ops.index_update(wigvals,
+                                               jax.ops.index[:, i],
+                                               wigvals_iem)
+                
+
+            '''
             wigvals = foril(0, len_s, lambda i, __:
                             jax.ops.index_update(wigvals,
                                                  jax.ops.index[:, i], 1), wigvals)
+            '''
 
             # Tsr = jax_compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2)
             Tsr = self.jax_compute_Tsr(qdpt_mode, eigfuncs)
@@ -146,24 +179,14 @@ class compute_submatrix:
             Tsr = jax.ops.index_update(Tsr, i, Tsr_at_i)
 
             return (Tsr, s_arr)
-        '''
-        for i, s in enumerate(self.s_arr):
-            ls2fac = L1sq + L2sq - s*(s+1)
-            eigfac = U2*V1 + V2*U1 - U1*U2 - 0.5*V1*V2*ls2fac
-            # wigval = w3j(ell1, s, ell2, -1, 0, 1)
-            # using some dummy number until we write the                
-            # function for mapping wigner3js
-            wigval = 1.0
 
-            Tsr_at_i = -(1 - jax_minus1pow(qdpt_mode.ell1 + qdpt_mode.ell2 + s))\
-                       *Om1 * Om2 * wigval * eigfac / self.r
-            Tsr = jax.ops.index_update(Tsr, i, Tsr_at_i)
-        '''
         Tsr, s_arr = foril(0, len(self.s_arr), func4Tsr_s_loop, (Tsr, self.s_arr))
+
         return Tsr
 
 
 if __name__ == "__main__":
+    '''
     # parameters to be included in the global dictionary later?
     s_arr = jnp.array([1,3,5], dtype='int32')
 
@@ -208,6 +231,7 @@ if __name__ == "__main__":
     GVAR = namedtuple('GVAR', ['r',
                                'wsr',
                                's_arr'])
+
     QDPT_MODE = namedtuple('QDPT_MODE', ['ell1',
                                          'ell2',
                                          'ellmin',
@@ -222,10 +246,74 @@ if __name__ == "__main__":
     qdpt_mode = QDPT_MODE(ell1, ell2, min(ell1, ell2), omegaref)
     eigfuncs = EIGFUNCS(U1, U2, V1, V2)
 
+    wigs = jf.create_namedtuple('WIGNERS',
+                                ['wig_list',
+                                 'wig_idx1',
+                                 'wig_idx2',
+                                 'wig_idx_full'],
+                                (GVARS_TR.wig_list,
+                                 GVARS_ST.wig_idx1,
+                                 GVARS_ST.wig_idx2,
+                                 GVARS_ST.wig_idx_full))
+    '''
+
+    GVARS = gvar_jax.GlobalVars()
+    GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
+    
+    # extracting the pruned parameters for multiplets of interest                                                                                                              
+    nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx_full = prune_multiplets.get_pruned_attributes(GVARS, GVARS_ST)
+
+
+    # converting to list before sending into jax'd function
+    # wig_idx_full = wig_idx_full.tolist()
+
+    lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
+                                         nl_idx_pruned,
+                                         omega_pruned)
+
+
+    # creating the named tuples                                                                                                                                              
+    gvars = jf.create_namedtuple('GVAR',
+                                 ['r',
+                                  'wsr',
+                                  's_arr'],
+                                 (GVARS_TR.r,
+                                  GVARS_TR.wsr,
+                                  GVARS_ST.s_arr))    
+
+    # considering self-coupling for testing
+    ell1, ell2 = nl_pruned[0,1], nl_pruned[0,1]
+    omegaref = omega_pruned[0]
+    U1, U2 = lm.U_arr[0], lm.U_arr[0]
+    V1, V2 = lm.V_arr[0], lm.V_arr[0]
+
+    qdpt_mode = jf.create_namedtuple('QDPT_MODE',
+                                     ['ell1',
+                                      'ell2',
+                                      'ellmin',
+                                      'omegaref'],
+                                     (ell1,
+                                      ell2,
+                                      min(ell1, ell2),
+                                      omegaref))
+    
+    eigfuncs = jf.create_namedtuple('EIGFUNCS',
+                                    ['U1', 'U2',
+                                     'V1', 'V2'],
+                                    (U1, U2,
+                                     V1, V2))
+    
+    wigs = jf.create_namedtuple('WIGNERS',
+                                ['wig_list',
+                                 'wig_idx_full'],
+                                (wig_list,
+                                 wig_idx_full))
+
     Niter = 100
 
     # creating the instance of the class
     get_submat = compute_submatrix(gvars)
+
 
     # testing get_Cvec() function                                                              
     # declaring only qdpt_mode as static argument. It is critical to note that it is
@@ -235,16 +323,18 @@ if __name__ == "__main__":
     # here, qdpt_mode has non-array info while eigfuncs have array info.
     _get_Cvec = jax.jit(get_submat.jax_get_Cvec(), static_argnums=(0,))
     # __ = _get_Cvec(ell1, ell2, s_arr, r, U1, U2, V1, V2, omegaref)
-    __ = _get_Cvec(qdpt_mode, eigfuncs)
+    __ = _get_Cvec(qdpt_mode, eigfuncs, wigs)
 
+    
     t1 = time.time()
-    for __ in range(Niter): __ = get_submat.jax_get_Cvec()(qdpt_mode, eigfuncs).block_until_ready()
+    for __ in range(Niter): __ = get_submat.jax_get_Cvec()(qdpt_mode, eigfuncs, wigs)
     t2 = time.time()
+    
 
     t3 = time.time()
-    for __ in range(Niter): __ = _get_Cvec(qdpt_mode, eigfuncs).block_until_ready()
+    for __ in range(Niter): __ = _get_Cvec(qdpt_mode, eigfuncs, wigs).block_until_ready()
     t4 = time.time()
-
+    
     print("get_Cvec()")
     print("JIT version is faster by: ", (t2-t1)/(t4-t3))
     print(f"Time taken per iteration (jax-jitted) get_Cvec = {(t4-t3)/Niter:.3e} seconds")

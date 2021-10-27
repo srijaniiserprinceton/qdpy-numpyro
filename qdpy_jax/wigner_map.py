@@ -4,7 +4,6 @@ import time
 
 jax.config.update('jax_platform_name', 'cpu')
 from jax.lib import xla_bridge
-print(xla_bridge.get_backend().platform) 
 
 # function to check if the elements of a 1D array are sorted
 def issorted(a):
@@ -26,7 +25,6 @@ def find_c_RY03(ell1, ell2, ell3, m1, m2, m3):
                    [ell1 - m1, ell2 - m2, ell3 - m3],
                    [ell1 + m1, ell2 + m2, ell3 + m3]]) 
 
-    print(R)
 
     # converting it to the Eqn.(2.11) form according to the step in
     # ~https://github.com/csdms-contrib/slepian_alpha/blob/master/wignersort.m~
@@ -141,7 +139,6 @@ def find_c_RY03(ell1, ell2, ell3, m1, m2, m3):
                                lambda __: 0,
                                operand=None)
 
-    print(R)
     
     # initializing the Regge free parameters from the matrix R
     L, X, T, B, S = regge
