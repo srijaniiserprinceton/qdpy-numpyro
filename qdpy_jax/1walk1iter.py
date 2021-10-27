@@ -61,7 +61,8 @@ build_supermatrix_ = gjit.gnool_jit(build_supmat_funcs.get_func2build_supermatri
 t1c = time.time()
 
 # extracting the pruned parameters for multiplets of interest
-nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx_full = prune_multiplets.get_pruned_attributes(GVARS, GVARS_ST)
+nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx_full = \
+    prune_multiplets.get_pruned_attributes(GVARS, GVARS_ST)
 
 lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
                                      nl_idx_pruned,
@@ -113,10 +114,16 @@ for i in range(len(GVARS.n0_arr)):
     CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0, GVARS_ST)
     CENMULT_AND_NBS = tu.tree_map(lambda x: np.array(x), CENMULT_AND_NBS)
     SUBMAT_DICT = build_SUBMAT_INDICES_(CENMULT_AND_NBS)
+    print(f"startx = {SUBMAT_DICT.startx}")
+    print(f"starty = {SUBMAT_DICT.starty}")
+    print(f"endx = {SUBMAT_DICT.endx}")
+    print(f"endy = {SUBMAT_DICT.endy}")
     SUBMAT_DICT = tu.tree_map(lambda x: np.array(x), SUBMAT_DICT)
 
-    supmatrix = build_supermatrix_(CENMULT_AND_NBS, SUBMAT_DICT,
-                                   GVARS_PRUNED_ST, GVARS_PRUNED_TR).block_until_ready()
+    supmatrix = build_supermatrix_(CENMULT_AND_NBS,
+                                   SUBMAT_DICT,
+                                   GVARS_PRUNED_ST,
+                                   GVARS_PRUNED_TR).block_until_ready()
     print(f'Calculated supermatrix for multiplet = ({n0}, {ell0})')
 t2c = time.time()
 print(f'Time taken in seconds for compilation of {nmults} multiplets' +

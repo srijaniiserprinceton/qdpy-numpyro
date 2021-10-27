@@ -27,25 +27,25 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
         def update_submat_ind_iy(iy, submat_tile_ind):
             submat_tile_ind = jax.ops.index_update(submat_tile_ind,
                                                    jax.ops.index[ix, iy, 0],
-                                                   sum_dim[iy, 0])
+                                                   sum_dim[ix, 0])
                                                     
             submat_tile_ind = jax.ops.index_update(submat_tile_ind,
-                                                   jax.ops.index[ix, iy, 2],
-                                                   sum_dim[iy, 2])
-            
-            submat_tile_ind = jax.ops.index_update(submat_tile_ind,
-                                                   jax.ops.index[ix, iy, 1],\
+                                                   jax.ops.index[ix, iy, 1],
                                                    sum_dim[iy, 1])
             
-            submat_tile_ind =  jax.ops.index_update(submat_tile_ind,
-                                                    jax.ops.index[ix, iy, 3],\
-                                                    sum_dim[iy, 3])
+            submat_tile_ind = jax.ops.index_update(submat_tile_ind,
+                                                   jax.ops.index[ix, iy, 2],
+                                                   sum_dim[ix, 2])
             
+            submat_tile_ind =  jax.ops.index_update(submat_tile_ind,
+                                                    jax.ops.index[ix, iy, 3],
+                                                    sum_dim[iy, 3])
+
             return submat_tile_ind
 
-        submat_tile_int = jax.lax.fori_loop(0, CNM_AND_NBS.dim_blocks,
-                                            update_submat_ind_iy, submat_tile_ind)
-        
+        submat_tile_int = foril(0, CNM_AND_NBS.dim_blocks,
+                                update_submat_ind_iy, submat_tile_ind)
+
         return submat_tile_ind
 
     # dim_blocks = np.size(CNM_AND_NBS.omega_nbs)
@@ -74,12 +74,20 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
                                        jax.ops.index[i, 3],
                                        jnp.sum(dimY_submat[:i+1, 0]))
 
+    # sum_dim = np.zeros((CNM_AND_NBS.dim_blocks, 4), dtype='int32')
+    # for i in range(CNM_AND_NBS.dim_blocks):
+    #     sum_dim[i, 0] = dimX_submat[0, :i].sum()
+    #     sum_dim[i, 1] = dimY_submat[:i, 0].sum()
+    #     sum_dim[i, 2] = dimX_submat[0, :i+1].sum()
+    #     sum_dim[i, 3] = dimY_submat[:i+1, 0].sum()
+    # sum_dim = jnp.asarray(sum_dim)
+
     # creating the startx, startx, endx, endy for submatrices
     submat_tile_ind = np.zeros((CNM_AND_NBS.dim_blocks,
                                 CNM_AND_NBS.dim_blocks, 4), dtype='int32')
 
-    submat_tile_ind = jax.lax.fori_loop(0, CNM_AND_NBS.dim_blocks,
-                                        update_submat_ind_ix, submat_tile_ind)
+    submat_tile_ind = foril(0, CNM_AND_NBS.dim_blocks,
+                            update_submat_ind_ix, submat_tile_ind)
 
     # creating the submat-dictionary namedtuple
     SUBMAT_DICT = jf.create_namedtuple('SUBMAT_DICT',
@@ -87,10 +95,15 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
                                         'starty',
                                         'endx',
                                         'endy'],
+                                       # (sum_dim[:, 0],
+                                       #  sum_dim[:, 1],
+                                       #  sum_dim[:, 2],
+                                       #  sum_dim[:, 3]))
                                        (submat_tile_ind[:, :, 0],
                                         submat_tile_ind[:, :, 1],
                                         submat_tile_ind[:, :, 2],
                                         submat_tile_ind[:, :, 3])) 
+    print(submat_tile_ind[:, :, 0])
     return SUBMAT_DICT
 
 
@@ -147,6 +160,7 @@ class build_supermatrix_functions:
                 # the region where ell2 >= ell1
                 ell1 = CNM_AND_NBS.nl_nbs[i, 1]
                 ell2 = CNM_AND_NBS.nl_nbs[ii, 1]
+                print(ell1, ell2)
                 
                 # creating the named tuples
                 gvars = jf.create_namedtuple('GVAR',
@@ -187,15 +201,35 @@ class build_supermatrix_functions:
 
                 # creating the submatrix
                 submat = jnp.ones((endx-startx, endy-starty), dtype='float32')
-                supmat = jax.ops.index_update(supmat,
-                                              jax.ops.index[startx:endx,
-                                                            starty:endy],
-                                              submat)
+                print(submat.shape, submatdiag.shape)
 
+                dell = ell1 - ell2
+                absdell = np.abs(dell)
                 #!!!!!!!!!!!!!!THIS NEEDS TO BE FIXED!!!!!!!!!!!!!!!!!!!!!#
+                def true_func(operands):
+                    submat = operands
+                    submat = jax.lax.cond(absdell == 0,
+                                          jnp.diag(submatdiag),
+                                          jax.ops.index_update(submat,
+                                                        jax.ops.index[absdell:-absdell, :],
+                                                        jnp.diag(submatdiag)))
+                    return submat
+
+                def false_func(operands):
+                    submat = operands
+                    submat = jax.ops.index_update(submat,
+                                                  jax.ops.index[:, absdell:-absdell],
+                                                  jnp.diag(submatdiag))
+                    return submat
+
+                submat = jax.lax.cond(dell >= 0,
+                                      true_func,
+                                      false_func,
+                                      operand=(submat))
+
                 supmat = jax.ops.index_update(supmat,
-                                              jax.ops.index[:100, :100],
-                                              jnp.diag(submatdiag[:100]))
+                                              jax.ops.index[startx:endx, starty:endy],
+                                              submat)
 
                 # to avoid repeated filling of the central blocks
                 supmat = jax.lax.cond(abs(i-ii)>0,\
@@ -203,6 +237,8 @@ class build_supermatrix_functions:
                                         jax.ops.index[starty:endy, startx:endx],
                                         jnp.transpose(jnp.conjugate(submat))),
                                         lambda __: supmat, operand=None)
+
+
         return supmat
 
 '''
