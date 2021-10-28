@@ -3,14 +3,14 @@ from qdpy_jax import wigner_map2 as wigmap
 from qdpy_jax import build_cenmult_and_nbs as build_CENMULT_AND_NBS
 from qdpy_jax import gnool_jit as gjit
 
-# jitting various functions                                                                                                                                                     
+# jitting various functions
 get_namedtuple_for_cenmult_and_neighbours_ = \
     gjit.gnool_jit(build_CENMULT_AND_NBS.get_namedtuple_for_cenmult_and_neighbours,
                    static_array_argnums = (0, 1, 2))
 
 
-# slices out the unique nl, nl_idx and omega from                                                                                                                             
-# from the arguments nl, omega which may contain repetitions                                                                                                     
+# slices out the unique nl, nl_idx and omega from
+# from the arguments nl, omega which may contain repetitions
 def get_pruned_multiplets(nl, omega, nl_all):
     n1 = nl[:, 0]
     l1 = nl[:, 1]
@@ -39,7 +39,7 @@ def get_pruned_attributes(GVARS, GVARS_ST):
     for i in range(len(GVARS.n0_arr)):
         n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
         
-        # building the namedtuple for the central multiplet and its neighbours                                                                                                                                         
+        # building the namedtuple for the central multiplet and its neighbours
         CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0, GVARS_ST)
         if i == 0:
             nl_pruned = CENMULT_AND_NBS.nl_nbs
@@ -56,7 +56,7 @@ def get_pruned_attributes(GVARS, GVARS_ST):
     wig_idx_full[:, 0] = idx1_list
     wig_idx_full[:, 1] = idx2_list
     
-    # extracting the unique multiplets in the nl_pruned                                                                                                                                                                
+    # extracting the unique multiplets in the nl_pruned
     nl_pruned, nl_idx_pruned, omega_pruned = get_pruned_multiplets(nl_pruned,
                                                                    omega_pruned,
                                                                    GVARS_ST.nl_all)

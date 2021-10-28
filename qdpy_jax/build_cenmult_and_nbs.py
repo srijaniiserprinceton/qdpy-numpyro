@@ -3,18 +3,13 @@ import numpy as np
 import jax.numpy as jnp
 from collections import namedtuple
 from functools import partial
-
 import sys
 import time
 
 # imports from qdpy_jax
-# from qdpy_jax import globalvars
-from qdpy_jax import gnool_jit as gjit
-from qdpy_jax import jax_functions as jf
+from . import gnool_jit as gjit
+from . import jax_functions as jf
 
-# GVARS = globalvars.GlobalVars()
-# GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
-# del GVARS
 
 def get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS):
     """Function that returns the name tuple for the
@@ -79,7 +74,7 @@ def get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS):
     omega_neighbours = get_omega_neighbors(nl_neighbours_idx)
     num_neighbours = len(nl_neighbours_idx)
     
-    dim_super = 2 * np.sum(nl_neighbours[:,1] + 1)
+    dim_super = (2*nl_neighbours[:, 1] + 1).sum()
     dim_blocks = np.size(omega_neighbours)
 
     CENMULT_AND_NBS = jf.create_namedtuple('CENMULT_AND_NBS',

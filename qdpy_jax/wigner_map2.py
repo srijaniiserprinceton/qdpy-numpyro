@@ -6,7 +6,7 @@ import jax
 import time
 
 jax.config.update('jax_platform_name', 'cpu')
-from jax.lib import xla_bridge
+# from jax.lib import xla_bridge
 # print(xla_bridge.get_backend().platform)
 
 
@@ -55,9 +55,11 @@ def get_wigners(nl_nbs, wig_list, idx1_list, idx2_list):
         idx1 = ell*(ell+1)//2 + abs(m)
         idx2 = s*(s+1)//2 + dell
         fac = 1
-        if (ell2 > ell1) and (m < 0):
-            fac = -1
-        if (ell2 < ell1) and (m >= 0):
+        # if (ell2 > ell1) and (m < 0):
+        #     fac = -1
+        # if (ell2 < ell1) and (m >= 0):
+        #     fac = -1
+        if m < 0:
             fac = -1
         return idx1, idx2, fac
 
@@ -113,43 +115,75 @@ def find_idx(ell1, s, ell2, m):
     # /ell1 s ell2\
     # \ m  0  -m /
 
-    def true_func(ell12m):
-        ell1, ell2, m = ell12m
-        fac = jax.lax.cond(m<0,
-                           lambda fac: -1,
-                           lambda fac: 1,
-                           operand=None)
-        dell = ell2 - ell1
-        return ell1, dell, fac
+    # def true_func(ell12m):
+    #     ell1, ell2, m = ell12m
+    #     fac = jax.lax.cond(m<0,
+    #                        lambda fac: -1,
+    #                        lambda fac: 1,
+    #                        operand=None)
+    #     dell = ell2 - ell1
+    #     return ell1, dell, fac
 
-    def false_func(ell12m):
-        ell1, ell2, m = ell12m
-        fac = jax.lax.cond(m>=0,
-                           lambda fac: -1,
-                           lambda fac: 1,
-                           operand=None)
-        dell = ell1 - ell2
-        return ell2, dell, fac
+    # def false_func(ell12m):
+    #     ell1, ell2, m = ell12m
+    #     fac = jax.lax.cond(m>=0,
+    #                        lambda fac: -1,
+    #                        lambda fac: 1,
+    #                        operand=None)
+    #     dell = ell1 - ell2
+    #     return ell2, dell, fac
 
-    ell, dell, fac = jax.lax.cond(ell2>ell1,
-                                  true_func,
-                                  false_func,
-                                  operand=(ell1, ell2, m))
+    # ell, dell, fac = jax.lax.cond(ell2>ell1,
+    #                               true_func,
+    #                               false_func,
+    #                               operand=(ell1, ell2, m))
+    fac = jax.lax.cond(m < 0,
+                       lambda fac: -1,
+                       lambda fac: 1,
+                       operand=None)
 
-    idx1 = ell*(ell+1)//2+jnp.abs(m)
-    idx2 = s*(s+1)//2+dell
+    ell = jnp.minimum(ell1, ell2)
+    dell = jnp.abs(ell1 - ell2)
+    idx1 = ell*(ell+1)//2 + jnp.abs(m)
+    idx2 = s*(s+1)//2 + dell
 
     return idx1, idx2, fac
 
 def foril_func(i):
     return i, _find_idx(ell1, s, ell2, m)
 
+
+def get_wig_from_pc(ell1, s, ell2, m):
+    wig1 = w3j_vecm(ell1, s, ell2, -m, 0, m)
+    idx1, idx2, fac = find_idx(ell1, s, ell2, m)
+    wig_idx = np.where((wig_idx_full[:, 0]==idx1) *
+                       (wig_idx_full[:, 1]==idx2))[0][0]
+    wig2 = fac * wig_list[wig_idx]
+    tv = np.isclose(wig1, wig2)
+    print(f'({ell1:4d} :{ell2:4d} :{m:4d}) wig-actual = {wig1:9.6f}: wig-read = {wig2:9.6f} - Match = {tv}')
+    return wig1, wig2
+
+def compute_uniq_wigners(ell, s, ellp, m):
+    idx1, idx2, fac = find_idx(ell, s, ellp, m)
+    wig_list = w3j_vecm(ell, s, ellp, -m, 0*m, m)
+    wig_idx_full = np.zeros((len(wig_list), 2), dtype=np.int32)
+    wig_idx_full[:, 0] = idx1
+    wig_idx_full[:, 1] = idx2
+    return wig_list, wig_idx_full
+
 # timing the functions with and without jitting
 if __name__ == "__main__":
     # wigner parameters
-    ell1, s, ell2 = 220, 5, 222
+    ell1, s, ell2 = 200, 5, 202
     # m = -9
-    m = jnp.arange(-ell1, ell1+1)
+    m = jnp.arange(ell1+1)
+    wig_list, wig_idx_full = compute_uniq_wigners(ell1, s, ell2, m)
+    m_test = 125
+    __ = get_wig_from_pc(ell1, s, ell2, m_test)
+    __ = get_wig_from_pc(ell2, s, ell1, m_test)
+    __ = get_wig_from_pc(ell1, s, ell2, -m_test)
+    __ = get_wig_from_pc(ell2, s, ell1, -m_test)
+
     ell1 = ell1*jnp.ones_like(m)
     s = s*jnp.ones_like(m)
     ell2 = ell2*jnp.ones_like(m)

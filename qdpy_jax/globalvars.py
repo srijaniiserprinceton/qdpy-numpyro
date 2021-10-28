@@ -121,7 +121,7 @@ class GlobalVars():
         self.s_arr = np.arange(1, self.smax+1, 2)
 
         self.fwindow = qdPars.fwindow
-        self.wsr = np.loadtxt(f'{self.datadir}/w_s/w.dat')
+        self.wsr = -1.0*np.loadtxt(f'{self.datadir}/w_s/w.dat')
 
         # generating the multiplets which we will use
         n_arr, ell_arr = self.get_mult_arrays(load_from_file=False,

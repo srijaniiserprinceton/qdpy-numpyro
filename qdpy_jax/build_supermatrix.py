@@ -11,18 +11,13 @@ from qdpy_jax import gnool_jit as gjit
 from qdpy_jax import class_Cvec as cvec
 from qdpy_jax import jax_functions as jf
 
-'''
-current_dir = os.path.dirname(os.path.realpath(__file__))
-package_dir = os.path.dirname(current_dir)
-data_dir = f"{package_dir}/qdpy_jax"
-eig_dir = f"/mnt/disk2/samarth/get-solar-eigs/efs_Jesper/snrnmais_files/eig_files"
-'''
-
 
 def build_SUBMAT_INDICES(CNM_AND_NBS):
     """Returns the namedtuple containing the tiling information
     of the submatrices inside the supermatrix.
     """
+
+    # functions called by foriloop
     def update_submat_ind_ix(ix, submat_tile_ind):
         def update_submat_ind_iy(iy, submat_tile_ind):
             submat_tile_ind = jax.ops.index_update(submat_tile_ind,
@@ -108,10 +103,6 @@ class build_supermatrix_functions:
             """Function to assimilate all the neighbour info
             and return the function to compute the SuperMatrix'
             """
-
-            # building the submatrix dictionary
-            # SUBMAT_DICT = self.build_SUBMAT_DICT(CNM_AND_NBS)
-
             # tiling supermatrix with submatrices
             supmat = self.tile_submatrices(CNM_AND_NBS, SUBMAT_DICT,
                                            GVARS_ST, GVARS_TR)
@@ -202,7 +193,6 @@ class build_supermatrix_functions:
                                                lambda __: np.array([absdell, 0]),
                                                lambda __: np.array([0, absdell]),
                                                operand = None)
-
                     return sm_clip_ind
 
                 sm_clip_ind = jax.lax.cond(dell == 0,
@@ -228,13 +218,11 @@ class build_supermatrix_functions:
 
             # filling the freqdiag
             omega_nb = CNM_AND_NBS.omega_nbs[i]
-            startx, starty = SUBMAT_DICT.startx[i, i], SUBMAT_DICT.starty[i, i]
-            endx, endy = SUBMAT_DICT.endx[i, i], SUBMAT_DICT.endy[i, i]
+            startx, endx = SUBMAT_DICT.startx[i, i], SUBMAT_DICT.starty[i, i]
             om2diff = omega_nb**2 - omegaref**2
-            print(om2diff)
             om2diff_mat = jnp.identity(endx-startx) * om2diff
             supmat = jax.ops.index_add(supmat,
-                                       jax.ops.index[startx:endx, starty:endy],
+                                       jax.ops.index[startx:endx, startx:endx],
                                        om2diff_mat)
 
         return supmat

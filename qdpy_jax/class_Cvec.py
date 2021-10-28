@@ -71,8 +71,8 @@ class compute_submatrix:
 
             def modify_wig_ell(iem, func_params):
                 wigvals_iem, idx1, idx2, fac = func_params
-                idx = jnp.argmin(jnp.abs(wigs.wig_idx_full[:,0]-idx1[iem])
-                                 + jnp.abs(wigs.wig_idx_full[:,1]-idx2[iem]))
+                idx = jnp.argmin(jnp.abs(wigs.wig_idx_full[:, 0] - idx1[iem]) +
+                                 jnp.abs(wigs.wig_idx_full[:, 1] - idx2[iem]))
 
                 wigvals_iem = jax.ops.index_update(wigvals_iem,
                                                jax.ops.index[idx],
@@ -91,17 +91,7 @@ class compute_submatrix:
                                                jax.ops.index[:, i],
                                                wigvals_iem)
                 
-            Tsr = self.jax_compute_Tsr(qdpt_mode, eigfuncs)
-            # -1 factor from definition of toroidal field
-            '''wsr = np.loadtxt(f'{self.sup.gvar.datadir}/{WFNAME}')\
-            [:, self.rmin_idx:self.rmax_idx] * (-1.0)'''
-            # self.sup.spline_dict.get_wsr_from_Bspline()
-            #wsr = self.sup.spline_dict.wsr
-            # wsr[0, :] *= 0.0 # setting w1 = 0
-            # wsr[1, :] *= 0.0 # setting w3 = 0
-            # wsr[2, :] *= 0.0 # setting w5 = 0
-            # wsr /= 2.0
-            # integrand = Tsr * wsr * (self.sup.gvar.rho * self.sup.gvar.r**2)[NAX, :]
+            Tsr = self.jax_compute_Tsr(qdpt_mode, eigfuncs, wigs)
             integrand = Tsr * self.wsr   # since U and V are scaled by sqrt(rho) * r
 
             #### TO BE REPLACED WITH SIMPSON #####
@@ -118,8 +108,7 @@ class compute_submatrix:
 
         return get_func_Cvec
 
-    #def jax_compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2):
-    def jax_compute_Tsr(self, qdpt_mode, eigfuncs): 
+    def jax_compute_Tsr(self, qdpt_mode, eigfuncs, wigs): 
         """Computing the kernels which are used for obtaining the
         submatrix elements.
         """
@@ -138,13 +127,15 @@ class compute_submatrix:
             s = s_arr[i]
             ell1, ell2 = qdpt_mode.ell1, qdpt_mode.ell2
             r = self.r
-            # s = self.s_arr[i]
             ls2fac = L1sq + L2sq - s*(s+1)
             eigfac = U2*V1 + V2*U1 - U1*U2 - 0.5*V1*V2*ls2fac
-            # wigval = w3j(ell1, s, ell2, -1, 0, 1)
-            # using some dummy number until we write the
-            # function for mapping wigner3js
-            wigval = 1.0
+
+            # computing the wigner
+            idx1, idx2, fac = _find_idx(ell1, s, ell2, 1)
+            wig_idx = jnp.argmin(jnp.abs(wigs.wig_idx_full[:, 0] - idx1) +
+                                 jnp.abs(wigs.wig_idx_full[:, 1] - idx2))
+            wigval = fac * wigs.wig_list[wig_idx]
+
             Tsr_at_i = -(1 - jax_minus1pow(ell1 + ell2 + s)) * \
                        Om1 * Om2 * wigval * eigfac / r
             Tsr = jax.ops.index_update(Tsr, i, Tsr_at_i)
@@ -152,88 +143,15 @@ class compute_submatrix:
             return (Tsr, s_arr)
 
         Tsr, s_arr = foril(0, len(self.s_arr), func4Tsr_s_loop, (Tsr, self.s_arr))
-
         return Tsr
 
 
 if __name__ == "__main__":
-    '''
-    # parameters to be included in the global dictionary later?
-    s_arr = jnp.array([1,3,5], dtype='int32')
-
-    rmin = 0.3
-    rmax = 1.0
-
-    r = np.loadtxt(f'{data_dir}/r.dat') # the radial grid
-
-    # finding the indices for rmin and rmax
-    rmin_ind = np.argmin(np.abs(r - rmin))
-    rmax_ind = np.argmin(np.abs(r - rmax)) + 1
-
-    # clipping radial grid
-    r = r[rmin_ind:rmax_ind]
-
-    # the rotation profile
-    wsr = np.loadtxt(f'{data_dir}/w.dat')
-    wsr = wsr[:,rmin_ind:rmax_ind]
-    wsr = jnp.array(wsr)   # converting to device array once
-
-    # using fixed modes (0,200)-(0,200) coupling for testing
-    n1, n2 = 0, 0
-    ell1, ell2 = 200, 200
-
-    # finding omegaref
-    omegaref = 1
-
-    U = np.loadtxt(f'{data_dir}/U3672.dat')
-    V = np.loadtxt(f'{data_dir}/V3672.dat')
-
-    U = U[rmin_ind:rmax_ind]
-    V = V[rmin_ind:rmax_ind]
-
-    # converting numpy arrays to jax.numpy arrays
-    r = jnp.array(r)
-    U, V = jnp.array(U), jnp.array(V)
-
-    U1, U2 = U, U
-    V1, V2 = V, V
-
-    # creating the named tuples
-    GVAR = namedtuple('GVAR', ['r',
-                               'wsr',
-                               's_arr'])
-
-    QDPT_MODE = namedtuple('QDPT_MODE', ['ell1',
-                                         'ell2',
-                                         'ellmin',
-                                         'omegaref'])
-    EIGFUNCS = namedtuple('EIGFUNCS', ['U1',
-                                       'U2',
-                                       'V1',
-                                       'V2'])
-
-    # initializing namedtuples. This could be done from a separate file later
-    gvars = GVAR(r, wsr, s_arr)
-    qdpt_mode = QDPT_MODE(ell1, ell2, min(ell1, ell2), omegaref)
-    eigfuncs = EIGFUNCS(U1, U2, V1, V2)
-
-    wigs = jf.create_namedtuple('WIGNERS',
-                                ['wig_list',
-                                 'wig_idx1',
-                                 'wig_idx2',
-                                 'wig_idx_full'],
-                                (GVARS_TR.wig_list,
-                                 GVARS_ST.wig_idx1,
-                                 GVARS_ST.wig_idx2,
-                                 GVARS_ST.wig_idx_full))
-    '''
-
     GVARS = gvar_jax.GlobalVars()
     GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
     
-    # extracting the pruned parameters for multiplets of interest                                                                                                              
+    # extracting the pruned parameters for multiplets of interest
     nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx_full = prune_multiplets.get_pruned_attributes(GVARS, GVARS_ST)
-
 
     # converting to list before sending into jax'd function
     # wig_idx_full = wig_idx_full.tolist()
@@ -242,8 +160,7 @@ if __name__ == "__main__":
                                          nl_idx_pruned,
                                          omega_pruned)
 
-
-    # creating the named tuples                                                                                                                                              
+    # creating the named tuples
     gvars = jf.create_namedtuple('GVAR',
                                  ['r',
                                   'wsr',
@@ -286,11 +203,13 @@ if __name__ == "__main__":
     get_submat = compute_submatrix(gvars)
 
 
-    # testing get_Cvec() function                                                              
-    # declaring only qdpt_mode as static argument. It is critical to note that it is
-    # better to avoid trying to declare namedtuples containing arrays to be static argument.
-    # since for our problem, a changed array will be marked by a changed mode, it is better
-    # to club the non-array info in a separate namedtuple than the array info. For example,
+    # testing get_Cvec() function
+    # declaring only qdpt_mode as static argument. It is critical
+    # to note that it is better to avoid trying to declare namedtuples
+    # containing arrays to be static argument.
+    # since for our problem, a changed array will be marked by a changed
+    # mode, it is better to club the non-array info in a separate
+    # namedtuple than the array info. For example,
     # here, qdpt_mode has non-array info while eigfuncs have array info.
     _get_Cvec = jax.jit(get_submat.jax_get_Cvec(), static_argnums=(0,))
     # __ = _get_Cvec(ell1, ell2, s_arr, r, U1, U2, V1, V2, omegaref)
