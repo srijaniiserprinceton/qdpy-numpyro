@@ -75,8 +75,8 @@ class compute_submatrix:
                                  jnp.abs(wigs.wig_idx_full[:, 1] - idx2[iem]))
 
                 wigvals_iem = jax.ops.index_update(wigvals_iem,
-                                               jax.ops.index[idx],
-                                               fac[idx] * wigs.wig_list[idx])  
+                                               jax.ops.index[iem],
+                                               fac[iem] * wigs.wig_list[idx])  
 
                 return (wigvals_iem, idx1, idx2, fac)
 
@@ -138,7 +138,8 @@ class compute_submatrix:
 
             Tsr_at_i = -(1 - jax_minus1pow(ell1 + ell2 + s)) * \
                        Om1 * Om2 * wigval * eigfac / r
-            Tsr = jax.ops.index_update(Tsr, i, Tsr_at_i)
+            Tsr = jax.ops.index_update(Tsr, jax.ops.index[i, :], Tsr_at_i)
+            # Tsr = jax.ops.index_update(Tsr, i, Tsr_at_i)
 
             return (Tsr, s_arr)
 

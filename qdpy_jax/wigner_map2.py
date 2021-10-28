@@ -113,7 +113,7 @@ def ind2sub(cont_ind, nrows, ncols):
 def find_idx(ell1, s, ell2, m):
     # New method for specific use-case of qdPy
     # /ell1 s ell2\
-    # \ m  0  -m /
+    # \-|m| 0 |m| /
 
     # def true_func(ell12m):
     #     ell1, ell2, m = ell12m
