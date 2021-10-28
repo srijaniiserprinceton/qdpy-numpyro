@@ -69,35 +69,13 @@ class compute_submatrix:
             len_s = jnp.size(self.s_arr)
             wigvals = jnp.zeros((len_m, len_s))
 
-            '''
-            def modify_wig(iess, wigvals):
-                idx1, idx2, fac = _find_idx(ell1, self.s_arr[iess], ell2, m)
-
-                def modify_wig_ell(iell, wigvals):
-                    idx = jnp.argmin(jnp.abs(wig_idx_full-idx1[iell]) + jnp.abs(wig_idx_full-idx2[iell]))
-                    # idx = wig_idx_full.index([idx1[iell], idx2[iell]])
-                    #return jax.ops.index_update(wigvals,
-                    #                           jax.ops.index[iell],
-                    #                            fac[iell]*wigs.wigs_list[iell])
-                    
-                    return fac[idx] * wigs.wig_list[idx]
-                    
-                wigvals = jax.ops.index_update(wigvals,
-                                               jax.ops.index[:, iess],
-                                               foril(0, lenidx,
-                                                     modify_wig_ell, wigvals))
-                return wigvals
-
-            wigvals = foril(0, len_s, modify_wig, wigvals)
-            '''
             def modify_wig_ell(iem, func_params):
                 wigvals_iem, idx1, idx2, fac = func_params
                 idx = jnp.argmin(jnp.abs(wigs.wig_idx_full[:,0]-idx1[iem])
-                                 + jnp.abs(wigs.wig_idx_full[:,1]-idx2[iem]))                                                                                        
-                
+                                 + jnp.abs(wigs.wig_idx_full[:,1]-idx2[iem]))
 
-                wigvals_iem = jax.ops.index_update(wigvals_iem,                                                                                                                                 
-                                               jax.ops.index[idx],                                                                    
+                wigvals_iem = jax.ops.index_update(wigvals_iem,
+                                               jax.ops.index[idx],
                                                fac[idx] * wigs.wig_list[idx])  
 
                 return (wigvals_iem, idx1, idx2, fac)
@@ -106,20 +84,13 @@ class compute_submatrix:
                 idx1, idx2, fac = _find_idx(ell1, s, ell2, m)
                 
                 wigvals_iem = jnp.zeros((len_m))
-                wigvals_iem, __, __, __ = foril(0, len_m, modify_wig_ell, (wigvals_iem, idx1, idx2, fac))
+                wigvals_iem, __, __, __ = foril(0, len_m, modify_wig_ell,
+                                                (wigvals_iem, idx1, idx2, fac))
 
                 wigvals = jax.ops.index_update(wigvals,
                                                jax.ops.index[:, i],
                                                wigvals_iem)
                 
-
-            '''
-            wigvals = foril(0, len_s, lambda i, __:
-                            jax.ops.index_update(wigvals,
-                                                 jax.ops.index[:, i], 1), wigvals)
-            '''
-
-            # Tsr = jax_compute_Tsr(ell1, ell2, s_arr, r, U1, U2, V1, V2)
             Tsr = self.jax_compute_Tsr(qdpt_mode, eigfuncs)
             # -1 factor from definition of toroidal field
             '''wsr = np.loadtxt(f'{self.sup.gvar.datadir}/{WFNAME}')\

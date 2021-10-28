@@ -194,10 +194,9 @@ class build_supermatrix_functions:
                 absdell = np.abs(dell)
 
                 # tiling the diagonal submatdiag into the rect submatrix
-                # submat clipping index in the order of x_left, x_right, y_up, y_down
+                # submat clipping index in the order of x_left, y_up
                 sm_clip_ind = np.array([0, 0], dtype='int')
-                
-                
+
                 def dell_not_zero_func(sm_clip_ind):
                     sm_clip_ind = jax.lax.cond(dell > 0,
                                                lambda __: np.array([absdell, 0]),
@@ -206,7 +205,6 @@ class build_supermatrix_functions:
 
                     return sm_clip_ind
 
-                
                 sm_clip_ind = jax.lax.cond(dell == 0,
                                            lambda sm_clip_ind: sm_clip_ind,
                                            dell_not_zero_func,
@@ -217,7 +215,6 @@ class build_supermatrix_functions:
                                                       jnp.diag(submatdiag),
                                                       (sm_clip_ind[0], sm_clip_ind[1]))
 
-
                 supmat = jax.ops.index_update(supmat,
                                               jax.ops.index[startx:endx, starty:endy],
                                               submat)
@@ -225,10 +222,20 @@ class build_supermatrix_functions:
                 # to avoid repeated filling of the central blocks
                 supmat = jax.lax.cond(abs(i-ii)>0,\
                                       lambda __: jax.ops.index_update(supmat,
-                                                                      jax.ops.index[starty:endy, startx:endx],
-                                                                      jnp.transpose(jnp.conjugate(submat))),
+                                                jax.ops.index[starty:endy, startx:endx],
+                                                jnp.transpose(jnp.conjugate(submat))),
                                       lambda __: supmat, operand=None)
 
+            # filling the freqdiag
+            omega_nb = CNM_AND_NBS.omega_nbs[i]
+            startx, starty = SUBMAT_DICT.startx[i, i], SUBMAT_DICT.starty[i, i]
+            endx, endy = SUBMAT_DICT.endx[i, i], SUBMAT_DICT.endy[i, i]
+            om2diff = omega_nb**2 - omegaref**2
+            print(om2diff)
+            om2diff_mat = jnp.identity(endx-startx) * om2diff
+            supmat = jax.ops.index_add(supmat,
+                                       jax.ops.index[startx:endx, starty:endy],
+                                       om2diff_mat)
 
         return supmat
 

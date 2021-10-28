@@ -109,7 +109,7 @@ GVARS_PRUNED_ST = jf.create_namedtuple('GVARS_ST',
 
 nmults = len(GVARS.n0_arr)
 
-for i in range(len(GVARS.n0_arr)):
+for i in range(nmults):
     n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
     CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0, GVARS_ST)
     CENMULT_AND_NBS = tu.tree_map(lambda x: np.array(x), CENMULT_AND_NBS)
