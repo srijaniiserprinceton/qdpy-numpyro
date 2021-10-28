@@ -61,14 +61,20 @@ class compute_submatrix:
 
             lenidx = len(wigs.wig_idx_full)
 
+
+            print(lenidx, qdpt_mode.ellmin)
+
             ell1 = qdpt_mode.ell1
             ell2 = qdpt_mode.ell2
             ell = qdpt_mode.ellmin
             m = jnp.arange(-ell, ell+1)
             len_m = len(m)
             len_s = jnp.size(self.s_arr)
+            
+            wigvals = jnp.ones((len_m, len_s))
+            '''
             wigvals = jnp.zeros((len_m, len_s))
-
+            
             def modify_wig_ell(iem, func_params):
                 wigvals_iem, idx1, idx2, fac = func_params
                 idx = jnp.argmin(jnp.abs(wigs.wig_idx_full[:, 0] - idx1[iem]) +
@@ -90,7 +96,8 @@ class compute_submatrix:
                 wigvals = jax.ops.index_update(wigvals,
                                                jax.ops.index[:, i],
                                                wigvals_iem)
-                
+            '''
+            
             Tsr = self.jax_compute_Tsr(qdpt_mode, eigfuncs, wigs)
             integrand = Tsr * self.wsr   # since U and V are scaled by sqrt(rho) * r
 
