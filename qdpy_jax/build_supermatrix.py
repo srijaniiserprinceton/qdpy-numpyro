@@ -166,9 +166,9 @@ class build_supermatrix_functions:
 
                 wigs = jf.create_namedtuple('WIGNERS',
                                             ['wig_list',
-                                             'wig_idx_full'],
+                                             'wig_idx'],
                                             (GVARS_TR.wig_list,
-                                             GVARS_ST.wig_idx_full))
+                                             GVARS_ST.wig_idx))
 
                 get_submat = cvec.compute_submatrix(gvars)
 

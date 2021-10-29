@@ -59,10 +59,7 @@ class compute_submatrix:
         def get_func_Cvec(qdpt_mode, eigfuncs, wigs):
             """Computing the non-zero components of the submatrix"""
 
-            lenidx = len(wigs.wig_idx_full)
-
-
-            print(lenidx, qdpt_mode.ellmin)
+            lenidx = len(wigs.wig_idx)
 
             ell1 = qdpt_mode.ell1
             ell2 = qdpt_mode.ell2
@@ -71,10 +68,9 @@ class compute_submatrix:
             len_m = len(m)
             len_s = jnp.size(self.s_arr)
             
-            wigvals = jnp.ones((len_m, len_s))
-            '''
             wigvals = jnp.zeros((len_m, len_s))
             
+            '''
             def modify_wig_ell(iem, func_params):
                 wigvals_iem, idx1, idx2, fac = func_params
                 idx = jnp.argmin(jnp.abs(wigs.wig_idx_full[:, 0] - idx1[iem]) +
@@ -85,18 +81,18 @@ class compute_submatrix:
                                                fac[iem] * wigs.wig_list[idx])  
 
                 return (wigvals_iem, idx1, idx2, fac)
-
+            '''
+            
             for i, s in enumerate(self.s_arr):
-                idx1, idx2, fac = _find_idx(ell1, s, ell2, m)
-                
-                wigvals_iem = jnp.zeros((len_m))
-                wigvals_iem, __, __, __ = foril(0, len_m, modify_wig_ell,
-                                                (wigvals_iem, idx1, idx2, fac))
+                wig_idx, fac = _find_idx(ell1, s, ell2, m)
+
+                wigidx_for_s = jnp.searchsorted(wigs.wig_idx, wig_idx)
+                wigval_for_s = fac * wigs.wig_list[wigidx_for_s]
 
                 wigvals = jax.ops.index_update(wigvals,
                                                jax.ops.index[:, i],
-                                               wigvals_iem)
-            '''
+                                               wigval_for_s)
+
             
             Tsr = self.jax_compute_Tsr(qdpt_mode, eigfuncs, wigs)
             integrand = Tsr * self.wsr   # since U and V are scaled by sqrt(rho) * r
@@ -138,10 +134,17 @@ class compute_submatrix:
             eigfac = U2*V1 + V2*U1 - U1*U2 - 0.5*V1*V2*ls2fac
 
             # computing the wigner
+            '''
             idx1, idx2, fac = _find_idx(ell1, s, ell2, 1)
             wig_idx = jnp.argmin(jnp.abs(wigs.wig_idx_full[:, 0] - idx1) +
                                  jnp.abs(wigs.wig_idx_full[:, 1] - idx2))
             wigval = fac * wigs.wig_list[wig_idx]
+            '''
+
+            wig_idx, fac = _find_idx(ell1, s, ell2, 1)
+            
+            wigidx_for_s = jnp.searchsorted(wigs.wig_idx, wig_idx)
+            wigval = fac * wigs.wig_list[wigidx_for_s]
 
             Tsr_at_i = -(1 - jax_minus1pow(ell1 + ell2 + s)) * \
                        Om1 * Om2 * wigval * eigfac / r

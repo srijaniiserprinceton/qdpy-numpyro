@@ -61,7 +61,7 @@ build_supermatrix_ = gjit.gnool_jit(build_supmat_funcs.get_func2build_supermatri
 t1c = time.time()
 
 # extracting the pruned parameters for multiplets of interest
-nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx_full = \
+nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx = \
     prune_multiplets.get_pruned_attributes(GVARS, GVARS_ST)
 
 lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
@@ -98,14 +98,14 @@ GVARS_PRUNED_ST = jf.create_namedtuple('GVARS_ST',
                                         'omega_list',
                                         'fwindow',
                                         'OM',
-                                        'wig_idx_full'],
+                                        'wig_idx'],
                                        (GVARS_ST.s_arr,
                                         lm.nl_pruned,
                                         lm.nl_idx_pruned,
                                         lm.omega_pruned,
                                         GVARS_ST.fwindow,
                                         GVARS_ST.OM,
-                                        wig_idx_full))
+                                        wig_idx))
 
 nmults = len(GVARS.n0_arr)
 

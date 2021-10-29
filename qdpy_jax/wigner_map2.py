@@ -97,8 +97,19 @@ def get_wigners(nl_nbs, wig_list, idx1_list, idx2_list):
                     idx1_list.extend(list(idx1))
                     idx2_list.extend(list(idx2))
                     wig_list.extend(list(wigvals))
-    return wig_list, idx1_list, idx2_list
 
+    # computing a unified index for the wigner
+    max_ord_mag_idx1 = max(idx1_list)//10
+    max_ord_mag_idx2 = max(idx2_list)//10
+
+    wig_idx = idx2_list/max_ord_mag_idx2 \
+              * (max_ord_mag_idx1 + 
+                 max_ord_mag_idx2 + 1) \
+              + idx1_list
+
+    # return wig_list, idx1_list, idx2_list
+
+    return wig_list, wig_idx
 
 # function to check if the elements of a 1D array are sorted
 def issorted(a):
@@ -115,28 +126,6 @@ def find_idx(ell1, s, ell2, m):
     # /ell1 s ell2\
     # \-|m| 0 |m| /
 
-    # def true_func(ell12m):
-    #     ell1, ell2, m = ell12m
-    #     fac = jax.lax.cond(m<0,
-    #                        lambda fac: -1,
-    #                        lambda fac: 1,
-    #                        operand=None)
-    #     dell = ell2 - ell1
-    #     return ell1, dell, fac
-
-    # def false_func(ell12m):
-    #     ell1, ell2, m = ell12m
-    #     fac = jax.lax.cond(m>=0,
-    #                        lambda fac: -1,
-    #                        lambda fac: 1,
-    #                        operand=None)
-    #     dell = ell1 - ell2
-    #     return ell2, dell, fac
-
-    # ell, dell, fac = jax.lax.cond(ell2>ell1,
-    #                               true_func,
-    #                               false_func,
-    #                               operand=(ell1, ell2, m))
     fac = jax.lax.cond(m < 0,
                        lambda fac: -1,
                        lambda fac: 1,
@@ -147,7 +136,17 @@ def find_idx(ell1, s, ell2, m):
     idx1 = ell*(ell+1)//2 + jnp.abs(m)
     idx2 = s*(s+1)//2 + dell
 
-    return idx1, idx2, fac
+    # computing a unified index for the wigner                                             
+    max_ord_mag_idx1 = idx1//10
+    max_ord_mag_idx2 = idx2//10
+
+    wig_idx = idx2/max_ord_mag_idx2 \
+              * (max_ord_mag_idx1 +
+                 max_ord_mag_idx2 + 1) \
+              + idx1
+
+    # return idx1, idx2, fac
+    return wig_idx, fac
 
 def foril_func(i):
     return i, _find_idx(ell1, s, ell2, m)
