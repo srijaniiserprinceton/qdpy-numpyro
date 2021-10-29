@@ -126,6 +126,8 @@ def find_idx(ell1, s, ell2, m):
     wig_idx = idx2*(10**max_ord_mag_idx1) + idx1
     return wig_idx, fac
 
+_find_idx = jax.jit(find_idx)
+
 def foril_func(i):
     return i, _find_idx(ell1, s, ell2, m)
 
@@ -136,13 +138,14 @@ def get_wig_from_pc(ell1, s, ell2, m):
     wigidx_local = jnp.searchsorted(wig_idx, idx)
     wig2 = fac * wig_list[wigidx_local]
     tv = np.isclose(wig1, wig2)
-    print(f'({ell1:4d} :{ell2:4d} :{m:4d}) ' +
-          f'wig-actual = {wig1:9.6f}: wig-read = {wig2:9.6f}' +
-          f'- Match = {tv}')
+    # print(f'({ell1:4d} :{ell2:4d} :{m:4d}) ' +
+    #       f'wig-actual = {wig1:9.6f}: wig-read = {wig2:9.6f}' +
+    #       f'- Match = {tv}')
+    print(f'Match = {tv}')
     return wig1, wig2
 
 def compute_uniq_wigners(ell, s, ellp, m):
-    wig_idx, fac = find_idx(ell, s, ellp, m)
+    wig_idx, fac = _find_idx(ell, s, ellp, m)
     wig_list = w3j_vecm(ell, s, ellp, -m, 0*m, m)
 
     sortind_wig_idx = np.argsort(wig_idx, kind='quicksort')
@@ -157,7 +160,8 @@ if __name__ == "__main__":
     # m = -9
     m = jnp.arange(ell1+1)
     wig_list, wig_idx = compute_uniq_wigners(ell1, s, ell2, m)
-    m_test = 125
+    wig_list = jnp.asarray(wig_list)
+    m_test = np.arange(16)
     __ = get_wig_from_pc(ell1, s, ell2, m_test)
     __ = get_wig_from_pc(ell2, s, ell1, m_test)
     __ = get_wig_from_pc(ell1, s, ell2, -m_test)
