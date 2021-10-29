@@ -93,7 +93,6 @@ class compute_submatrix:
                                                jax.ops.index[:, i],
                                                wigval_for_s)
 
-            
             Tsr = self.jax_compute_Tsr(qdpt_mode, eigfuncs, wigs)
             integrand = Tsr * self.wsr   # since U and V are scaled by sqrt(rho) * r
 

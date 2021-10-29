@@ -68,7 +68,6 @@ lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
                                      nl_idx_pruned,
                                      omega_pruned)
 
-
 GVARS_PRUNED_TR = jf.create_namedtuple('GVARS_TR',
                                        ['r',
                                         'rth',

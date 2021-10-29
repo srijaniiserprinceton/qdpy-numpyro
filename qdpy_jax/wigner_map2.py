@@ -47,7 +47,7 @@ def w3j_vecm(l1, l2, l3, m1, m2, m3):
     return wigvals
 
 
-def get_wigners(nl_nbs, wig_list, idx1_list, idx2_list):
+def get_wigners(nl_nbs, wig_list, wig_idx):
     @np.vectorize
     def find_idx_fac(ell1, s, ell2, m):
         dell = abs(ell1 - ell2)
@@ -58,7 +58,10 @@ def get_wigners(nl_nbs, wig_list, idx1_list, idx2_list):
 
         if m < 0:
             fac = -1
-        return idx1, idx2, fac
+
+        max_ord_mag_idx1 = 5
+        wig_idx = idx2*(10**max_ord_mag_idx1) + idx1
+        return wig_idx, fac
 
     num_multiplets = nl_nbs.shape[0]
     num_blocks = int(num_multiplets**2)
@@ -77,27 +80,19 @@ def get_wigners(nl_nbs, wig_list, idx1_list, idx2_list):
                 if s < dell:
                     continue
 
-                idx1, idx2, fac = find_idx_fac(l1arr, s, l2arr, m)
+                widx, fac = find_idx_fac(l1arr, s, l2arr, m)
                 exists = True
 
                 try:
-                    _i1 = idx1_list.index(idx1[4])
-                    _i2 = idx2_list.index(idx2[4])
-                    mask1 = np.array(idx1_list) == idx1[4]
-                    mask2 = np.array(idx2_list) == idx2[4]
-                    exists = (mask1*mask2).sum().astype('bool')
+                    _i1 = wig_idx.index(widx)
+                    exists = True
                 except ValueError:
                     exists = False
 
                 if not exists:
                     wigvals = w3j_vecm(ell1, s, ell2, -m, 0*m, m)
-                    idx1_list.extend(list(idx1))
-                    idx2_list.extend(list(idx2))
                     wig_list.extend(list(wigvals))
-
-    # computing a unified index for the wigner
-    max_ord_mag_idx1 = 5
-    wig_idx = idx2_list*(10**max_ord_mag_idx1) + idx1_list
+                    wig_idx.extend(list(widx))
 
     return wig_list, wig_idx
 
@@ -141,7 +136,9 @@ def get_wig_from_pc(ell1, s, ell2, m):
     wigidx_local = jnp.searchsorted(wig_idx, idx)
     wig2 = fac * wig_list[wigidx_local]
     tv = np.isclose(wig1, wig2)
-    print(f'({ell1:4d} :{ell2:4d} :{m:4d}) wig-actual = {wig1:9.6f}: wig-read = {wig2:9.6f} - Match = {tv}')
+    print(f'({ell1:4d} :{ell2:4d} :{m:4d}) ' +
+          f'wig-actual = {wig1:9.6f}: wig-read = {wig2:9.6f}' +
+          f'- Match = {tv}')
     return wig1, wig2
 
 def compute_uniq_wigners(ell, s, ellp, m):

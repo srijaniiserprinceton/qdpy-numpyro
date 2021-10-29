@@ -16,7 +16,6 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
     """Returns the namedtuple containing the tiling information
     of the submatrices inside the supermatrix.
     """
-
     # functions called by foriloop
     def update_submat_ind_ix(ix, submat_tile_ind):
         def update_submat_ind_iy(iy, submat_tile_ind):
@@ -40,7 +39,6 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
 
         submat_tile_ind = foril(0, CNM_AND_NBS.dim_blocks,
                                 update_submat_ind_iy, submat_tile_ind)
-
         return submat_tile_ind
 
     # dim_blocks = np.size(CNM_AND_NBS.omega_nbs)

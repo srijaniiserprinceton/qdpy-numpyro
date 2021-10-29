@@ -8,7 +8,6 @@ get_namedtuple_for_cenmult_and_neighbours_ = \
     gjit.gnool_jit(build_CENMULT_AND_NBS.get_namedtuple_for_cenmult_and_neighbours,
                    static_array_argnums = (0, 1, 2))
 
-
 # slices out the unique nl, nl_idx and omega from
 # from the arguments nl, omega which may contain repetitions
 def get_pruned_multiplets(nl, omega, nl_all):
@@ -33,8 +32,7 @@ def get_pruned_multiplets(nl, omega, nl_all):
 
 def get_pruned_attributes(GVARS, GVARS_ST):
     wig_list = []
-    idx1_list = []
-    idx2_list = []
+    wig_idx = []
     
     for i in range(len(GVARS.n0_arr)):
         n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
@@ -48,20 +46,8 @@ def get_pruned_attributes(GVARS, GVARS_ST):
             nl_pruned = np.concatenate((nl_pruned, CENMULT_AND_NBS.nl_nbs), 0)
             omega_pruned = np.append(omega_pruned, CENMULT_AND_NBS.omega_nbs)
             
-        '''
-        wig_list, idx1_list, idx2_list = wigmap.get_wigners(CENMULT_AND_NBS.nl_nbs,
-                                                            wig_list, idx1_list,
-                                                            idx2_list)
-        '''
         wig_list, wig_idx = wigmap.get_wigners(CENMULT_AND_NBS.nl_nbs, 
-                                               wig_list, idx1_list,
-                                               idx2_list)
-
-    '''
-    wig_idx_full = np.zeros((len(wig_list), 2), dtype=np.int32)
-    wig_idx_full[:, 0] = idx1_list
-    wig_idx_full[:, 1] = idx2_list
-    '''
+                                               wig_list, wig_idx)
 
     # extracting the unique multiplets in the nl_pruned
     nl_pruned, nl_idx_pruned, omega_pruned = get_pruned_multiplets(nl_pruned,
@@ -78,6 +64,5 @@ def get_pruned_attributes(GVARS, GVARS_ST):
     sortind_wig_idx = np.argsort(wig_idx)
     wig_idx = wig_idx[sortind_wig_idx]
     wig_list = wig_list[sortind_wig_idx]
-    
+
     return nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx
-    
