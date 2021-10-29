@@ -82,7 +82,7 @@ class GlobalVars():
 
 
         datadir = f"{self.snrnmais_dir}/data_files"
-        
+
         qdPars = qdParams()
 
         # Frequency unit conversion factor (in Hz (cgs))
@@ -121,7 +121,8 @@ class GlobalVars():
         self.s_arr = np.arange(1, self.smax+1, 2)
 
         self.fwindow = qdPars.fwindow
-        self.wsr = -1.0*np.loadtxt(f'{self.datadir}/w_s/w.dat')
+        # self.wsr = -1.0*np.loadtxt(f'{self.datadir}/w_s/w.dat')
+        self.wsr = np.load(f'wsr-spline.npy')
 
         # generating the multiplets which we will use
         n_arr, ell_arr = self.get_mult_arrays(load_from_file=False,
@@ -146,7 +147,7 @@ class GlobalVars():
 
         # retaining only region between rmin and rmax
         self.r = self.mask_minmax(self.r)
-        self.wsr = self.mask_minmax(self.wsr, axis=1)
+        # self.wsr = self.mask_minmax(self.wsr, axis=1)
         # self.pruned_multiplets.U_arr = self.mask_minmax(self.pruned_multiplets.U_arr,
                                                         # axis=1)
         # self.pruned_multiplets.V_arr = self.mask_minmax(self.pruned_multiplets.V_arr,
@@ -198,7 +199,7 @@ class GlobalVars():
         if(load_from_file):
             mults = np.load('qdpy_multiplets.npy')
             n_arr, ell_arr = mults[:, 0], mults[:, 1]
-        
+
         # creating the arrays when the ells are continuous in each radial orders
         else:
             for i, n in enumerate(radial_orders):
