@@ -118,13 +118,13 @@ class build_supermatrix_functions:
         # our sorting puts the central mode at the first index in nl_neighbours
         omegaref = CNM_AND_NBS.omega_nbs[0]
 
-        for i in range(CNM_AND_NBS.dim_blocks):
-            for ii in range(i, CNM_AND_NBS.dim_blocks):
-                idx1 = CNM_AND_NBS.nl_nbs_idx[i]
-                idx2 = CNM_AND_NBS.nl_nbs_idx[ii]
+        for ic in range(CNM_AND_NBS.dim_blocks):
+            for ir in range(ic, CNM_AND_NBS.dim_blocks):
+                idx1 = CNM_AND_NBS.nl_nbs_idx[ir]
+                idx2 = CNM_AND_NBS.nl_nbs_idx[ic]
 
-                idx1 = GVARS_ST.nl_idx_pruned.tolist().index(CNM_AND_NBS.nl_nbs_idx[i])
-                idx2 = GVARS_ST.nl_idx_pruned.tolist().index(CNM_AND_NBS.nl_nbs_idx[ii])
+                idx1 = GVARS_ST.nl_idx_pruned.tolist().index(CNM_AND_NBS.nl_nbs_idx[ir])
+                idx2 = GVARS_ST.nl_idx_pruned.tolist().index(CNM_AND_NBS.nl_nbs_idx[ic])
 
                 U1, V1 = GVARS_TR.U_arr[idx1], GVARS_TR.V_arr[idx1]
                 U2, V2 = GVARS_TR.U_arr[idx2], GVARS_TR.V_arr[idx2]
@@ -134,8 +134,8 @@ class build_supermatrix_functions:
 
                 # because ii starts from i, we only scan
                 # the region where ell2 >= ell1
-                ell1 = CNM_AND_NBS.nl_nbs[i, 1]
-                ell2 = CNM_AND_NBS.nl_nbs[ii, 1]
+                ell1 = CNM_AND_NBS.nl_nbs[ir, 1]
+                ell2 = CNM_AND_NBS.nl_nbs[ic, 1]
                 
                 # creating the named tuples
                 gvars = jf.create_namedtuple('GVAR',
@@ -172,8 +172,10 @@ class build_supermatrix_functions:
 
                 submatdiag = get_submat.jax_get_Cvec()(qdpt_mode, eigfuncs, wigs)
 
-                startx, starty = SUBMAT_DICT.startx[i,ii], SUBMAT_DICT.starty[i,ii]
-                endx, endy = SUBMAT_DICT.endx[i,ii], SUBMAT_DICT.endy[i,ii]
+                startx, starty = SUBMAT_DICT.startx[ir,ic], SUBMAT_DICT.starty[ir,ic]
+                endx, endy = SUBMAT_DICT.endx[ir,ic], SUBMAT_DICT.endy[ir,ic]
+
+                print(startx, starty, endx, endy)
 
                 # creating the rectangular submatrix
                 submat = jnp.zeros((endx-startx, endy-starty), dtype='float32')
@@ -208,15 +210,15 @@ class build_supermatrix_functions:
                                               submat)
 
                 # to avoid repeated filling of the central blocks
-                supmat = jax.lax.cond(abs(i-ii)>0,\
+                supmat = jax.lax.cond(abs(ic-ir)>0,\
                                       lambda __: jax.ops.index_update(supmat,
                                                 jax.ops.index[starty:endy, startx:endx],
                                                 jnp.transpose(jnp.conjugate(submat))),
                                       lambda __: supmat, operand=None)
 
             # filling the freqdiag
-            omega_nb = CNM_AND_NBS.omega_nbs[i]
-            startx, endx = SUBMAT_DICT.startx[i, i], SUBMAT_DICT.starty[i, i]
+            omega_nb = CNM_AND_NBS.omega_nbs[ic]
+            startx, endx = SUBMAT_DICT.startx[ic, ic], SUBMAT_DICT.starty[ic, ic]
             om2diff = omega_nb**2 - omegaref**2
             om2diff_mat = jnp.identity(endx-startx) * om2diff
             supmat = jax.ops.index_add(supmat,
