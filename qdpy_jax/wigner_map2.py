@@ -55,10 +55,7 @@ def get_wigners(nl_nbs, wig_list, idx1_list, idx2_list):
         idx1 = ell*(ell+1)//2 + abs(m)
         idx2 = s*(s+1)//2 + dell
         fac = 1
-        # if (ell2 > ell1) and (m < 0):
-        #     fac = -1
-        # if (ell2 < ell1) and (m >= 0):
-        #     fac = -1
+
         if m < 0:
             fac = -1
         return idx1, idx2, fac
@@ -99,15 +96,8 @@ def get_wigners(nl_nbs, wig_list, idx1_list, idx2_list):
                     wig_list.extend(list(wigvals))
 
     # computing a unified index for the wigner
-    max_ord_mag_idx1 = max(idx1_list)//10
-    max_ord_mag_idx2 = max(idx2_list)//10
-
-    wig_idx = idx2_list/max_ord_mag_idx2 \
-              * (max_ord_mag_idx1 + 
-                 max_ord_mag_idx2 + 1) \
-              + idx1_list
-
-    # return wig_list, idx1_list, idx2_list
+    max_ord_mag_idx1 = 5
+    wig_idx = idx2_list*(10**max_ord_mag_idx1) + idx1_list
 
     return wig_list, wig_idx
 
@@ -137,15 +127,8 @@ def find_idx(ell1, s, ell2, m):
     idx2 = s*(s+1)//2 + dell
 
     # computing a unified index for the wigner                                             
-    max_ord_mag_idx1 = idx1//10
-    max_ord_mag_idx2 = idx2//10
-
-    wig_idx = idx2/max_ord_mag_idx2 \
-              * (max_ord_mag_idx1 +
-                 max_ord_mag_idx2 + 1) \
-              + idx1
-
-    # return idx1, idx2, fac
+    max_ord_mag_idx1 = 5
+    wig_idx = idx2*(10**max_ord_mag_idx1) + idx1
     return wig_idx, fac
 
 def foril_func(i):
@@ -154,21 +137,21 @@ def foril_func(i):
 
 def get_wig_from_pc(ell1, s, ell2, m):
     wig1 = w3j_vecm(ell1, s, ell2, -m, 0, m)
-    idx1, idx2, fac = find_idx(ell1, s, ell2, m)
-    wig_idx = np.where((wig_idx_full[:, 0]==idx1) *
-                       (wig_idx_full[:, 1]==idx2))[0][0]
-    wig2 = fac * wig_list[wig_idx]
+    idx, fac = find_idx(ell1, s, ell2, m)
+    wigidx_local = jnp.searchsorted(wig_idx, idx)
+    wig2 = fac * wig_list[wigidx_local]
     tv = np.isclose(wig1, wig2)
     print(f'({ell1:4d} :{ell2:4d} :{m:4d}) wig-actual = {wig1:9.6f}: wig-read = {wig2:9.6f} - Match = {tv}')
     return wig1, wig2
 
 def compute_uniq_wigners(ell, s, ellp, m):
-    idx1, idx2, fac = find_idx(ell, s, ellp, m)
+    wig_idx, fac = find_idx(ell, s, ellp, m)
     wig_list = w3j_vecm(ell, s, ellp, -m, 0*m, m)
-    wig_idx_full = np.zeros((len(wig_list), 2), dtype=np.int32)
-    wig_idx_full[:, 0] = idx1
-    wig_idx_full[:, 1] = idx2
-    return wig_list, wig_idx_full
+
+    sortind_wig_idx = np.argsort(wig_idx, kind='quicksort')
+    wig_idx = wig_idx[sortind_wig_idx]
+    wig_list = wig_list[sortind_wig_idx]
+    return wig_list, wig_idx
 
 # timing the functions with and without jitting
 if __name__ == "__main__":
@@ -176,7 +159,7 @@ if __name__ == "__main__":
     ell1, s, ell2 = 200, 5, 202
     # m = -9
     m = jnp.arange(ell1+1)
-    wig_list, wig_idx_full = compute_uniq_wigners(ell1, s, ell2, m)
+    wig_list, wig_idx = compute_uniq_wigners(ell1, s, ell2, m)
     m_test = 125
     __ = get_wig_from_pc(ell1, s, ell2, m_test)
     __ = get_wig_from_pc(ell2, s, ell1, m_test)
@@ -198,7 +181,7 @@ if __name__ == "__main__":
     __ = _find_idx(ell1, s, ell2, m)
 
     t3 = time.time()
-    for __ in range(Niter): idx1, idx2, fac = _find_idx(ell1, s, ell2, m)
+    for __ in range(Niter): idx, fac = _find_idx(ell1, s, ell2, m)
     t4 = time.time()
 
     print(f'Time taken for a 1.2 billion computations in hours:' +
