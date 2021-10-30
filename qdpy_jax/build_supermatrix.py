@@ -218,7 +218,7 @@ class build_supermatrix_functions:
 
             # filling the freqdiag
             omega_nb = CNM_AND_NBS.omega_nbs[ic]
-            startx, endx = SUBMAT_DICT.startx[ic, ic], SUBMAT_DICT.starty[ic, ic]
+            startx, endx = SUBMAT_DICT.startx[ic, ic], SUBMAT_DICT.endx[ic, ic]
             om2diff = omega_nb**2 - omegaref**2
             om2diff_mat = jnp.identity(endx-startx) * om2diff
             supmat = jax.ops.index_add(supmat,
