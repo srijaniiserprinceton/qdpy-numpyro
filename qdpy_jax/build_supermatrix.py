@@ -175,7 +175,6 @@ class build_supermatrix_functions:
                 startx, starty = SUBMAT_DICT.startx[ir,ic], SUBMAT_DICT.starty[ir,ic]
                 endx, endy = SUBMAT_DICT.endx[ir,ic], SUBMAT_DICT.endy[ir,ic]
 
-                print(startx, starty, endx, endy)
 
                 # creating the rectangular submatrix
                 submat = jnp.zeros((endx-startx, endy-starty), dtype='float32')
@@ -220,6 +219,7 @@ class build_supermatrix_functions:
             omega_nb = CNM_AND_NBS.omega_nbs[ic]
             startx, endx = SUBMAT_DICT.startx[ic, ic], SUBMAT_DICT.endx[ic, ic]
             om2diff = omega_nb**2 - omegaref**2
+            print(ell2, om2diff)
             om2diff_mat = jnp.identity(endx-startx) * om2diff
             supmat = jax.ops.index_add(supmat,
                                        jax.ops.index[startx:endx, startx:endx],
