@@ -20,8 +20,10 @@ from qdpy_jax import prune_multiplets
 jax.config.update('jax_platform_name', 'cpu')
 
 # enabling 64 bits
+
 from jax.config import config
 config.update('jax_enable_x64', True)
+
 
 # slices out the unique nl, nl_idx and omega from
 # from the arguments nl, omega which may contain repetitions
