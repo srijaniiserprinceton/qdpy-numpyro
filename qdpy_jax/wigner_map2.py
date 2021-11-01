@@ -91,7 +91,7 @@ def get_wigners(nl_nbs, wig_list, wig_idx):
 
                 if not exists:
                     wigvals = w3j_vecm(ell1, s, ell2, -m, 0*m, m)
-                    wig_list.extend(list(wigvals.astype(np.float32)))
+                    wig_list.extend(list(wigvals))
                     wig_idx.extend(list(widx))
                     # print(ell1, s, ell2)
                     # print(wigvals[-6:][::-1])

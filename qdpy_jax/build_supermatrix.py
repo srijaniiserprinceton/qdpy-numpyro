@@ -113,7 +113,7 @@ class build_supermatrix_functions:
         submatrices into the supermatrix.
         """
         supmat = jnp.zeros((CNM_AND_NBS.dim_super,
-                            CNM_AND_NBS.dim_super), dtype='float32')
+                            CNM_AND_NBS.dim_super))
             
         # finding omegaref. This is the frequency of the central mode
         # our sorting puts the central mode at the first index in nl_neighbours
@@ -179,7 +179,7 @@ class build_supermatrix_functions:
                 endx, endy = SUBMAT_DICT.endx[ir, ic], SUBMAT_DICT.endy[ir, ic]
 
                 # creating the rectangular submatrix
-                submat = jnp.zeros((endx-startx, endy-starty), dtype='float32')
+                submat = jnp.zeros((endx-startx, endy-starty))
 
                 # ell1 goes along the x-axis of the matrix and ell2 goes along the y-axis
                 dell = ell1 - ell2

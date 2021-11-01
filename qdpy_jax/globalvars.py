@@ -34,13 +34,21 @@ class qdParams():
     # (2) a1 = \omega_0 ( 1 - 1/ell ) scaling
     # (Since we are using lmax = 300, 0.45*300 \approx 150)
 
+    # defining the datatypes
+    '''
+    NPINT = np.int32
+    JNPINT = jnp.int32
+    NPFLOAT = np.float32
+    JNPFLOAT = jnp.float32
+    '''
+    
     # the radial orders present
-    radial_orders = np.array([0], dtype='int32')
+    radial_orders = np.array([0])
     # the bounds on angular degree for each radial order
-    ell_bounds = np.array([[200, 200]], dtype='int32')
+    ell_bounds = np.array([[200, 200]])
 
     rmin, rth, rmax = 0.0, 0.98, 1.2
-    fwindow =  150 
+    fwindow =  150.0 
     smax = 5
     precompute = False
     use_precomputed = False
@@ -61,7 +69,9 @@ class GlobalVars():
                       "nl_all", "nl_all_list",
                       "omega_list", "fwindow",
                       "smax", "s_arr", "wsr",
-                      "pruned_multiplets"]
+                      "pruned_multiplets",
+                      "INT",
+                      "FLOAT"]
 
     __methods__ = ["get_all_GVAR",
                    "get_mult_arrays",
@@ -93,10 +103,10 @@ class GlobalVars():
         self.OM = np.sqrt(4*np.pi*R_sol*B_0**2/M_sol) 
 
         # self.rho = np.loadtxt(f"{self.datadir}/rho.dat")
-        self.r = np.loadtxt(f"{datadir}/r.dat")
+        self.r = np.loadtxt(f"{datadir}/r.dat").astype('float')
         self.nl_all = np.loadtxt(f"{datadir}/nl.dat").astype('int')
         self.nl_all_list = np.loadtxt(f"{datadir}/nl.dat").astype('int').tolist()
-        self.omega_list = np.loadtxt(f"{datadir}/muhz.dat") * 1e-6 / self.OM
+        self.omega_list = np.loadtxt(f"{datadir}/muhz.dat").astype('float') * 1e-6 / self.OM
 
         # getting indices for minimum and maximum r
         if qdPars.precompute:
@@ -122,12 +132,13 @@ class GlobalVars():
 
         self.fwindow = qdPars.fwindow
         # self.wsr = -1.0*np.loadtxt(f'{self.datadir}/w_s/w.dat')
-        self.wsr = np.load(f'wsr-spline.npy')
+        self.wsr = np.load(f'wsr-spline.npy').astype('float')
 
         # generating the multiplets which we will use
-        n_arr, ell_arr = self.get_mult_arrays(load_from_file=False,
-                                             radial_orders=qdPars.radial_orders,
-                                             ell_bounds=qdPars.ell_bounds)
+        load_from_file = False
+        n_arr, ell_arr = self.get_mult_arrays(load_from_file,
+                                              qdPars.radial_orders,
+                                              qdPars.ell_bounds)
         self.n0_arr, self.ell0_arr = n_arr, ell_arr
 
         # rth = r threshold beyond which the profiles are updated. 
@@ -138,32 +149,9 @@ class GlobalVars():
         self.fac_up = np.array([1.1, 2.0, 2.0])
         self.fac_lo = np.array([0.9, 0.0, 0.0])
 
-        # # getting the pruned multiplets
-        # self.pruned_multiplets = load_multiplets.load_multiplets(self, n_arr, ell_arr)
-        # # not needed anymore
-        # del self.omega_list
-        # del self.nl_all
-        # del self.nl_all_list
-
         # retaining only region between rmin and rmax
         self.r = self.mask_minmax(self.r)
-        # self.wsr = self.mask_minmax(self.wsr, axis=1)
-        # self.pruned_multiplets.U_arr = self.mask_minmax(self.pruned_multiplets.U_arr,
-                                                        # axis=1)
-        # self.pruned_multiplets.V_arr = self.mask_minmax(self.pruned_multiplets.V_arr,
-                                                        # axis=1)
 
-        # converting to device array once
-        '''
-        self.wsr = jnp.array(self.wsr)   
-        self.r = jnp.array(self.r)
-        self.pruned_multiplets.nl_pruned = jnp.array(self.pruned_multiplets.nl_pruned)
-        self.pruned_multiplets.omega_pruned = jnp.array(self.pruned_multiplets.omega_pruned)
-        self.pruned_multiplets.U_arr = jnp.array(self.pruned_multiplets.U_arr)
-        self.pruned_multiplets_V_arr = jnp.array(self.pruned_multiplets.V_arr)
-        self.fac_up = jnp.array(self.fac_up)
-        self.fac_lo = jnp.array(self.fac_lo)
-        '''
 
     def get_all_GVAR(self):
         '''Builds and returns the relevant dictionaries.
@@ -177,9 +165,7 @@ class GlobalVars():
         GVAR_ST = self.get_namedtuple_gvar_static()
         return GVAR_PATHS, GVAR_TR, GVAR_ST 
 
-    def get_mult_arrays(self, load_from_file=False, 
-                        radial_orders=np.array([0]),
-                        ell_bounds=np.array([195, 200])):
+    def get_mult_arrays(self, load_from_file, radial_orders, ell_bounds):
         '''Creates the n array and ell array. If discontonuous ell then load from a 
         pregenerated file.
 
@@ -192,12 +178,12 @@ class GlobalVars():
         ell_bounds: array_like
             An array of bounds of angular degrees for each radial order in `radial_orders`.
         '''
-        n_arr = np.array([], dtype='int32')
-        ell_arr = np.array([], dtype='int32')
+        n_arr = np.array([])
+        ell_arr = np.array([])
 
         # loading from a file. Must be saved in the (nmults, 2) shape
         if(load_from_file):
-            mults = np.load('qdpy_multiplets.npy')
+            mults = np.load('qdpy_multiplets.npy').astype('int')
             n_arr, ell_arr = mults[:, 0], mults[:, 1]
 
         # creating the arrays when the ells are continuous in each radial orders
@@ -267,6 +253,7 @@ class GlobalVars():
                                             self.omega_list,
                                             self.fwindow,
                                             self.OM))
+
         return GVAR_STATIC
 
     def get_ind(self, arr, val):
