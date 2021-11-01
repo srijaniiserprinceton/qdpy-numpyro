@@ -1,4 +1,4 @@
-Bimport jax.numpy as jnp
+import jax.numpy as jnp
 import numpy as np
 from jax.lax import fori_loop as foril
 import py3nj
@@ -68,7 +68,7 @@ def get_wigners(nl_nbs, wig_list, wig_idx):
     s_arr = np.array([1, 3, 5])
 
     for i in range(num_multiplets):
-        for ii in range(num_multiplets):
+        for ii in range(i, num_multiplets):
             ell1 = np.array([nl_nbs[i, 1]])[0]
             ell2 = np.array([nl_nbs[ii, 1]])[0]
             ellmin = min(ell1, ell2)
@@ -77,8 +77,8 @@ def get_wigners(nl_nbs, wig_list, wig_idx):
             l2arr = np.ones_like(m)*ell2
             for s in s_arr:
                 dell = abs(ell2 - ell1)
-                if s < dell:
-                    continue
+                # if s < dell:
+                #     continue
 
                 widx, fac = find_idx_fac(l1arr, s, l2arr, m)
                 exists = True
@@ -91,8 +91,10 @@ def get_wigners(nl_nbs, wig_list, wig_idx):
 
                 if not exists:
                     wigvals = w3j_vecm(ell1, s, ell2, -m, 0*m, m)
-                    wig_list.extend(list(wigvals))
+                    wig_list.extend(list(wigvals.astype(np.float32)))
                     wig_idx.extend(list(widx))
+                    # print(ell1, s, ell2)
+                    # print(wigvals[-6:][::-1])
 
     return wig_list, wig_idx
 

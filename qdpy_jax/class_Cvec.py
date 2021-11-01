@@ -8,6 +8,8 @@ import os
 from functools import partial
 from jax.lax import fori_loop as foril
 
+from jax.experimental import host_callback as hcall
+
 from qdpy_jax import wigner_map2 as wigmap
 from qdpy_jax import gnool_jit as gjit
 from qdpy_jax import prune_multiplets
@@ -67,22 +69,9 @@ class compute_submatrix:
             m = jnp.arange(-ell, ell+1)
             len_m = len(m)
             len_s = jnp.size(self.s_arr)
-            
+
             wigvals = jnp.zeros((len_m, len_s))
-            
-            '''
-            def modify_wig_ell(iem, func_params):
-                wigvals_iem, idx1, idx2, fac = func_params
-                idx = jnp.argmin(jnp.abs(wigs.wig_idx_full[:, 0] - idx1[iem]) +
-                                 jnp.abs(wigs.wig_idx_full[:, 1] - idx2[iem]))
 
-                wigvals_iem = jax.ops.index_update(wigvals_iem,
-                                               jax.ops.index[iem],
-                                               fac[iem] * wigs.wig_list[idx])  
-
-                return (wigvals_iem, idx1, idx2, fac)
-            '''
-            
             for i, s in enumerate(self.s_arr):
                 wig_idx, fac = _find_idx(ell1, s, ell2, m)
 
@@ -133,23 +122,14 @@ class compute_submatrix:
             eigfac = U2*V1 + V2*U1 - U1*U2 - 0.5*V1*V2*ls2fac
 
             # computing the wigner
-            '''
-            idx1, idx2, fac = _find_idx(ell1, s, ell2, 1)
-            wig_idx = jnp.argmin(jnp.abs(wigs.wig_idx_full[:, 0] - idx1) +
-                                 jnp.abs(wigs.wig_idx_full[:, 1] - idx2))
-            wigval = fac * wigs.wig_list[wig_idx]
-            '''
-
             wig_idx, fac = _find_idx(ell1, s, ell2, 1)
-            
             wigidx_for_s = jnp.searchsorted(wigs.wig_idx, wig_idx)
             wigval = fac * wigs.wig_list[wigidx_for_s]
 
             Tsr_at_i = -(1 - jax_minus1pow(ell1 + ell2 + s)) * \
                        Om1 * Om2 * wigval * eigfac / r
             Tsr = jax.ops.index_update(Tsr, jax.ops.index[i, :], Tsr_at_i)
-            # Tsr = jax.ops.index_update(Tsr, i, Tsr_at_i)
-
+            # jf.jax_print(s, ell1, ell2, Tsr_at_i[-8:])
             return (Tsr, s_arr)
 
         Tsr, s_arr = foril(0, len(self.s_arr), func4Tsr_s_loop, (Tsr, self.s_arr))

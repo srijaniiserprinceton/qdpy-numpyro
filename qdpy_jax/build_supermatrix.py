@@ -7,6 +7,7 @@ from jax.lax import fori_loop as foril
 from collections import namedtuple
 from functools import partial
 
+
 from qdpy_jax import gnool_jit as gjit
 from qdpy_jax import class_Cvec as cvec
 from qdpy_jax import jax_functions as jf
@@ -171,10 +172,11 @@ class build_supermatrix_functions:
                 get_submat = cvec.compute_submatrix(gvars)
 
                 submatdiag = get_submat.jax_get_Cvec()(qdpt_mode, eigfuncs, wigs)
+                jf.jax_print(qdpt_mode.ell1, qdpt_mode.ell2,
+                             submatdiag[:10])
 
-                startx, starty = SUBMAT_DICT.startx[ir,ic], SUBMAT_DICT.starty[ir,ic]
-                endx, endy = SUBMAT_DICT.endx[ir,ic], SUBMAT_DICT.endy[ir,ic]
-
+                startx, starty = SUBMAT_DICT.startx[ir, ic], SUBMAT_DICT.starty[ir, ic]
+                endx, endy = SUBMAT_DICT.endx[ir, ic], SUBMAT_DICT.endy[ir, ic]
 
                 # creating the rectangular submatrix
                 submat = jnp.zeros((endx-startx, endy-starty), dtype='float32')
@@ -219,7 +221,6 @@ class build_supermatrix_functions:
             omega_nb = CNM_AND_NBS.omega_nbs[ic]
             startx, endx = SUBMAT_DICT.startx[ic, ic], SUBMAT_DICT.endx[ic, ic]
             om2diff = omega_nb**2 - omegaref**2
-            print(ell2, om2diff)
             om2diff_mat = jnp.identity(endx-startx) * om2diff
             supmat = jax.ops.index_add(supmat,
                                        jax.ops.index[startx:endx, startx:endx],
@@ -267,4 +268,3 @@ if __name__ == "__main__":
     CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0, GVARS_ST)
     CENMULT_AND_NBS = tu.tree_map(lambda x: np.array(x), CENMULT_AND_NBS)
     SUBMAT_DICT = build_SUBMAT_INDICES(CENMULT_AND_NBS)
-    print(SUBMAT_DICT.startx)
