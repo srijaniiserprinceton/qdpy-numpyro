@@ -172,8 +172,6 @@ class build_supermatrix_functions:
                 get_submat = cvec.compute_submatrix(gvars)
 
                 submatdiag = get_submat.jax_get_Cvec()(qdpt_mode, eigfuncs, wigs)
-                jf.jax_print(qdpt_mode.ell1, qdpt_mode.ell2,
-                             submatdiag[:10])
 
                 startx, starty = SUBMAT_DICT.startx[ir, ic], SUBMAT_DICT.starty[ir, ic]
                 endx, endy = SUBMAT_DICT.endx[ir, ic], SUBMAT_DICT.endy[ir, ic]

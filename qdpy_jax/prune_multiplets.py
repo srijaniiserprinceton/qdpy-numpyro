@@ -1,7 +1,8 @@
 import numpy as np
-from qdpy_jax import wigner_map2 as wigmap
-from qdpy_jax import build_cenmult_and_nbs as build_CENMULT_AND_NBS
-from qdpy_jax import gnool_jit as gjit
+
+from . import wigner_map2 as wigmap
+from . import build_cenmult_and_nbs as build_CENMULT_AND_NBS
+from . import gnool_jit as gjit
 
 # jitting various functions
 get_namedtuple_for_cenmult_and_neighbours_ = \
