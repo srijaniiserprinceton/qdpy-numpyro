@@ -20,36 +20,22 @@ nchains = int(sys.argv[2])
 # initializing parameters
 N = 50; J = 2
 X = random.normal(random.PRNGKey(seed = 123), (N, J))
-weight = np.array([1.5, -2.8])
+weight = np.array([1.7, -2.8])
 error = random.normal(random.PRNGKey(234), (N, )) # standard Normal
 b = 10.5
-y_obs = X @ weight + b + error
+y_obs = X @ weight + b + 0.01 * error
 y = y_obs.reshape((N, 1))
 X = jax.device_get(X) # convert jax array into numpy array
 y = jax.device_get(y) # convert jax array into numpy array
 
-# creating a matrix to solve the dummy eigenvalue problem
-# constructing the sparse matrix                                                                 
-mat_sparse = scipy.sparse.rand(2500,2500,density=0.5)
-mat_dense = mat_sparse.todense()
-# making symmetric matrix                                                                     
-sym_mat_raw = mat_dense + mat_dense.T
-sym_mat = jax.device_put(sym_mat_raw)
-
-
 # setting up model
 def model(X, y=None):
-    # dummy eigenvalue problem
-    # print('Solving eval')
-    # w_np, __ = numpy.linalg.eigh(sym_mat_raw + numpy.mean(jax.device_get(X)))
-    # w = jax.device_put(w_np)
-    # w, __ = jax.scipy.linalg.eigh(sym_mat+np.mean(X))
-    
+
     ndims = np.shape(X)[-1]
     ws = numpyro.sample('betas', dist.Normal(0.0,10*np.ones(ndims)))
     b = numpyro.sample('b', dist.Normal(0.0, 10.0))
     sigma = numpyro.sample('sigma', dist.Uniform(0.0, 10.0))
-    mu = X @ ws + b # + 1e-30*np.mean(w)
+    mu = X @ ws + b
 
     return numpyro.sample("y", dist.Normal(mu, sigma), obs=y)
 
