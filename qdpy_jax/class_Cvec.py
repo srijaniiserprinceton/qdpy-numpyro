@@ -11,7 +11,6 @@ from jax.lax import fori_loop as foril
 from jax.experimental import host_callback as hcall
 
 from qdpy_jax import wigner_map2 as wigmap
-from qdpy_jax import gnool_jit as gjit
 from qdpy_jax import prune_multiplets
 from qdpy_jax import load_multiplets
 from qdpy_jax import globalvars as gvar_jax

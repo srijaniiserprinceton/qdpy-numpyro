@@ -2,13 +2,11 @@ import numpy as np
 import jax.numpy as jnp
 import jax
 import os
-import jax.numpy as jnp
 from jax.lax import fori_loop as foril
 from collections import namedtuple
 from functools import partial
+from jax import tree_util as tu
 
-
-from qdpy_jax import gnool_jit as gjit
 from qdpy_jax import class_Cvec as cvec
 from qdpy_jax import jax_functions as jf
 
@@ -38,7 +36,7 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
 
             return submat_tile_ind
 
-        submat_tile_ind = foril(0, CNM_AND_NBS.dim_blocks,
+        submat_tile_ind = foril(0, CNM_AND_NBS.num_nbs,
                                 update_submat_ind_iy, submat_tile_ind)
         return submat_tile_ind
 
@@ -46,15 +44,16 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
     # supermatix can be tiled with submatrices corresponding to
     # (l, n) - (l', n') coupling. The dimensions of the submatrix
     # is (2l+1, 2l'+1)
-    dim_blocks = CNM_AND_NBS.dim_blocks
-
-    dimX_submat = 2*CNM_AND_NBS.nl_nbs[:, 1].reshape(1, CNM_AND_NBS.dim_blocks) \
-            * np.ones((CNM_AND_NBS.dim_blocks, 1), dtype='int32') + 1
+    dim_blocks = CNM_AND_NBS.num_nbs
+    nl_nbs = np.asarray(CNM_AND_NBS.nl_nbs)
+    
+    dimX_submat = 2 * nl_nbs[:, 1].reshape(1, dim_blocks) \
+                  * np.ones((dim_blocks, 1), dtype='int32') + 1
     dimY_submat = dimX_submat.T
 
-    sum_dim = jnp.zeros((CNM_AND_NBS.dim_blocks, 4), dtype='int32')
+    sum_dim = jnp.zeros((dim_blocks, 4), dtype='int32')
 
-    for i in range(CNM_AND_NBS.dim_blocks):
+    for i in range(dim_blocks):
         sum_dim = jax.ops.index_update(sum_dim,
                                        jax.ops.index[i, 0],
                                        jnp.sum(dimX_submat[0, :i]))
@@ -69,10 +68,10 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
                                        jnp.sum(dimY_submat[:i+1, 0]))
 
     # creating the startx, startx, endx, endy for submatrices
-    submat_tile_ind = np.zeros((CNM_AND_NBS.dim_blocks,
-                                CNM_AND_NBS.dim_blocks, 4), dtype='int32')
+    submat_tile_ind = np.zeros((dim_blocks,
+                                dim_blocks, 4), dtype='int32')
 
-    submat_tile_ind = foril(0, CNM_AND_NBS.dim_blocks,
+    submat_tile_ind = foril(0, dim_blocks,
                             update_submat_ind_ix, submat_tile_ind)
 
     # creating the submat-dictionary namedtuple
@@ -85,6 +84,7 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
                                         submat_tile_ind[:, :, 1],
                                         submat_tile_ind[:, :, 2],
                                         submat_tile_ind[:, :, 3])) 
+    
     return SUBMAT_DICT
 
 
@@ -119,13 +119,22 @@ class build_supermatrix_functions:
         # our sorting puts the central mode at the first index in nl_neighbours
         omegaref = CNM_AND_NBS.omega_nbs[0]
 
-        for ic in range(CNM_AND_NBS.dim_blocks):
-            for ir in range(ic, CNM_AND_NBS.dim_blocks):
+        # changing required tuples to arrays and lists
+        nl_idx_pruned = list(GVARS_ST.nl_idx_pruned)
+        nl_nbs = np.asarray(CNM_AND_NBS.nl_nbs)
+        
+        startx_arr = np.asarray(SUBMAT_DICT.startx)
+        starty_arr = np.asarray(SUBMAT_DICT.starty)
+        endx_arr = np.asarray(SUBMAT_DICT.endx)
+        endy_arr = np.asarray(SUBMAT_DICT.endy)
+        
+        for ic in range(CNM_AND_NBS.num_nbs):
+            for ir in range(ic, CNM_AND_NBS.num_nbs):
                 idx1 = CNM_AND_NBS.nl_nbs_idx[ir]
                 idx2 = CNM_AND_NBS.nl_nbs_idx[ic]
 
-                idx1 = GVARS_ST.nl_idx_pruned.tolist().index(CNM_AND_NBS.nl_nbs_idx[ir])
-                idx2 = GVARS_ST.nl_idx_pruned.tolist().index(CNM_AND_NBS.nl_nbs_idx[ic])
+                idx1 = nl_idx_pruned.index(CNM_AND_NBS.nl_nbs_idx[ir])
+                idx2 = nl_idx_pruned.index(CNM_AND_NBS.nl_nbs_idx[ic])
 
                 U1, V1 = GVARS_TR.U_arr[idx1], GVARS_TR.V_arr[idx1]
                 U2, V2 = GVARS_TR.U_arr[idx2], GVARS_TR.V_arr[idx2]
@@ -135,8 +144,8 @@ class build_supermatrix_functions:
 
                 # because ii starts from i, we only scan
                 # the region where ell2 >= ell1
-                ell1 = CNM_AND_NBS.nl_nbs[ir, 1]
-                ell2 = CNM_AND_NBS.nl_nbs[ic, 1]
+                ell1 = nl_nbs[ir, 1]
+                ell2 = nl_nbs[ic, 1]
                 
                 # creating the named tuples
                 gvars = jf.create_namedtuple('GVAR',
@@ -167,16 +176,14 @@ class build_supermatrix_functions:
                                             ['wig_list',
                                              'wig_idx'],
                                             (GVARS_TR.wig_list,
-                                             GVARS_ST.wig_idx))
+                                             np.asarray(GVARS_ST.wig_idx)))
 
                 get_submat = cvec.compute_submatrix(gvars)
 
                 submatdiag = get_submat.jax_get_Cvec()(qdpt_mode, eigfuncs, wigs)
-                jf.jax_print(qdpt_mode.ell1, qdpt_mode.ell2,
-                             submatdiag[:10])
 
-                startx, starty = SUBMAT_DICT.startx[ir, ic], SUBMAT_DICT.starty[ir, ic]
-                endx, endy = SUBMAT_DICT.endx[ir, ic], SUBMAT_DICT.endy[ir, ic]
+                startx, starty = startx_arr[ir, ic], starty_arr[ir, ic]
+                endx, endy = endx_arr[ir, ic], endy_arr[ir, ic]
 
                 # creating the rectangular submatrix
                 submat = jnp.zeros((endx-startx, endy-starty))
@@ -219,7 +226,7 @@ class build_supermatrix_functions:
 
             # filling the freqdiag
             omega_nb = CNM_AND_NBS.omega_nbs[ic]
-            startx, endx = SUBMAT_DICT.startx[ic, ic], SUBMAT_DICT.endx[ic, ic]
+            startx, endx = startx_arr[ic, ic], endx_arr[ic, ic]
             om2diff = omega_nb**2 - omegaref**2
             om2diff_mat = jnp.identity(endx-startx) * om2diff
             supmat = jax.ops.index_add(supmat,

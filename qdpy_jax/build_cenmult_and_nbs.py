@@ -1,13 +1,12 @@
 import jax
 import numpy as np   
-import jax.numpy as jnp
+# import jax.numpy as jnp
 from collections import namedtuple
 from functools import partial
 import sys
 import time
 
 # imports from qdpy_jax
-from . import gnool_jit as gjit
 from . import jax_functions as jf
 
 
@@ -19,18 +18,18 @@ def get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS):
 
     def nl_idx(n0, ell0):
         try:
-            idx = GVARS.nl_all.tolist().index([n0, ell0]) 
+            idx = nl_list.index([n0, ell0])
         except ValueError:
             idx = None
             logger.error('Mode not found')
         return idx
 
-    def nl_idx_vec(nl_list):
-        nlnum = nl_list.shape[0]
+    def nl_idx_vec(nl_neighbours):
+        nlnum = nl_neighbours.shape[0]
         nlidx = np.zeros(nlnum, dtype='int32')
         for i in range(nlnum):
-            nlidx[i] = nl_idx(nl_list[i][0],
-                            nl_list[i][1])
+            nlidx[i] = nl_idx(nl_neighbours[i][0],
+                              nl_neighbours[i][1])
         return nlidx
 
     def get_omega_neighbors(nl_idx):
@@ -40,11 +39,12 @@ def get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS):
             omega_neighbors[i] = GVARS.omega_list[nl_idx[i]]
         return omega_neighbors
 
-    omega_list = GVARS.omega_list
-    nl_all = GVARS.nl_all
-    
+    omega_list = np.asarray(GVARS.omega_list)
+    nl_arr = np.asarray(GVARS.nl_all)
+    nl_list = list(map(list, GVARS.nl_all))
+
     # unperturbed frequency of central multiplet (n0, ell0)
-    mult_idx = np.in1d(nl_all[:, 0], n0) * np.in1d(nl_all[:, 1], ell0)
+    mult_idx = np.in1d(nl_arr[:, 0], n0) * np.in1d(nl_arr[:, 1], ell0)
     omega0 = omega_list[mult_idx]
     
     # frequency distances from central multiplet
@@ -56,11 +56,11 @@ def get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS):
     
     # rejecting modes that don't satisfy triangle inequality
     smax = GVARS.s_arr[-1]
-    mask_ell = abs(nl_all[:, 1] - ell0) <= smax
+    mask_ell = abs(nl_arr[:, 1] - ell0) <= smax
 
     # only even l1-l2 is coupled for odd-s rotation perturbation
     # this is specific to the fact that dr is considered for odd s only
-    mask_odd = ((nl_all[:, 1] - ell0)%2) == 0
+    mask_odd = ((nl_arr[:, 1] - ell0)%2) == 0
     
     # creating the final mask accounting for all of the masks above
     mask_nb = mask_omega * mask_ell * mask_odd
@@ -69,26 +69,31 @@ def get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS):
     sort_idx = np.argsort(abs(omega_diff[mask_nb]))
     
     # the final attributes that will be stored
-    nl_neighbours = nl_all[mask_nb][sort_idx]
+    nl_neighbours = nl_arr[mask_nb][sort_idx]
     nl_neighbours_idx = nl_idx_vec(nl_neighbours)
     omega_neighbours = get_omega_neighbors(nl_neighbours_idx)
-    num_neighbours = len(nl_neighbours_idx)
-    
-    dim_super = (2*nl_neighbours[:, 1] + 1).sum()
-    dim_blocks = np.size(omega_neighbours)
 
+    num_neighbours = len(nl_neighbours_idx)
+    dim_super = (2*nl_neighbours[:, 1] + 1).sum()
+    
+    # converting to tuples and nestes tuples for easy of passing
+    nl_neighbours = tuple(map(tuple, nl_neighbours))
+    nl_neighbours_idx = tuple(nl_neighbours_idx)
+    omega_neighbours = tuple(omega_neighbours)
+    
+    
     CENMULT_AND_NBS = jf.create_namedtuple('CENMULT_AND_NBS',
                                            ['nl_nbs',
                                             'nl_nbs_idx',
                                             'omega_nbs',
                                             'num_nbs',
-                                            'dim_blocks',
                                             'dim_super'],
                                            (nl_neighbours,
                                             nl_neighbours_idx,
                                             omega_neighbours,
                                             num_neighbours,
-                                            dim_blocks,
                                             dim_super))
-
+    
     return CENMULT_AND_NBS
+
+    

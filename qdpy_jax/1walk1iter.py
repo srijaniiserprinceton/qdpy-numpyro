@@ -8,7 +8,6 @@ import jax
 import jax.tree_util as tu
 
 # new package in jax.numpy
-from qdpy_jax import gnool_jit as gjit
 from qdpy_jax import build_cenmult_and_nbs as build_CENMULT_AND_NBS 
 from qdpy_jax import build_supermatrix as build_supmat
 from qdpy_jax import globalvars as gvar_jax
@@ -50,25 +49,23 @@ GVARS = gvar_jax.GlobalVars()
 GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 
 # jitting various functions
-get_namedtuple_for_cenmult_and_neighbours_ = \
-    gjit.gnool_jit(build_CENMULT_AND_NBS.get_namedtuple_for_cenmult_and_neighbours,
-                   static_array_argnums = (0, 1, 2))
+get_namedtuple_for_cenmult_and_neighbours_ = jax.jit(build_CENMULT_AND_NBS.get_namedtuple_for_cenmult_and_neighbours,
+                                                     static_argnums = (0, 1, 2))
 
-build_SUBMAT_INDICES_ = gjit.gnool_jit(build_supmat.build_SUBMAT_INDICES,
-                                       static_array_argnums=(0,))
+build_SUBMAT_INDICES_ = jax.jit(build_supmat.build_SUBMAT_INDICES, static_argnums=(0,))
 
 # initialzing the class instance for supermatrix computation
 build_supmat_funcs = build_supmat.build_supermatrix_functions()    
-build_supermatrix_ = gjit.gnool_jit(build_supmat_funcs.get_func2build_supermatrix(),
-                                    static_array_argnums=(0, 1, 2))
+build_supermatrix_ = jax.jit(build_supmat_funcs.get_func2build_supermatrix(),
+                             static_argnums=(0, 1, 2))
 
 # COMPILING JAX
 # looping over the ells
 t1c = time.time()
 
 # extracting the pruned parameters for multiplets of interest
-nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx = \
-    prune_multiplets.get_pruned_attributes(GVARS, GVARS_ST)
+nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx =\
+                prune_multiplets.get_pruned_attributes(GVARS, GVARS_ST)
 
 lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
                                      nl_idx_pruned,
@@ -117,15 +114,17 @@ nmults = len(GVARS.n0_arr)
 for i in range(nmults):
     n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
     CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0, GVARS_ST)
-    CENMULT_AND_NBS = tu.tree_map(lambda x: np.array(x), CENMULT_AND_NBS)
-    SUBMAT_DICT = build_SUBMAT_INDICES_(CENMULT_AND_NBS)
-    SUBMAT_DICT = tu.tree_map(lambda x: np.array(x), SUBMAT_DICT)
+    CENMULT_AND_NBS = jf.tree_map_CNM_AND_NBS(CENMULT_AND_NBS)
 
+    SUBMAT_DICT = build_SUBMAT_INDICES_(CENMULT_AND_NBS)
+    SUBMAT_DICT = jf.tree_map_SUBMAT_DICT(SUBMAT_DICT)
+    
     supmatrix = build_supermatrix_(CENMULT_AND_NBS,
                                    SUBMAT_DICT,
                                    GVARS_PRUNED_ST,
                                    GVARS_PRUNED_TR).block_until_ready()
     print(f'Calculated supermatrix for multiplet = ({n0}, {ell0})')
+
 t2c = time.time()
 print(f'Time taken in seconds for compilation of {nmults} multiplets' +
       f' =  {t2c-t1c:.2f} seconds')
@@ -136,15 +135,16 @@ print("--------------------------------------------------")
 
 for i in range(nmults):
     n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
-
-    # building the namedtuple for the central multiplet and its neighbours
     CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0, GVARS_ST)
-    CENMULT_AND_NBS = tu.tree_map(lambda x: np.array(x), CENMULT_AND_NBS)
-    SUBMAT_DICT = build_SUBMAT_INDICES_(CENMULT_AND_NBS)
-    SUBMAT_DICT = tu.tree_map(lambda x: np.array(x), SUBMAT_DICT)
+    CENMULT_AND_NBS = jf.tree_map_CNM_AND_NBS(CENMULT_AND_NBS)
 
-    supmatrix = build_supermatrix_(CENMULT_AND_NBS, SUBMAT_DICT,
-                                   GVARS_PRUNED_ST, GVARS_PRUNED_TR).block_until_ready()
+    SUBMAT_DICT = build_SUBMAT_INDICES_(CENMULT_AND_NBS)
+    SUBMAT_DICT = jf.tree_map_SUBMAT_DICT(SUBMAT_DICT)
+
+    supmatrix = build_supermatrix_(CENMULT_AND_NBS,
+                                   SUBMAT_DICT,
+                                   GVARS_PRUNED_ST,
+                                   GVARS_PRUNED_TR).block_until_ready()
     print(f'Calculated supermatrix for multiplet = ({n0}, {ell0})')
 t2e = time.time()
 
@@ -163,3 +163,4 @@ print(f'Total time taken (1500 iterations) = ' +
 
 print(f'Fraction of time taken for setting up EV = ' +
       f'{t_projected_jit/t_projected_eigval:.3f}')
+

@@ -1,12 +1,12 @@
+from jax import jit
 import numpy as np
 from qdpy_jax import wigner_map2 as wigmap
 from qdpy_jax import build_cenmult_and_nbs as build_CENMULT_AND_NBS
-from qdpy_jax import gnool_jit as gjit
 
 # jitting various functions
 get_namedtuple_for_cenmult_and_neighbours_ = \
-    gjit.gnool_jit(build_CENMULT_AND_NBS.get_namedtuple_for_cenmult_and_neighbours,
-                   static_array_argnums = (0, 1, 2))
+    jit(build_CENMULT_AND_NBS.get_namedtuple_for_cenmult_and_neighbours,
+        static_argnums = (0, 1, 2))
 
 # slices out the unique nl, nl_idx and omega from
 # from the arguments nl, omega which may contain repetitions
@@ -49,10 +49,13 @@ def get_pruned_attributes(GVARS, GVARS_ST):
         wig_list, wig_idx = wigmap.get_wigners(CENMULT_AND_NBS.nl_nbs, 
                                                wig_list, wig_idx)
 
+    nl_arr = np.asarray(GVARS_ST.nl_all)
+    nl_pruned = np.asarray(nl_pruned)
+
     # extracting the unique multiplets in the nl_pruned
     nl_pruned, nl_idx_pruned, omega_pruned = get_pruned_multiplets(nl_pruned,
                                                                    omega_pruned,
-                                                                   GVARS_ST.nl_all)
+                                                                   nl_arr)
     
     nl_pruned = np.array(nl_pruned).astype('int')
     nl_idx_pruned = np.array(nl_idx_pruned).astype('int')
@@ -64,5 +67,12 @@ def get_pruned_attributes(GVARS, GVARS_ST):
     sortind_wig_idx = np.argsort(wig_idx)
     wig_idx = wig_idx[sortind_wig_idx]
     wig_list = wig_list[sortind_wig_idx]
+
+    # converting to tuples and nested tuples
+    # done only for the ones which will be static in other functions
+    nl_pruned = tuple(map(tuple, nl_pruned))
+    nl_idx_pruned = tuple(nl_idx_pruned)
+    omega_pruned = tuple(omega_pruned)
+    wig_idx = tuple(wig_idx)
 
     return nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx
