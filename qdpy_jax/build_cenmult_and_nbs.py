@@ -7,8 +7,8 @@ import sys
 import time
 
 # imports from qdpy_jax
-from . import gnool_jit as gjit
-from . import jax_functions as jf
+# from qdpy_jax import gnool_jit as gjit
+from qdpy_jax import jax_functions as jf
 
 
 def get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS):
