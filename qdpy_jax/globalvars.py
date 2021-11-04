@@ -151,7 +151,13 @@ class GlobalVars():
 
         # retaining only region between rmin and rmax
         self.r = self.mask_minmax(self.r)
-
+        
+        
+        # converting necessary arrays to tuples
+        self.s_arr = tuple(self.s_arr)
+        self.omega_list= tuple(self.omega_list)
+        self.nl_all = tuple(map(tuple, self.nl_all))
+        
 
     def get_all_GVAR(self):
         '''Builds and returns the relevant dictionaries.
@@ -178,8 +184,8 @@ class GlobalVars():
         ell_bounds: array_like
             An array of bounds of angular degrees for each radial order in `radial_orders`.
         '''
-        n_arr = np.array([])
-        ell_arr = np.array([])
+        n_arr = np.array([], dtype='int32')
+        ell_arr = np.array([], dtype='int32')
 
         # loading from a file. Must be saved in the (nmults, 2) shape
         if(load_from_file):

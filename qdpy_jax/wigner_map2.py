@@ -48,6 +48,9 @@ def w3j_vecm(l1, l2, l3, m1, m2, m3):
 
 
 def get_wigners(nl_nbs, wig_list, wig_idx):
+    # re-converting it back to array
+    nl_nbs = jnp.asarray(nl_nbs)
+    
     @np.vectorize
     def find_idx_fac(ell1, s, ell2, m):
         dell = abs(ell1 - ell2)
