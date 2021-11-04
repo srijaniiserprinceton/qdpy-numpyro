@@ -10,7 +10,7 @@ from jax import tree_util as tu
 from qdpy_jax import class_Cvec as cvec
 from qdpy_jax import jax_functions as jf
 
-
+@partial(jax.jit, static_argnums=(0,))
 def build_SUBMAT_INDICES(CNM_AND_NBS):
     """Returns the namedtuple containing the tiling information
     of the submatrices inside the supermatrix.
@@ -36,15 +36,14 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
 
             return submat_tile_ind
 
-        submat_tile_ind = foril(0, CNM_AND_NBS.num_nbs,
+        submat_tile_ind = foril(0, dim_blocks,
                                 update_submat_ind_iy, submat_tile_ind)
         return submat_tile_ind
 
-    # dim_blocks = np.size(CNM_AND_NBS.omega_nbs)
     # supermatix can be tiled with submatrices corresponding to
     # (l, n) - (l', n') coupling. The dimensions of the submatrix
     # is (2l+1, 2l'+1)
-    dim_blocks = CNM_AND_NBS.num_nbs
+    dim_blocks = len(CNM_AND_NBS.omega_nbs)
     nl_nbs = np.asarray(CNM_AND_NBS.nl_nbs)
     
     dimX_submat = 2 * nl_nbs[:, 1].reshape(1, dim_blocks) \
@@ -98,6 +97,7 @@ class build_supermatrix_functions:
         pass
 
     def get_func2build_supermatrix(self):
+        @partial(jax.jit, static_argnums=(0, 1, 2))
         def build_supermatrix(CNM_AND_NBS, SUBMAT_DICT, GVARS_ST, GVARS_TR):
             """Function to assimilate all the neighbour info
             and return the function to compute the SuperMatrix'
@@ -112,24 +112,26 @@ class build_supermatrix_functions:
         """Function to loop over the submatrix blocks and tile in the
         submatrices into the supermatrix.
         """
-        supmat = jnp.zeros((CNM_AND_NBS.dim_super,
-                            CNM_AND_NBS.dim_super))
-            
-        # finding omegaref. This is the frequency of the central mode
+
         # our sorting puts the central mode at the first index in nl_neighbours
         omegaref = CNM_AND_NBS.omega_nbs[0]
 
         # changing required tuples to arrays and lists
         nl_idx_pruned = list(GVARS_ST.nl_idx_pruned)
         nl_nbs = np.asarray(CNM_AND_NBS.nl_nbs)
-        
+
+        dim_super = np.sum(2*nl_nbs[:, 1] + 1)
+        dim_blocks = len(CNM_AND_NBS.omega_nbs)
+        supmat = jnp.zeros((dim_super, dim_super))
+
+        # finding omegaref. This is the frequency of the central mode
         startx_arr = np.asarray(SUBMAT_DICT.startx)
         starty_arr = np.asarray(SUBMAT_DICT.starty)
         endx_arr = np.asarray(SUBMAT_DICT.endx)
         endy_arr = np.asarray(SUBMAT_DICT.endy)
         
-        for ic in range(CNM_AND_NBS.num_nbs):
-            for ir in range(ic, CNM_AND_NBS.num_nbs):
+        for ic in range(dim_blocks):
+            for ir in range(ic, dim_blocks):
                 idx1 = CNM_AND_NBS.nl_nbs_idx[ir]
                 idx2 = CNM_AND_NBS.nl_nbs_idx[ic]
 
