@@ -84,6 +84,7 @@ GVARS_PRUNED_ST = jf.create_namedtuple('GVARS_ST',
 nmults = len(GVARS.n0_arr)
 
 def model():
+    ev_list = []
     for i in range(nmults):
         n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
         CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST)
@@ -96,8 +97,10 @@ def model():
                                        SUBMAT_DICT,
                                        GVARS_PRUNED_ST,
                                        GVARS_PRUNED_TR)
+        eigvals, eigvecs = jnp.linalg.eigh(supmatrix)
+        ev_list.append(eigvals)
         print(f'Calculated supermatrix for multiplet = ({n0}, {ell0})')
-    return supmatrix
+    return ev_list
 
 # jitting model()
 model_ = jax.jit(model)
@@ -113,23 +116,25 @@ print(f'Time taken in seconds for compilation of {nmults} multiplets' +
 print("--------------------------------------------------")
 
 # EXECUTING JAX
+Niter = 10
 t1e = time.time()
-__ = model_().block_until_ready()
+for i in range(Niter):
+    __ = model_().block_until_ready()
 t2e = time.time()
 
 factor4niter = 1500 * 200./3600.
-t_projected_jit = (t2e-t1e) / nmults * factor4niter
+t_projected_jit = (t2e-t1e) / nmults /Niter * factor4niter
 t_projected_eigval = 2. * factor4niter
 print(f'Time taken in seconds by jax-jitted execution' +
       f' of entire simulation (1500 iterations) = {t_projected_jit:.2f} hours')
 
-print(f'Assuming 2 seconds per eigenvalue problem solving, the ' +
-      f'total time taken for EV solver (1500 iterations) = {t_projected_eigval:.2f} hours')
+# print(f'Assuming 2 seconds per eigenvalue problem solving, the ' +
+#       f'total time taken for EV solver (1500 iterations) = {t_projected_eigval:.2f} hours')
 
-print('------------------')
-print(f'Total time taken (1500 iterations) = ' +
-      f'{(t_projected_jit + t_projected_eigval)/24.:.2f} days')
+# # print('------------------')
+# print(f'Total time taken (1500 iterations) = ' +
+#       f'{(t_projected_jit + t_projected_eigval)/24.:.2f} days')
 
-print(f'Fraction of time taken for setting up EV = ' +
-      f'{t_projected_jit/t_projected_eigval:.3f}')
+# print(f'Fraction of time taken for setting up EV = ' +
+#       f'{t_projected_jit/t_projected_eigval:.3f}')
 

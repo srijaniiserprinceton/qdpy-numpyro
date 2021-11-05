@@ -41,7 +41,6 @@ W5T = 1.
 
 def model():
     # setting min and max value to be 0.1*true and 3.*true
-    '''
     w1min, w1max = .1*abs(W1T), 3.*abs(W1T)
     w3min, w3max = .1*abs(W3T), 3.*abs(W3T)
     w5min, w5max = .1*abs(W5T), 3.*abs(W5T)
@@ -51,7 +50,6 @@ def model():
     w5 = numpyro.sample('w5', dist.Uniform(w5min, w5max))
     
     sigma = numpyro.sample('sigma', dist.Uniform(0.1, 10.0))
-    '''
     eig_sample = jnp.array([])
     
     for i in range(nmults):
@@ -68,17 +66,15 @@ def model():
                                        GVARS_PRUNED_TR)
 
         fac = 1.0
-        '''
         fac *= (1 + w1*1e-3)
         fac *= (1 + w3*1e-3)
         fac *= (1 + w5*1e-3)
         fac /= 2.0*CENMULT_AND_NBS.omega_nbs[0]
-        '''
         eig_sample = jnp.append(eig_sample, get_eigs(supmatrix)*fac)
         
     eigvals_true = jnp.ones_like(eig_sample) * eig_sample * 1.1
     # eig_sample = numpyro.deterministic('eig', eig_mcmc_func(w1=w1, w3=w3, w5=w5))
-    # return numpyro.sample('obs', dist.Normal(eig_sample, sigma), obs=eigvals_true)
+    return numpyro.sample('obs', dist.Normal(eig_sample, sigma), obs=eigvals_true)
 
 
 def get_eigs(mat):
