@@ -110,12 +110,14 @@ def issorted(a):
 def ind2sub(cont_ind, nrows, ncols):
     return cont_ind//nrows, cont_ind%ncols
 
-@jnp.vectorize
+# @jnp.vectorize
+# @np.vectorize
 def find_idx(ell1, s, ell2, m):
     # New method for specific use-case of qdPy
     # /ell1 s ell2\
     # \-|m| 0 |m| /
 
+    '''
     fac = jax.lax.cond(m < 0,
                        lambda fac: -1,
                        lambda fac: 1,
@@ -130,6 +132,18 @@ def find_idx(ell1, s, ell2, m):
     max_ord_mag_idx1 = 5
     wig_idx = idx2*(10**max_ord_mag_idx1) + idx1
     return wig_idx, fac
+    '''
+    fac = np.sign(m)
+    ell = np.minimum(ell1, ell2)                                                             
+    dell = np.abs(ell1 - ell2)                                                               
+    idx1 = ell*(ell+1)//2 + np.abs(m)                                                        
+    idx2 = s*(s+1)//2 + dell                                                                  
+
+    # computing a unified index for the wigner                                                
+    max_ord_mag_idx1 = 5                                                                      
+    wig_idx = idx2*(10**max_ord_mag_idx1) + idx1                                              
+    return wig_idx, fac 
+
 
 _find_idx = jax.jit(find_idx)
 

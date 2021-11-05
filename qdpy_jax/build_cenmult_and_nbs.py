@@ -1,14 +1,9 @@
 import jax
 import numpy as np   
-from collections import namedtuple
-from functools import partial
-import sys
-import time
 
 # imports from qdpy_jax
 from qdpy_jax import jax_functions as jf
 
-@partial(jax.jit, static_argnums=(0, 1, 2))
 def get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS):
     """Function that returns the name tuple for the
     attributes of the central mode and the neighbours for 

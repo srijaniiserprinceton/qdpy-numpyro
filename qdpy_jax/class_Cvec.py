@@ -48,12 +48,13 @@ def jax_gamma(ell):
     return jnp.sqrt((2*ell + 1)/4/jnp.pi)
 
 # _find_idx = gjit.gnool_jit(wigmap.find_idx, static_array_argnums=(3,))
-_find_idx = jax.jit(wigmap.find_idx)
+# _find_idx = jax.jit(wigmap.find_idx)
+_find_idx = wigmap.find_idx
 
 class compute_submatrix:
     def __init__(self, gvars):
         self.r = gvars.r
-        self.s_arr = jnp.array(gvars.s_arr)
+        self.s_arr = np.array(gvars.s_arr)
         self.wsr = gvars.wsr
 
     def jax_get_Cvec(self):
@@ -65,7 +66,7 @@ class compute_submatrix:
             ell1 = qdpt_mode.ell1
             ell2 = qdpt_mode.ell2
             ell = qdpt_mode.ellmin
-            m = jnp.arange(-ell, ell+1)
+            m = np.arange(-ell, ell+1)
             len_m = len(m)
             len_s = jnp.size(self.s_arr)
 
@@ -74,7 +75,8 @@ class compute_submatrix:
             for i, s in enumerate(self.s_arr):
                 wig_idx, fac = _find_idx(ell1, s, ell2, m)
 
-                wigidx_for_s = jnp.searchsorted(wigs.wig_idx, wig_idx)
+                wigidx_for_s = np.searchsorted(wigs.wig_idx, wig_idx)
+
                 wigval_for_s = fac * wigs.wig_list[wigidx_for_s]
 
                 wigvals = jax.ops.index_update(wigvals,
@@ -112,9 +114,10 @@ class compute_submatrix:
         U1, U2, V1, V2 = eigfuncs.U1, eigfuncs.U2, eigfuncs.V1, eigfuncs.V2
 
         # creating internal function for the foril
-        def func4Tsr_s_loop(i, iplist):
-            Tsr, s_arr = iplist
-            s = s_arr[i]
+        # def func4Tsr_s_loop(i, iplist):
+        for i, s in enumerate(self.s_arr):
+            # Tsr = iplist
+            # s = self.s_arr[i]
             ell1, ell2 = qdpt_mode.ell1, qdpt_mode.ell2
             r = self.r
             ls2fac = L1sq + L2sq - s*(s+1)
@@ -122,16 +125,19 @@ class compute_submatrix:
 
             # computing the wigner
             wig_idx, fac = _find_idx(ell1, s, ell2, 1)
-            wigidx_for_s = jnp.searchsorted(wigs.wig_idx, wig_idx)
+            wigidx_for_s = np.searchsorted(wigs.wig_idx, wig_idx)
+
             wigval = fac * wigs.wig_list[wigidx_for_s]
 
             Tsr_at_i = -(1 - jax_minus1pow(ell1 + ell2 + s)) * \
                        Om1 * Om2 * wigval * eigfac / r
             Tsr = jax.ops.index_update(Tsr, jax.ops.index[i, :], Tsr_at_i)
             # jf.jax_print(s, ell1, ell2, Tsr_at_i[-8:])
-            return (Tsr, s_arr)
+            # return (Tsr, s_arr)
+            # return Tsr
 
-        Tsr, s_arr = foril(0, len(self.s_arr), func4Tsr_s_loop, (Tsr, self.s_arr))
+        # Tsr, s_arr = foril(0, len(self.s_arr), func4Tsr_s_loop, (Tsr, self.s_arr))
+        # Tsr = foril(0, len(self.s_arr), func4Tsr_s_loop, Tsr)
         return Tsr
 
 

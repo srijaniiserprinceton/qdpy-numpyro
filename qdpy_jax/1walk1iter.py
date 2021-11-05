@@ -1,10 +1,9 @@
-from collections import namedtuple
 import numpy as np
-import py3nj
 import time
 import sys
 
 import jax
+import jax.numpy as jnp
 import jax.tree_util as tu
 
 # new package in jax.numpy
@@ -24,44 +23,17 @@ from jax.config import config
 config.update('jax_enable_x64', True)
 
 
-# slices out the unique nl, nl_idx and omega from
-# from the arguments nl, omega which may contain repetitions
-def get_pruned_multiplets(nl, omega, nl_all):
-    n1 = nl[:, 0]
-    l1 = nl[:, 1]
-
-    omega_pruned = [omega[0]]
-    
-    nl_idx_pruned = [nl_all.tolist().index([nl[0, 0], nl[0, 1]])]
-    nl_pruned = nl[0, :].reshape(1, 2)
-
-    for i in range(1, len(n1)):
-        try:
-            nl_pruned.tolist().index([n1[i], l1[i]])
-        except ValueError:
-            nl_pruned = np.concatenate((nl_pruned,
-                                        nl[i, :].reshape(1, 2)), 0)
-            omega_pruned.append(omega[i])
-            nl_idx_pruned.append(nl_all.tolist().index([nl[i, 0], nl[i, 1]]))
-    return nl_pruned, nl_idx_pruned, omega_pruned
-
 GVARS = gvar_jax.GlobalVars()
 GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 
 # jitting various functions
-get_namedtuple_for_cenmult_and_neighbours_ = jax.jit(build_CENMULT_AND_NBS.get_namedtuple_for_cenmult_and_neighbours,
-                                                     static_argnums = (0, 1, 2))
+get_namedtuple_for_cenmult_and_neighbours = build_CENMULT_AND_NBS.get_namedtuple_for_cenmult_and_neighbours
 
-build_SUBMAT_INDICES_ = jax.jit(build_supmat.build_SUBMAT_INDICES, static_argnums=(0,))
+build_SUBMAT_INDICES = build_supmat.build_SUBMAT_INDICES_np
 
 # initialzing the class instance for supermatrix computation
 build_supmat_funcs = build_supmat.build_supermatrix_functions()    
-build_supermatrix_ = jax.jit(build_supmat_funcs.get_func2build_supermatrix(),
-                             static_argnums=(0, 1, 2))
-
-# COMPILING JAX
-# looping over the ells
-t1c = time.time()
+build_supermatrix = build_supmat_funcs.get_func2build_supermatrix()
 
 # extracting the pruned parameters for multiplets of interest
 nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx =\
@@ -111,41 +83,38 @@ GVARS_PRUNED_ST = jf.create_namedtuple('GVARS_ST',
 
 nmults = len(GVARS.n0_arr)
 
-for i in range(nmults):
-    n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
-    CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0, GVARS_ST)
-    CENMULT_AND_NBS = jf.tree_map_CNM_AND_NBS(CENMULT_AND_NBS)
+def model():
+    for i in range(nmults):
+        n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
+        CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST)
+        CENMULT_AND_NBS = jf.tree_map_CNM_AND_NBS(CENMULT_AND_NBS)
+        
+        SUBMAT_DICT = build_SUBMAT_INDICES(CENMULT_AND_NBS)
+        SUBMAT_DICT = jf.tree_map_SUBMAT_DICT(SUBMAT_DICT)
+        
+        supmatrix = build_supermatrix(CENMULT_AND_NBS,
+                                       SUBMAT_DICT,
+                                       GVARS_PRUNED_ST,
+                                       GVARS_PRUNED_TR)
+        print(f'Calculated supermatrix for multiplet = ({n0}, {ell0})')
+    return supmatrix
 
-    SUBMAT_DICT = build_SUBMAT_INDICES_(CENMULT_AND_NBS)
-    SUBMAT_DICT = jf.tree_map_SUBMAT_DICT(SUBMAT_DICT)
-    
-    supmatrix = build_supermatrix_(CENMULT_AND_NBS,
-                                   SUBMAT_DICT,
-                                   GVARS_PRUNED_ST,
-                                   GVARS_PRUNED_TR).block_until_ready()
-    print(f'Calculated supermatrix for multiplet = ({n0}, {ell0})')
+# jitting model()
+model_ = jax.jit(model)
 
+# COMPILING JAX
+# looping over the ells
+t1c = time.time()
+__ = model_().block_until_ready()
 t2c = time.time()
 print(f'Time taken in seconds for compilation of {nmults} multiplets' +
       f' =  {t2c-t1c:.2f} seconds')
 
-# EXECUTING JAX
-t1e = time.time()
 print("--------------------------------------------------")
 
-for i in range(nmults):
-    n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
-    CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours_(n0, ell0, GVARS_ST)
-    CENMULT_AND_NBS = jf.tree_map_CNM_AND_NBS(CENMULT_AND_NBS)
-
-    SUBMAT_DICT = build_SUBMAT_INDICES_(CENMULT_AND_NBS)
-    SUBMAT_DICT = jf.tree_map_SUBMAT_DICT(SUBMAT_DICT)
-
-    supmatrix = build_supermatrix_(CENMULT_AND_NBS,
-                                   SUBMAT_DICT,
-                                   GVARS_PRUNED_ST,
-                                   GVARS_PRUNED_TR).block_until_ready()
-    print(f'Calculated supermatrix for multiplet = ({n0}, {ell0})')
+# EXECUTING JAX
+t1e = time.time()
+__ = model_().block_until_ready()
 t2e = time.time()
 
 factor4niter = 1500 * 200./3600.

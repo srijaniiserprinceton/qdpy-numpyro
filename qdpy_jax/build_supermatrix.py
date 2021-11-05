@@ -1,6 +1,7 @@
 import numpy as np
 import jax.numpy as jnp
 import jax
+import sys
 import os
 from jax.lax import fori_loop as foril
 from collections import namedtuple
@@ -10,82 +11,43 @@ from jax import tree_util as tu
 from qdpy_jax import class_Cvec as cvec
 from qdpy_jax import jax_functions as jf
 
-@partial(jax.jit, static_argnums=(0,))
-def build_SUBMAT_INDICES(CNM_AND_NBS):
-    """Returns the namedtuple containing the tiling information
-    of the submatrices inside the supermatrix.
-    """
-    # functions called by foriloop
-    def update_submat_ind_ix(ix, submat_tile_ind):
-        def update_submat_ind_iy(iy, submat_tile_ind):
-            submat_tile_ind = jax.ops.index_update(submat_tile_ind,
-                                                   jax.ops.index[ix, iy, 0],
-                                                   sum_dim[iy, 0])
-                                                    
-            submat_tile_ind = jax.ops.index_update(submat_tile_ind,
-                                                   jax.ops.index[ix, iy, 1],
-                                                   sum_dim[ix, 1])
-            
-            submat_tile_ind = jax.ops.index_update(submat_tile_ind,
-                                                   jax.ops.index[ix, iy, 2],
-                                                   sum_dim[iy, 2])
-            
-            submat_tile_ind =  jax.ops.index_update(submat_tile_ind,
-                                                    jax.ops.index[ix, iy, 3],
-                                                    sum_dim[ix, 3])
-
-            return submat_tile_ind
-
-        submat_tile_ind = foril(0, dim_blocks,
-                                update_submat_ind_iy, submat_tile_ind)
-        return submat_tile_ind
-
-    # supermatix can be tiled with submatrices corresponding to
-    # (l, n) - (l', n') coupling. The dimensions of the submatrix
+def build_SUBMAT_INDICES_np(CNM_AND_NBS):
+    # supermatix can be tiled with submatrices corresponding to                               
+    # (l, n) - (l', n') coupling. The dimensions of the submatrix                             
     # is (2l+1, 2l'+1)
     dim_blocks = len(CNM_AND_NBS.omega_nbs)
     nl_nbs = np.asarray(CNM_AND_NBS.nl_nbs)
-    
+
     dimX_submat = 2 * nl_nbs[:, 1].reshape(1, dim_blocks) \
-                  * np.ones((dim_blocks, 1), dtype='int32') + 1
-    dimY_submat = dimX_submat.T
+                  * np.ones((dim_blocks, 1), dtype='int32') + 1                             
+    dimY_submat = dimX_submat.T 
 
-    sum_dim = jnp.zeros((dim_blocks, 4), dtype='int32')
+    # creating the startx, startx, endx, endy for submatrices                                 
+    submat_tile_ind = np.zeros((dim_blocks,                                                   
+                                dim_blocks, 4), dtype='int32') 
 
-    for i in range(dim_blocks):
-        sum_dim = jax.ops.index_update(sum_dim,
-                                       jax.ops.index[i, 0],
-                                       jnp.sum(dimX_submat[0, :i]))
-        sum_dim = jax.ops.index_update(sum_dim,
-                                       jax.ops.index[i, 1],
-                                       jnp.sum(dimY_submat[:i, 0]))
-        sum_dim = jax.ops.index_update(sum_dim,
-                                       jax.ops.index[i, 2],
-                                       jnp.sum(dimX_submat[0, :i+1]))
-        sum_dim = jax.ops.index_update(sum_dim,
-                                       jax.ops.index[i, 3],
-                                       jnp.sum(dimY_submat[:i+1, 0]))
+    for ix in range(0, dim_blocks):
+        for iy in range(0, dim_blocks):
+            submat_tile_ind[ix, iy, 0] = np.sum(dimX_submat[0, :ix])
 
-    # creating the startx, startx, endx, endy for submatrices
-    submat_tile_ind = np.zeros((dim_blocks,
-                                dim_blocks, 4), dtype='int32')
+            submat_tile_ind[ix, iy, 1] = np.sum(dimY_submat[:iy, 0])
+                                         
+            submat_tile_ind[ix, iy, 2] = np.sum(dimX_submat[0, :ix+1])
+        
+            submat_tile_ind[ix, iy, 3] = np.sum(dimY_submat[:iy+1, 0])
 
-    submat_tile_ind = foril(0, dim_blocks,
-                            update_submat_ind_ix, submat_tile_ind)
+    # creating the submat-dictionary namedtuple                                               
+    SUBMAT_DICT = jf.create_namedtuple('SUBMAT_DICT',                                      
+                                       ['startx',                                            
+                                        'starty',                                             
+                                        'endx',                                               
+                                        'endy'],                                              
+                                       (submat_tile_ind[:, :, 0],                             
+                                        submat_tile_ind[:, :, 1],                             
+                                        submat_tile_ind[:, :, 2],                             
+                                        submat_tile_ind[:, :, 3]))
 
-    # creating the submat-dictionary namedtuple
-    SUBMAT_DICT = jf.create_namedtuple('SUBMAT_DICT',
-                                       ['startx',
-                                        'starty',
-                                        'endx',
-                                        'endy'],
-                                       (submat_tile_ind[:, :, 0],
-                                        submat_tile_ind[:, :, 1],
-                                        submat_tile_ind[:, :, 2],
-                                        submat_tile_ind[:, :, 3])) 
-    
     return SUBMAT_DICT
-
 
 class build_supermatrix_functions:
     """Function that returns the function to calculate
@@ -97,7 +59,7 @@ class build_supermatrix_functions:
         pass
 
     def get_func2build_supermatrix(self):
-        @partial(jax.jit, static_argnums=(0, 1, 2))
+        # @partial(jax.jit, static_argnums=(0, 1, 2))
         def build_supermatrix(CNM_AND_NBS, SUBMAT_DICT, GVARS_ST, GVARS_TR):
             """Function to assimilate all the neighbour info
             and return the function to compute the SuperMatrix'
@@ -123,7 +85,7 @@ class build_supermatrix_functions:
         dim_super = np.sum(2*nl_nbs[:, 1] + 1)
         dim_blocks = len(CNM_AND_NBS.omega_nbs)
         supmat = jnp.zeros((dim_super, dim_super))
-
+        
         # finding omegaref. This is the frequency of the central mode
         startx_arr = np.asarray(SUBMAT_DICT.startx)
         starty_arr = np.asarray(SUBMAT_DICT.starty)

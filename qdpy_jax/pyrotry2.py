@@ -41,6 +41,7 @@ W5T = 1.
 
 def model():
     # setting min and max value to be 0.1*true and 3.*true
+    '''
     w1min, w1max = .1*abs(W1T), 3.*abs(W1T)
     w3min, w3max = .1*abs(W3T), 3.*abs(W3T)
     w5min, w5max = .1*abs(W5T), 3.*abs(W5T)
@@ -50,61 +51,34 @@ def model():
     w5 = numpyro.sample('w5', dist.Uniform(w5min, w5max))
     
     sigma = numpyro.sample('sigma', dist.Uniform(0.1, 10.0))
-
+    '''
     eig_sample = jnp.array([])
-
+    
     for i in range(nmults):
         n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
-        CNM_AND_NBS = get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST)
-        # CENMULT_AND_NBS = jf.tree_map_CNM_AND_NBS(CENMULT_AND_NBS)
-
-        nl_nbs = tuple(map(tuple, CNM_AND_NBS.nl_nbs))
-        nl_nbs_idx = tuple(CNM_AND_NBS.nl_nbs_idx)
-        omega_nbs = tuple(CNM_AND_NBS.omega_nbs)
-
-        ntkeys = ['nl_nbs', 'nl_nbs_idx', 'omega_nbs']
-        ntvals = (nl_nbs, nl_nbs_idx, omega_nbs)
-        CNBS_tp = namedtuple('CENMULT_AND_NBS', ntkeys)
-        CENMULT_AND_NBS = CNBS_tp(*ntvals)
-
-
-        # nl_nbs = tuple(map(tuple, CNM_AND_NBS.nl_nbs))
-        # nl_nbs_idx = tuple(CNM_AND_NBS.nl_nbs_idx)
-        # omega_nbs = tuple(CNM_AND_NBS.omega_nbs)
-        # num_nbs = int(CNM_AND_NBS.num_nbs)#.astype(int)
-        # dim_super = int(CNM_AND_NBS.dim_super)#.astype(int)
-
-        # CENMULT_AND_NBS = jf.create_namedtuple('CENMULT_AND_NBS',
-        #                                     ['nl_nbs',
-        #                                     'nl_nbs_idx',
-        #                                     'omega_nbs',
-        #                                     'num_nbs',
-        #                                     'dim_super'],
-        #                                     (nl_nbs,
-        #                                     nl_nbs_idx,
-        #                                     omega_nbs,
-        #                                     num_nbs,
-        #                                     dim_super))
-        print(CENMULT_AND_NBS.__hash__())
+        CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST)
+        CENMULT_AND_NBS = jf.tree_map_CNM_AND_NBS(CENMULT_AND_NBS)
+        
         SUBMAT_DICT = build_SUBMAT_INDICES(CENMULT_AND_NBS)
         SUBMAT_DICT = jf.tree_map_SUBMAT_DICT(SUBMAT_DICT)
-
+        
         supmatrix = build_supermatrix(CENMULT_AND_NBS,
                                        SUBMAT_DICT,
                                        GVARS_PRUNED_ST,
                                        GVARS_PRUNED_TR)
 
         fac = 1.0
+        '''
         fac *= (1 + w1*1e-3)
         fac *= (1 + w3*1e-3)
         fac *= (1 + w5*1e-3)
         fac /= 2.0*CENMULT_AND_NBS.omega_nbs[0]
+        '''
         eig_sample = jnp.append(eig_sample, get_eigs(supmatrix)*fac)
-
-    print('here')
-
+        
+    eigvals_true = jnp.ones_like(eig_sample) * eig_sample * 1.1
     # eig_sample = numpyro.deterministic('eig', eig_mcmc_func(w1=w1, w3=w3, w5=w5))
-    return numpyro.sample('obs', dist.Normal(eig_sample, sigma), obs=eigvals_true)
+    # return numpyro.sample('obs', dist.Normal(eig_sample, sigma), obs=eigvals_true)
 
 
 def get_eigs(mat):
@@ -119,15 +93,11 @@ GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 # jitting various functions
 get_namedtuple_for_cenmult_and_neighbours = build_CENMULT_AND_NBS.get_namedtuple_for_cenmult_and_neighbours
 
-build_SUBMAT_INDICES = build_supmat.build_SUBMAT_INDICES
+build_SUBMAT_INDICES = build_supmat.build_SUBMAT_INDICES_np
 
 # initialzing the class instance for supermatrix computation
 build_supmat_funcs = build_supmat.build_supermatrix_functions()
 build_supermatrix = build_supmat_funcs.get_func2build_supermatrix()
-
-# COMPILING JAX
-# looping over the ells
-t1c = time.time()
 
 # extracting the pruned parameters for multiplets of interest
 nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx =\
@@ -177,25 +147,13 @@ GVARS_PRUNED_ST = jf.create_namedtuple('GVARS_ST',
 
 nmults = len(GVARS.n0_arr)
 
-for i in range(nmults):
-    n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
-    CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST)
-    CENMULT_AND_NBS = jf.tree_map_CNM_AND_NBS(CENMULT_AND_NBS)
-
-    SUBMAT_DICT = build_SUBMAT_INDICES(CENMULT_AND_NBS)
-    SUBMAT_DICT = jf.tree_map_SUBMAT_DICT(SUBMAT_DICT)
-    
-    supmatrix = build_supermatrix(CENMULT_AND_NBS,
-                                   SUBMAT_DICT,
-                                   GVARS_PRUNED_ST,
-                                   GVARS_PRUNED_TR).block_until_ready()
-    eigvals_true = jnp.append(eigvals_true, np.diag(supmatrix))
-    print(f'Calculated supermatrix for multiplet = ({n0}, {ell0})')
-
-t2c = time.time()
-print(f'Time taken in seconds for compilation of {nmults} multiplets' +
-      f' =  {t2c-t1c:.2f} seconds')
-
+'''
+# trying to jit model
+model_ = jax.jit(model)
+model()
+model_()
+print('model_() runs')
+'''
 
 # Start from this source of randomness. We will split keys for subsequent operations.
 rng_key = random.PRNGKey(12)
