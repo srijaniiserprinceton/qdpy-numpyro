@@ -84,7 +84,7 @@ GVARS_PRUNED_ST = jf.create_namedtuple('GVARS_ST',
 nmults = len(GVARS.n0_arr)
 
 def model():
-    ev_list = []
+    ev_sum = 0.0
     for i in range(nmults):
         n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
         CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST)
@@ -98,9 +98,9 @@ def model():
                                        GVARS_PRUNED_ST,
                                        GVARS_PRUNED_TR)
         eigvals, eigvecs = jnp.linalg.eigh(supmatrix)
-        ev_list.append(eigvals)
+        ev_sum += jnp.sum(eigvals)
         print(f'Calculated supermatrix for multiplet = ({n0}, {ell0})')
-    return ev_list
+    return ev_sum
 
 # jitting model()
 model_ = jax.jit(model)
@@ -116,7 +116,7 @@ print(f'Time taken in seconds for compilation of {nmults} multiplets' +
 print("--------------------------------------------------")
 
 # EXECUTING JAX
-Niter = 10
+Niter = 1
 t1e = time.time()
 for i in range(Niter):
     __ = model_().block_until_ready()

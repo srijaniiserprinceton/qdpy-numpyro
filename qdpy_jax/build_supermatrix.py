@@ -12,19 +12,19 @@ from qdpy_jax import class_Cvec as cvec
 from qdpy_jax import jax_functions as jf
 
 def build_SUBMAT_INDICES(CNM_AND_NBS):
-    # supermatix can be tiled with submatrices corresponding to                               
-    # (l, n) - (l', n') coupling. The dimensions of the submatrix                             
+    # supermatix can be tiled with submatrices corresponding to
+    # (l, n) - (l', n') coupling. The dimensions of the submatrix
     # is (2l+1, 2l'+1)
     dim_blocks = len(CNM_AND_NBS.omega_nbs)
     # nl array of neighbours
     nl_nbs = np.asarray(CNM_AND_NBS.nl_nbs)
 
     dimX_submat = 2 * nl_nbs[:, 1].reshape(1, dim_blocks) \
-                  * np.ones((dim_blocks, 1), dtype='int32') + 1                             
+                  * np.ones((dim_blocks, 1), dtype='int32') + 1
     dimY_submat = dimX_submat.T 
 
-    # creating the startx, startx, endx, endy for submatrices                                 
-    submat_tile_ind = np.zeros((dim_blocks,                                                   
+    # creating the startx, startx, endx, endy for submatrices
+    submat_tile_ind = np.zeros((dim_blocks,
                                 dim_blocks, 4), dtype='int32') 
 
     for ix in range(0, dim_blocks):
@@ -37,15 +37,15 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
         
             submat_tile_ind[ix, iy, 3] = np.sum(dimY_submat[:iy+1, 0])
 
-    # creating the submat-dictionary namedtuple                                               
-    SUBMAT_DICT = jf.create_namedtuple('SUBMAT_DICT',                                      
-                                       ['startx',                                            
-                                        'starty',                                             
-                                        'endx',                                               
-                                        'endy'],                                              
-                                       (submat_tile_ind[:, :, 0],                             
-                                        submat_tile_ind[:, :, 1],                             
-                                        submat_tile_ind[:, :, 2],                             
+    # creating the submat-dictionary namedtuple
+    SUBMAT_DICT = jf.create_namedtuple('SUBMAT_DICT',
+                                       ['startx',
+                                        'starty',
+                                        'endx',
+                                        'endy'],
+                                       (submat_tile_ind[:, :, 0],
+                                        submat_tile_ind[:, :, 1],
+                                        submat_tile_ind[:, :, 2],
                                         submat_tile_ind[:, :, 3]))
 
     return SUBMAT_DICT
