@@ -66,20 +66,14 @@ def get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS):
     nl_neighbours = nl_arr[mask_nb][sort_idx]
     nl_neighbours_idx = nl_idx_vec(nl_neighbours)
     omega_neighbours = get_omega_neighbors(nl_neighbours_idx)
-
-    num_neighbours = len(nl_neighbours_idx)
-    dim_super = (2*nl_neighbours[:, 1] + 1).sum()
+    
 
     CENMULT_AND_NBS = jf.create_namedtuple('CENMULT_AND_NBS',
                                            ['nl_nbs',
                                             'nl_nbs_idx',
-                                            'omega_nbs',
-                                            'num_nbs',
-                                            'dim_super'],
+                                            'omega_nbs'],
                                            (nl_neighbours,
                                             nl_neighbours_idx,
-                                            omega_neighbours,
-                                            num_neighbours,
-                                            dim_super))
+                                            omega_neighbours))
 
     return CENMULT_AND_NBS

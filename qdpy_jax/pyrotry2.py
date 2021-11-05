@@ -93,7 +93,7 @@ GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 # jitting various functions
 get_namedtuple_for_cenmult_and_neighbours = build_CENMULT_AND_NBS.get_namedtuple_for_cenmult_and_neighbours
 
-build_SUBMAT_INDICES = build_supmat.build_SUBMAT_INDICES_np
+build_SUBMAT_INDICES = build_supmat.build_SUBMAT_INDICES
 
 # initialzing the class instance for supermatrix computation
 build_supmat_funcs = build_supmat.build_supermatrix_functions()

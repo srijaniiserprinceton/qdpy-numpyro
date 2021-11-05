@@ -47,8 +47,6 @@ def jax_gamma(ell):
     """Computes gamma_ell"""
     return jnp.sqrt((2*ell + 1)/4/jnp.pi)
 
-# _find_idx = gjit.gnool_jit(wigmap.find_idx, static_array_argnums=(3,))
-# _find_idx = jax.jit(wigmap.find_idx)
 _find_idx = wigmap.find_idx
 
 class compute_submatrix:
@@ -114,10 +112,7 @@ class compute_submatrix:
         U1, U2, V1, V2 = eigfuncs.U1, eigfuncs.U2, eigfuncs.V1, eigfuncs.V2
 
         # creating internal function for the foril
-        # def func4Tsr_s_loop(i, iplist):
         for i, s in enumerate(self.s_arr):
-            # Tsr = iplist
-            # s = self.s_arr[i]
             ell1, ell2 = qdpt_mode.ell1, qdpt_mode.ell2
             r = self.r
             ls2fac = L1sq + L2sq - s*(s+1)
@@ -132,12 +127,7 @@ class compute_submatrix:
             Tsr_at_i = -(1 - jax_minus1pow(ell1 + ell2 + s)) * \
                        Om1 * Om2 * wigval * eigfac / r
             Tsr = jax.ops.index_update(Tsr, jax.ops.index[i, :], Tsr_at_i)
-            # jf.jax_print(s, ell1, ell2, Tsr_at_i[-8:])
-            # return (Tsr, s_arr)
-            # return Tsr
 
-        # Tsr, s_arr = foril(0, len(self.s_arr), func4Tsr_s_loop, (Tsr, self.s_arr))
-        # Tsr = foril(0, len(self.s_arr), func4Tsr_s_loop, Tsr)
         return Tsr
 
 
@@ -146,10 +136,8 @@ if __name__ == "__main__":
     GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
     
     # extracting the pruned parameters for multiplets of interest
-    nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx_full = prune_multiplets.get_pruned_attributes(GVARS, GVARS_ST)
-
-    # converting to list before sending into jax'd function
-    # wig_idx_full = wig_idx_full.tolist()
+    nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx_full =\
+                    prune_multiplets.get_pruned_attributes(GVARS, GVARS_ST)
 
     lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
                                          nl_idx_pruned,
@@ -207,7 +195,6 @@ if __name__ == "__main__":
     # namedtuple than the array info. For example,
     # here, qdpt_mode has non-array info while eigfuncs have array info.
     _get_Cvec = jax.jit(get_submat.jax_get_Cvec(), static_argnums=(0,))
-    # __ = _get_Cvec(ell1, ell2, s_arr, r, U1, U2, V1, V2, omegaref)
     __ = _get_Cvec(qdpt_mode, eigfuncs, wigs)
 
     

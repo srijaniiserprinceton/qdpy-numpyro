@@ -34,18 +34,10 @@ class qdParams():
     # (2) a1 = \omega_0 ( 1 - 1/ell ) scaling
     # (Since we are using lmax = 300, 0.45*300 \approx 150)
 
-    # defining the datatypes
-    '''
-    NPINT = np.int32
-    JNPINT = jnp.int32
-    NPFLOAT = np.float32
-    JNPFLOAT = jnp.float32
-    '''
-    
     # the radial orders present
     radial_orders = np.array([0])
     # the bounds on angular degree for each radial order
-    ell_bounds = np.array([[195, 210]])
+    ell_bounds = np.array([[200, 200]])
 
     rmin, rth, rmax = 0.0, 0.98, 1.2
     fwindow =  150.0 

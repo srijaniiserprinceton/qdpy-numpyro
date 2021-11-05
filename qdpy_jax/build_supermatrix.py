@@ -11,11 +11,12 @@ from jax import tree_util as tu
 from qdpy_jax import class_Cvec as cvec
 from qdpy_jax import jax_functions as jf
 
-def build_SUBMAT_INDICES_np(CNM_AND_NBS):
+def build_SUBMAT_INDICES(CNM_AND_NBS):
     # supermatix can be tiled with submatrices corresponding to                               
     # (l, n) - (l', n') coupling. The dimensions of the submatrix                             
     # is (2l+1, 2l'+1)
     dim_blocks = len(CNM_AND_NBS.omega_nbs)
+    # nl array of neighbours
     nl_nbs = np.asarray(CNM_AND_NBS.nl_nbs)
 
     dimX_submat = 2 * nl_nbs[:, 1].reshape(1, dim_blocks) \
