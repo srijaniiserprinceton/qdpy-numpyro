@@ -79,6 +79,7 @@ def model():
 
 def get_eigs(mat):
     eigvals, eigvecs = jnp.linalg.eigh(mat)
+    eigvals = build_supmat.eigval_sort_slice(eigvals, eigvecs)
     return eigvals
 #========================================================================
 

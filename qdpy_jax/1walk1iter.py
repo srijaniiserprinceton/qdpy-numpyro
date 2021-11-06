@@ -22,7 +22,6 @@ jax.config.update('jax_platform_name', 'cpu')
 from jax.config import config
 config.update('jax_enable_x64', True)
 
-
 GVARS = gvar_jax.GlobalVars()
 GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 
@@ -98,7 +97,8 @@ def model():
                                        GVARS_PRUNED_ST,
                                        GVARS_PRUNED_TR)
         eigvals, eigvecs = jnp.linalg.eigh(supmatrix)
-        ev_sum += jnp.sum(eigvals)
+        eigvals = build_supmat.eigval_sort_slice(eigvals, eigvecs)
+        ev_sum += jnp.sum(eigvals[:2*GVARS.ell0_arr[i]+1])
         print(f'Calculated supermatrix for multiplet = ({n0}, {ell0})')
     return ev_sum
 

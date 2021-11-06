@@ -11,6 +11,20 @@ from jax import tree_util as tu
 from qdpy_jax import class_Cvec as cvec
 from qdpy_jax import jax_functions as jf
 
+jidx = jax.ops.index
+jidx_update = jax.ops.index_update
+
+
+def eigval_sort_slice(eigval, eigvec):
+    def body_func(i, ebs):
+        return jidx_update(ebs, jidx[i], jnp.argmax(jnp.abs(eigvec[i])))
+
+    eigbasis_sort = np.zeros(len(eigval), dtype=int)
+    eigbasis_sort = foril(0, len(eigval), body_func, eigbasis_sort)
+
+    return eigval[eigbasis_sort]
+
+
 def build_SUBMAT_INDICES(CNM_AND_NBS):
     # supermatix can be tiled with submatrices corresponding to
     # (l, n) - (l', n') coupling. The dimensions of the submatrix
