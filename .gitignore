@@ -1,4 +1,5 @@
 *.npy
+*.txt
 *~
 .ipynb_checkpoints
 *.egg-info/*
