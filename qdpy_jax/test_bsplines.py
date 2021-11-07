@@ -2,12 +2,16 @@ from qdpy_jax import bsplines as bsp_adams
 from scipy.interpolate import BSpline as bsp_scipy
 import matplotlib.pyplot as plt
 from scipy import interpolate
+from scipy.interpolate import splev, splrep
 import jax
 import numpy as np
+from qdpy_jax import globalvars as gvar_jax
 
-_bsp_func_jax = jax.jit(bsp_adams.bspline1d)
+from jax.config import config
+config.update('jax_enable_x64', True)
 
-if __name__ == "__main__":
+
+def test_samarth():
     N = 1000
     k = 2
     knotstart = 0.1
@@ -20,14 +24,51 @@ if __name__ == "__main__":
     x_new = np.linspace(t.min()+0.005, t.max()-0.005, N)
     bsp_func_scipy = bsp_scipy(t, c, k)
 
+    print(t.shape, c.shape, k)
+
+    # reconstructing the B-splines
     y_scipy = bsp_func_scipy(x_new)
-
-    plt.figure()
-    # plt.plot(x, y, 'k', label='true')
-    plt.plot(x_new, y_scipy, 'k', label='scipy')
-
     y_adams= bsp_adams.bspline1d(x_new, c, t, k)
-    # y_adams = _bsp_func_jax(x_new, c, t, k)
-    plt.plot(x_new, y_adams, '-.r', label='adams')
-    plt.legend()
-    plt.show()
+
+    # testing
+    np.testing.assert_array_almost_equal(y_scipy, y_adams, decimal=10)
+
+
+def test_srijan():
+    
+    # getting the GVARS for the radius and the directories
+    GVARS = gvar_jax.GlobalVars()
+    '''
+    r = GVARS.r
+    wsr = GVARS.wsr[0]
+
+    print(GVARS.rmax_ind, GVARS.rmin_ind)
+    '''
+    
+    r = np.loadtxt('r.dat')[1:2399]
+    wsr =  np.load('wsr-spline.npy')[0]
+    
+    # parameterizing in terms of cubic splines
+    spl = splrep(r, wsr)
+
+    # getting the knot vector, control points, degree
+    t, c, k = spl
+
+    # reconstructing the B-splines using scipy function
+    y_scipy = bsp_scipy(t, c, k)(r)
+    
+    # adjusting the zero-padding in c from splrep
+    c = c[:-(k+1)]
+
+    # testing essential shapes criterion
+    np.testing.assert_equal(len(t), len(c) + k + 1)
+
+    # reconstructing the B-spline using Ryan P. Adams code
+    y_adams = bsp_adams.bspline1d(r, c, t, k)
+
+    np.testing.assert_array_equal(y_scipy, y_adams)
+
+
+if __name__ == "__main__":
+    test_samarth()
+    test_srijan()
