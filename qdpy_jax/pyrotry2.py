@@ -41,37 +41,45 @@ W5T = 1.
 
 def model():
     # setting min and max value to be 0.1*true and 3.*true
-    w1min, w1max = .1*abs(W1T), 3.*abs(W1T)
-    w3min, w3max = .1*abs(W3T), 3.*abs(W3T)
-    w5min, w5max = .1*abs(W5T), 3.*abs(W5T)
-    
-    w1 = numpyro.sample('w1', dist.Uniform(w1min, w1max))
-    w3 = numpyro.sample('w3', dist.Uniform(w3min, w3max))
-    w5 = numpyro.sample('w5', dist.Uniform(w5min, w5max))
-    
+    cmax = GVARS_TR.ctrl_arr_up
+    cmin = GVARS_TR.ctrl_arr_lo
+
+    c1_list = []
+    c3_list = []
+    c5_list = []
+    for i in range(cmax.shape[1]):
+        c1_list.append(numpyro.sample(f'c1_{i}', dist.Uniform(cmin[0, i], cmax[0, i])))
+        c3_list.append(numpyro.sample(f'c3_{i}', dist.Uniform(cmin[1, i], cmax[1, i])))
+        c5_list.append(numpyro.sample(f'c5_{i}', dist.Uniform(cmin[2, i], cmax[2, i])))
+
+    ctrl_arr = [jnp.array(c1_list),
+                jnp.array(c3_list),
+                jnp.array(c5_list)]
+
     sigma = numpyro.sample('sigma', dist.Uniform(0.1, 10.0))
     eig_sample = jnp.array([])
-    
+
     for i in range(nmults):
         n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
         CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST)
         CENMULT_AND_NBS = jf.tree_map_CNM_AND_NBS(CENMULT_AND_NBS)
-        
+
         SUBMAT_DICT = build_SUBMAT_INDICES(CENMULT_AND_NBS)
         SUBMAT_DICT = jf.tree_map_SUBMAT_DICT(SUBMAT_DICT)
-        
+
         supmatrix = build_supermatrix(CENMULT_AND_NBS,
-                                       SUBMAT_DICT,
-                                       GVARS_PRUNED_ST,
-                                       GVARS_PRUNED_TR)
+                                      SUBMAT_DICT,
+                                      GVARS_PRUNED_ST,
+                                      GVARS_PRUNED_TR,
+                                      ctrl_arr)
 
         fac = 1.0
-        fac *= (1 + w1*1e-3)
-        fac *= (1 + w3*1e-3)
-        fac *= (1 + w5*1e-3)
-        fac /= 2.0*CENMULT_AND_NBS.omega_nbs[0]
+        # fac *= (1 + w1*1e-3)
+        # fac *= (1 + w3*1e-3)
+        # fac *= (1 + w5*1e-3)
+        # fac /= 2.0*CENMULT_AND_NBS.omega_nbs[0]
         eig_sample = jnp.append(eig_sample, get_eigs(supmatrix)*fac)
-        
+
     eigvals_true = jnp.ones_like(eig_sample) * eig_sample * 1.1
     # eig_sample = numpyro.deterministic('eig', eig_mcmc_func(w1=w1, w3=w3, w5=w5))
     return numpyro.sample('obs', dist.Normal(eig_sample, sigma), obs=eigvals_true)
@@ -106,25 +114,25 @@ lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
 
 GVARS_PRUNED_TR = jf.create_namedtuple('GVARS_TR',
                                        ['r',
+                                        'r_spline',
                                         'rth',
-                                        'rmin_ind',
-                                        'rmax_ind',
-                                        'fac_up',
-                                        'fac_lo',
                                         'wsr',
                                         'U_arr',
                                         'V_arr',
-                                        'wig_list'],
+                                        'wig_list',
+                                        'ctrl_arr_up',
+                                        'ctrl_arr_lo',
+                                        'knot_arr'],
                                        (GVARS_TR.r,
+                                        GVARS_TR.r_spline,
                                         GVARS_TR.rth,
-                                        GVARS_TR.rmin_ind,
-                                        GVARS_TR.rmax_ind,
-                                        GVARS_TR.fac_up,
-                                        GVARS_TR.fac_lo,
                                         GVARS_TR.wsr,
                                         lm.U_arr,
                                         lm.V_arr,
-                                        wig_list))
+                                        wig_list,
+                                        GVARS_TR.ctrl_arr_up,
+                                        GVARS_TR.ctrl_arr_lo,
+                                        GVARS_TR.knot_arr))
 
 GVARS_PRUNED_ST = jf.create_namedtuple('GVARS_ST',
                                        ['s_arr',
@@ -133,14 +141,18 @@ GVARS_PRUNED_ST = jf.create_namedtuple('GVARS_ST',
                                         'omega_list',
                                         'fwindow',
                                         'OM',
-                                        'wig_idx'],
+                                        'wig_idx',
+                                        'rth_ind',
+                                        'spl_deg'],
                                        (GVARS_ST.s_arr,
                                         lm.nl_pruned,
                                         lm.nl_idx_pruned,
                                         lm.omega_pruned,
                                         GVARS_ST.fwindow,
                                         GVARS_ST.OM,
-                                        wig_idx))
+                                        wig_idx,
+                                        GVARS_ST.rth_ind,
+                                        GVARS_ST.spl_deg))
 
 nmults = len(GVARS.n0_arr)
 

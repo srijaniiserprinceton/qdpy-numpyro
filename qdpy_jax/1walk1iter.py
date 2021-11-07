@@ -42,27 +42,28 @@ lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
                                      nl_idx_pruned,
                                      omega_pruned)
 
+
 GVARS_PRUNED_TR = jf.create_namedtuple('GVARS_TR',
                                        ['r',
+                                        'r_spline',
                                         'rth',
-                                        'rmin_ind',
-                                        'rmax_ind',
-                                        'fac_up',
-                                        'fac_lo',
                                         'wsr',
                                         'U_arr',
                                         'V_arr',
-                                        'wig_list'],
+                                        'wig_list',
+                                        'ctrl_arr_up',
+                                        'ctrl_arr_lo',
+                                        'knot_arr'],
                                        (GVARS_TR.r,
+                                        GVARS_TR.r_spline,
                                         GVARS_TR.rth,
-                                        GVARS_TR.rmin_ind,
-                                        GVARS_TR.rmax_ind,
-                                        GVARS_TR.fac_up,
-                                        GVARS_TR.fac_lo,
                                         GVARS_TR.wsr,
                                         lm.U_arr,
                                         lm.V_arr,
-                                        wig_list))
+                                        wig_list,
+                                        GVARS_TR.ctrl_arr_up,
+                                        GVARS_TR.ctrl_arr_lo,
+                                        GVARS_TR.knot_arr))
 
 GVARS_PRUNED_ST = jf.create_namedtuple('GVARS_ST',
                                        ['s_arr',
@@ -71,31 +72,50 @@ GVARS_PRUNED_ST = jf.create_namedtuple('GVARS_ST',
                                         'omega_list',
                                         'fwindow',
                                         'OM',
-                                        'wig_idx'],
+                                        'wig_idx',
+                                        'rth_ind',
+                                        'spl_deg'],
                                        (GVARS_ST.s_arr,
                                         lm.nl_pruned,
                                         lm.nl_idx_pruned,
                                         lm.omega_pruned,
                                         GVARS_ST.fwindow,
                                         GVARS_ST.OM,
-                                        wig_idx))
+                                        wig_idx,
+                                        GVARS_ST.rth_ind,
+                                        GVARS_ST.spl_deg))
 
 nmults = len(GVARS.n0_arr)
 
 def model():
     ev_sum = 0.0
+
+    c1_list = []
+    c3_list = []
+    c5_list = []
+    for i in range(GVARS_TR.ctrl_arr_up.shape[1]):
+        c1_list.append(GVARS_TR.ctrl_arr_up[0, i])
+        c3_list.append(GVARS_TR.ctrl_arr_up[1, i])
+        c5_list.append(GVARS_TR.ctrl_arr_up[2, i])
+
+    ctrl_arr = [jnp.array(c1_list),
+                jnp.array(c3_list),
+                jnp.array(c5_list)]
+    print(ctrl_arr[0].shape)
+
     for i in range(nmults):
         n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
         CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST)
         CENMULT_AND_NBS = jf.tree_map_CNM_AND_NBS(CENMULT_AND_NBS)
-        
+
         SUBMAT_DICT = build_SUBMAT_INDICES(CENMULT_AND_NBS)
         SUBMAT_DICT = jf.tree_map_SUBMAT_DICT(SUBMAT_DICT)
-        
+
         supmatrix = build_supermatrix(CENMULT_AND_NBS,
-                                       SUBMAT_DICT,
-                                       GVARS_PRUNED_ST,
-                                       GVARS_PRUNED_TR)
+                                      SUBMAT_DICT,
+                                      GVARS_PRUNED_ST,
+                                      GVARS_PRUNED_TR,
+                                      ctrl_arr)
         eigvals, eigvecs = jnp.linalg.eigh(supmatrix)
         eigvals = build_supmat.eigval_sort_slice(eigvals, eigvecs)
         ev_sum += jnp.sum(eigvals[:2*GVARS.ell0_arr[i]+1])

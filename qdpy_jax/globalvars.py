@@ -101,35 +101,19 @@ class GlobalVars():
         self.nl_all_list = np.loadtxt(f"{datadir}/nl.dat").astype('int').tolist()
         self.omega_list = np.loadtxt(f"{datadir}/muhz.dat").astype('float') * 1e-6 / self.OM
 
-        # getting indices for minimum and maximum r
-        if qdPars.precompute:
-            self.rmin = 0.0
-            self.rmax = rth
-        elif qdPars.use_precomputed:
-            self.rmin = qdPars.rth
-            self.rmax = qdPars.rmax
-        else:
-            self.rmin = qdPars.rmin
-            self.rmax = qdPars.rmax
-
-        self.rmin_ind = self.get_ind(self.r, self.rmin)
+        self.rmin = qdPars.rmin
+        self.rmax = qdPars.rmax
 
         # removing the grid point corresponding to r=0
         # because Tsr has 1/r factor
-        if self.rmin == 0:
-            self.rmin_ind += 1
+        self.rmin_ind = self.get_ind(self.r, self.rmin) + 1
         self.rmax_ind = self.get_ind(self.r, self.rmax)
 
         self.smax = qdPars.smax
         self.s_arr = np.arange(1, self.smax+1, 2)
 
         self.fwindow = qdPars.fwindow
-        # self.wsr = -1.0*np.loadtxt(f'{self.datadir}/w_s/w.dat')
-        self.wsr = np.load(f'wsr-spline.npy').astype('float')
-        # to store the spline params
-        self.ctrl_arr = None
-        self.knot_arr = None
-        self.spl_deg = None
+        self.wsr = -1.0*np.loadtxt(f'{self.datadir}/w_s/w.dat') + 300
 
         # generating the multiplets which we will use
         load_from_file = False
@@ -148,10 +132,17 @@ class GlobalVars():
 
         # retaining only region between rmin and rmax
         self.r = self.mask_minmax(self.r)
-        
+        self.wsr = self.mask_minmax(self.wsr, axis=1)
+        self.rth_ind = self.get_ind(self.r, self.rth)
+        self.r_spline = self.r[self.rth_ind:]
+
         # finding the spline params for wsr
-        self.get_wsr_spline_params()
-        
+        self.spl_deg = None
+        self.knot_num = 10
+        # self.knot_arr, self.ctrl_arr = self.get_wsr_spline_params()
+        self.knot_arr, self.ctrl_arr_up = self.get_wsr_spline_params(which_ex='upex')
+        __, self.ctrl_arr_lo = self.get_wsr_spline_params(which_ex='loex')
+
         # converting necessary arrays to tuples
         self.s_arr = tuple(self.s_arr)
         self.omega_list= tuple(self.omega_list)
@@ -228,19 +219,23 @@ class GlobalVars():
         """
         GVAR_TRACED = jf.create_namedtuple('GVAR_TRACED',
                                            ['r',
+                                            'r_spline',
                                             'rth',
                                             'rmin_ind',
                                             'rmax_ind',
-                                            'fac_up',
-                                            'fac_lo',
-                                            'wsr'],
+                                            'wsr',
+                                            'ctrl_arr_up',
+                                            'ctrl_arr_lo',
+                                            'knot_arr'],
                                            (self.r,
+                                            self.r_spline,
                                             self.rth,
                                             self.rmin_ind,
                                             self.rmax_ind,
-                                            self.fac_up,
-                                            self.fac_lo,
-                                            self.wsr))
+                                            self.wsr,
+                                            self.ctrl_arr_up,
+                                            self.ctrl_arr_lo,
+                                            self.knot_arr))
         return GVAR_TRACED
 
     def get_namedtuple_gvar_static(self):
@@ -252,12 +247,16 @@ class GlobalVars():
                                             'nl_all',
                                             'omega_list',
                                             'fwindow',
-                                            'OM'],
+                                            'OM',
+                                            'rth_ind',
+                                            'spl_deg'],
                                            (self.s_arr,
                                             self.nl_all,
                                             self.omega_list,
                                             self.fwindow,
-                                            self.OM))
+                                            self.OM,
+                                            self.rth_ind,
+                                            self.spl_deg))
 
         return GVAR_STATIC
 
@@ -271,23 +270,90 @@ class GlobalVars():
         else:
             return arr[self.rmin_ind:self.rmax_ind]
 
-    def get_wsr_spline_params(self):
-        # parameterizing in terms of cubic splines                                           
-        t, c, k = splrep(self.r, self.wsr[0])
+    def get_wsr_spline_params(self, which_ex='upex'):
+        # parameterizing in terms of cubic splines
+        lenr = len(self.r_spline)
+        r_spacing = int(lenr//self.knot_num)
+        r_filtered = self.r_spline[::r_spacing]
+
+        # removing end points because of requirement of splrep
+        # endpoints are automatically padded up
+        t_set = r_filtered[1:-1]
+
+        self.spl_deg = 3
+
+        t, c, k = splrep(self.r_spline, self.wsr[0, self.rth_ind:],
+                         s=0, t=t_set, k=self.spl_deg)
         self.spl_deg = k
 
-        # adjusting the zero-padding in c from splrep                                        
+        # adjusting the zero-padding in c from splrep
         c = c[:-(k+1)]
 
         len_s = len(self.s_arr)
-
         c_arr = np.zeros((len_s, len(c)))
 
+        if which_ex == 'upex':
+            factor = self.fac_up
+        elif which_ex == 'loex':
+            factor = self.fac_lo
+        else:
+            factor = np.ones_like(self.fac_up)
+
         for i in range(len_s):
-            t, c, __ = splrep(self.r, self.wsr[i])
-            # adjusting the zero-padding in c from splrep                                  
+            t, c, __ = splrep(self.r_spline, self.wsr[i, self.rth_ind:]*factor[i],
+                              s=0, t=t_set, k=self.spl_deg)
+            # adjusting the zero-padding in c from splrep
             c = c[:-(k+1)]
             c_arr[i] = c
-        
-        self.knot_arr = t
-        self.ctrl_arr = c_arr
+
+        return t, c_arr
+
+    def get_matching_function(self):
+        return (np.tanh((self.r - self.rth)/0.05) + 1)/2.0
+
+    def create_nearsurface_profile(self, idx, which_ex='upex'):
+        w_dpt = self.wsr[idx, :]
+        w_new = np.zeros_like(w_dpt)
+
+        matching_function = self.get_matching_function()
+
+        if (which_ex == 'upex'):
+            scale_factor = self.fac_up[idx]
+        else:
+            scale_factor = self.fac_lo[idx]
+
+        # near surface enhanced or suppressed profile
+        # & adding the complementary part below the rth
+        w_new = matching_function * scale_factor * w_dpt
+        w_new += (1 - matching_function) * w_dpt
+        return w_new
+
+    def get_spline_coeffs(self):
+        w1, w3, w5 = (self.wsr[0, self.rth_ind:],
+                      self.wsr[1, self.rth_ind:],
+                      self.wsr[2, self.rth_ind:])
+        # getting spline attributes (knots, coefficients, degree)
+        t, c1, __ = interpolate.splrep(self.r_spline, w1)
+        __, c3, __ = interpolate.splrep(self.r_spline, w3)
+        __, c5, __ = interpolate.splrep(self.r_spline, w5)
+
+        return t, c1, c3, c5
+
+    def get_ctrl_extreme(self):
+        self.wsr_upex_matched = np.zeros_like(self.wsr)
+        self.wsr_loex_matched = np.zeros_like(self.wsr)
+
+        # looping over all the s in wsr
+        for i in range(len(self.wsr)):
+            self.wsr_upex_matched[i, :] = self.create_nearsurface_profile(i,
+                                                                          which_ex='upex')
+            self.wsr_loex_matched[i, :] = self.create_nearsurface_profile(i,
+                                                                          which_ex='loex')
+
+        # generating and saving coefficients for the upper extreme profiles
+        c1, c3, c5 = self.get_spline_coeffs(self.wsr_upex_matched[:, self.rth_ind:],
+                                            return_coeffs=True) 
+
+        params_init = []
+
+

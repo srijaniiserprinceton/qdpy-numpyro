@@ -54,6 +54,8 @@ def test_srijan(idx):
 
     # getting the knot vector, control points, degree
     t, c, k = spl
+    print(f"rdiff = {r.min() - t[0]}")
+    print(f"rdiff = {r.max() - t[-1]}")
 
     # reconstructing the B-splines using scipy function
     y_scipy = bsp_scipy(t, c, k)(r)

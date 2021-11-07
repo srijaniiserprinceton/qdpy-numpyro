@@ -75,17 +75,17 @@ class build_supermatrix_functions:
 
     def get_func2build_supermatrix(self):
         # @partial(jax.jit, static_argnums=(0, 1, 2))
-        def build_supermatrix(CNM_AND_NBS, SUBMAT_DICT, GVARS_ST, GVARS_TR):
+        def build_supermatrix(CNM_AND_NBS, SUBMAT_DICT, GVARS_ST, GVARS_TR, ctrl_arr):
             """Function to assimilate all the neighbour info
             and return the function to compute the SuperMatrix'
             """
             # tiling supermatrix with submatrices
             supmat = self.tile_submatrices(CNM_AND_NBS, SUBMAT_DICT,
-                                           GVARS_ST, GVARS_TR)
+                                           GVARS_ST, GVARS_TR, ctrl_arr)
             return supmat
         return build_supermatrix
 
-    def tile_submatrices(self, CNM_AND_NBS, SUBMAT_DICT, GVARS_ST, GVARS_TR):
+    def tile_submatrices(self, CNM_AND_NBS, SUBMAT_DICT, GVARS_ST, GVARS_TR, ctrl_arr):
         """Function to loop over the submatrix blocks and tile in the
         submatrices into the supermatrix.
         """
@@ -129,11 +129,19 @@ class build_supermatrix_functions:
                 # creating the named tuples
                 gvars = jf.create_namedtuple('GVAR',
                                              ['r',
+                                              'r_spline',
+                                              'rth_ind',
                                               'wsr',
-                                              's_arr'],
+                                              's_arr',
+                                              'knot_arr',
+                                              'spl_deg'],
                                              (GVARS_TR.r,
+                                              GVARS_TR.r_spline,
+                                              GVARS_ST.rth_ind,
                                               GVARS_TR.wsr,
-                                              GVARS_ST.s_arr))
+                                              GVARS_ST.s_arr,
+                                              GVARS_TR.knot_arr,
+                                              GVARS_ST.spl_deg))
 
                 qdpt_mode = jf.create_namedtuple('QDPT_MODE',
                                                  ['ell1',
@@ -159,7 +167,7 @@ class build_supermatrix_functions:
 
                 get_submat = cvec.compute_submatrix(gvars)
 
-                submatdiag = get_submat.jax_get_Cvec()(qdpt_mode, eigfuncs, wigs)
+                submatdiag = get_submat.jax_get_Cvec()(qdpt_mode, eigfuncs, wigs, ctrl_arr)
 
                 startx, starty = startx_arr[ir, ic], starty_arr[ir, ic]
                 endx, endy = endx_arr[ir, ic], endy_arr[ir, ic]

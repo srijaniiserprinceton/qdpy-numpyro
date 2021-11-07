@@ -15,11 +15,16 @@ from qdpy_jax import prune_multiplets
 from qdpy_jax import load_multiplets
 from qdpy_jax import globalvars as gvar_jax
 from qdpy_jax import jax_functions as jf
+from qdpy_jax import bsplines as bsp_adams
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
 data_dir = f"{package_dir}/qdpy_jax"
 
+bspline = bsp_adams.bspline1d
+
+jidx = jax.ops.index
+jidx_update = jax.ops.index_update
 
 def jax_Omega(ell, N):
     """Computes Omega_N^\ell"""
@@ -54,9 +59,29 @@ class compute_submatrix:
         self.r = gvars.r
         self.s_arr = np.array(gvars.s_arr)
         self.wsr = gvars.wsr
+        self.spl_deg = gvars.spl_deg
+        self.r_spline = gvars.r_spline
+        self.knot_arr = gvars.knot_arr
+        self.rth_ind = gvars.rth_ind
 
     def jax_get_Cvec(self):
-        def get_func_Cvec(qdpt_mode, eigfuncs, wigs):
+        def get_wsr_from_spline(wsr_dpt, ctrl_arr):
+            wsr_new = jnp.zeros_like(self.wsr)
+            wsr_1 = bspline(self.r_spline, ctrl_arr[0],
+                            self.knot_arr, self.spl_deg) 
+            wsr_3 = bspline(self.r_spline, ctrl_arr[1],
+                            self.knot_arr, self.spl_deg)
+            wsr_5 = bspline(self.r_spline, ctrl_arr[2],
+                            self.knot_arr, self.spl_deg)
+            wsr_new = jidx_update(wsr_new, jidx[:, :self.rth_ind],
+                                  self.wsr[:, :self.rth_ind])
+            wsr_new = jidx_update(wsr_new, jidx[0, self.rth_ind:], wsr_1)
+            wsr_new = jidx_update(wsr_new, jidx[1, self.rth_ind:], wsr_3)
+            wsr_new = jidx_update(wsr_new, jidx[2, self.rth_ind:], wsr_5)
+            return wsr_new
+
+
+        def get_func_Cvec(qdpt_mode, eigfuncs, wigs, ctrl_arr):
             """Computing the non-zero components of the submatrix"""
 
             lenidx = len(wigs.wig_idx)
@@ -72,17 +97,15 @@ class compute_submatrix:
 
             for i, s in enumerate(self.s_arr):
                 wig_idx, fac = _find_idx(ell1, s, ell2, m)
-
                 wigidx_for_s = np.searchsorted(wigs.wig_idx, wig_idx)
-
                 wigval_for_s = fac * wigs.wig_list[wigidx_for_s]
-
                 wigvals = jax.ops.index_update(wigvals,
                                                jax.ops.index[:, i],
                                                wigval_for_s)
 
             Tsr = self.jax_compute_Tsr(qdpt_mode, eigfuncs, wigs)
-            integrand = Tsr * self.wsr   # since U and V are scaled by sqrt(rho) * r
+            wsr = get_wsr_from_spline(self.wsr, ctrl_arr)
+            integrand = Tsr * wsr   # since U and V are scaled by sqrt(rho) * r
 
             #### TO BE REPLACED WITH SIMPSON #####
             integral = jnp.trapz(integrand, axis=1, x=self.r)
