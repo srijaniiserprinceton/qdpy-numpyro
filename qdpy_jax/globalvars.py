@@ -1,6 +1,7 @@
 from collections import namedtuple
 import jax.numpy as jnp
 import numpy as np
+from scipy.interpolate import splrep
 import os
 
 # loading custom libraries/classes
@@ -125,6 +126,9 @@ class GlobalVars():
         self.fwindow = qdPars.fwindow
         # self.wsr = -1.0*np.loadtxt(f'{self.datadir}/w_s/w.dat')
         self.wsr = np.load(f'wsr-spline.npy').astype('float')
+        # to store the spline params
+        self.c_arr = None
+        self.t_arr = None
 
         # generating the multiplets which we will use
         load_from_file = False
@@ -144,6 +148,8 @@ class GlobalVars():
         # retaining only region between rmin and rmax
         self.r = self.mask_minmax(self.r)
         
+        # finding the spline params for wsr
+        self.get_wsr_spline_params()
         
         # converting necessary arrays to tuples
         self.s_arr = tuple(self.s_arr)
@@ -263,3 +269,23 @@ class GlobalVars():
             return arr[:, self.rmin_ind:self.rmax_ind]
         else:
             return arr[self.rmin_ind:self.rmax_ind]
+
+    def get_wsr_spline_params(self):
+        # parameterizing in terms of cubic splines                                           
+        t, c, k = splrep(self.r, self.wsr[0])
+
+        # adjusting the zero-padding in c from splrep                                        
+        c = c[:-(k+1)]
+
+        len_s = len(self.s_arr)
+
+        c_arr = np.zeros((len_s, len(c)))
+
+        for i in range(len_s):
+            t, c, __ = splrep(self.r, self.wsr[i])
+            # adjusting the zero-padding in c from splrep                                  
+            c = c[:-(k+1)]
+            c_arr[i] = c
+        
+        self.t_arr = t
+        self.c_arr = c_arr

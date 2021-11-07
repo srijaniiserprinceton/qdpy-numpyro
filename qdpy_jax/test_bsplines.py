@@ -35,10 +35,9 @@ def test_samarth():
 
 
 def test_srijan():
-    
+    '''
     # getting the GVARS for the radius and the directories
     GVARS = gvar_jax.GlobalVars()
-    '''
     r = GVARS.r
     wsr = GVARS.wsr[0]
 
