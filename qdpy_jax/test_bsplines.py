@@ -10,7 +10,7 @@ from qdpy_jax import globalvars as gvar_jax
 from jax.config import config
 config.update('jax_enable_x64', True)
 
-bspline_1d_ = jax.jit(bsp_adams.bspline1d)
+bspline_1d_ = jax.jit(bsp_adams.bspline1d, static_argnums=(3,))
 
 def test_samarth():
     N = 1000
@@ -45,8 +45,9 @@ def test_srijan():
     print(GVARS.rmax_ind, GVARS.rmin_ind)
     '''
     
-    r = np.loadtxt('r.dat')[1:2399]
+    r = np.loadtxt('r.dat')[1:-1]
     wsr =  np.load('wsr-spline.npy')[0]
+    print(r.shape, wsr.shape)
     
     # parameterizing in terms of cubic splines
     spl = splrep(r, wsr)
@@ -67,9 +68,13 @@ def test_srijan():
     # y_adams = bsp_adams.bspline1d(r, c, t, k)
     y_adams = bspline_1d_(r, c, t, k)
 
-    np.testing.assert_array_equal(y_scipy, y_adams)
+    return y_scipy, y_adams
 
 
 if __name__ == "__main__":
     test_samarth()
-    test_srijan()
+    y_sp, y_ad = test_srijan()
+    tolerance = 1e-16
+    print(f"for tol={tolerance}: is y_scipy close to y_adams? " +
+          f"{np.isclose(y_sp, y_ad, rtol=tolerance).all()}")
+    np.testing.assert_array_equal(y_sp, y_ad)
