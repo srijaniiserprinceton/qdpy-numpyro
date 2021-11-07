@@ -35,7 +35,7 @@ def test_samarth():
     np.testing.assert_array_almost_equal(y_scipy, y_adams, decimal=10)
 
 
-def test_srijan():
+def test_srijan(idx):
     '''
     # getting the GVARS for the radius and the directories
     GVARS = gvar_jax.GlobalVars()
@@ -46,7 +46,7 @@ def test_srijan():
     '''
     
     r = np.loadtxt('r.dat')[1:-1]
-    wsr =  np.load('wsr-spline.npy')[0]
+    wsr =  np.load('wsr-spline.npy')[idx] 
     print(r.shape, wsr.shape)
     
     # parameterizing in terms of cubic splines
@@ -68,13 +68,21 @@ def test_srijan():
     # y_adams = bsp_adams.bspline1d(r, c, t, k)
     y_adams = bspline_1d_(r, c, t, k)
 
-    return y_scipy, y_adams
+    return r, wsr, y_scipy, y_adams
 
 
 if __name__ == "__main__":
     test_samarth()
-    y_sp, y_ad = test_srijan()
+
+    widx = 0
+    r, wsr, y_sp, y_ad = test_srijan(widx)
     tolerance = 1e-16
     print(f"for tol={tolerance}: is y_scipy close to y_adams? " +
           f"{np.isclose(y_sp, y_ad, rtol=tolerance).all()}")
-    np.testing.assert_array_equal(y_sp, y_ad)
+    # np.testing.assert_array_equal(y_sp, y_ad)
+    np.testing.assert_array_almost_equal(y_sp, y_ad, decimal=13)
+
+    plt.figure()
+    plt.plot(r, wsr)
+    plt.plot(r, y_ad, '--r')
+    plt.show()
