@@ -10,6 +10,7 @@ from qdpy_jax import globalvars as gvar_jax
 from jax.config import config
 config.update('jax_enable_x64', True)
 
+bspline_1d_ = jax.jit(bsp_adams.bspline1d)
 
 def test_samarth():
     N = 1000
@@ -63,7 +64,8 @@ def test_srijan():
     np.testing.assert_equal(len(t), len(c) + k + 1)
 
     # reconstructing the B-spline using Ryan P. Adams code
-    y_adams = bsp_adams.bspline1d(r, c, t, k)
+    # y_adams = bsp_adams.bspline1d(r, c, t, k)
+    y_adams = bspline_1d_(r, c, t, k)
 
     np.testing.assert_array_equal(y_scipy, y_adams)
 

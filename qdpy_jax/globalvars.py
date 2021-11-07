@@ -127,8 +127,9 @@ class GlobalVars():
         # self.wsr = -1.0*np.loadtxt(f'{self.datadir}/w_s/w.dat')
         self.wsr = np.load(f'wsr-spline.npy').astype('float')
         # to store the spline params
-        self.c_arr = None
-        self.t_arr = None
+        self.ctrl_arr = None
+        self.knot_arr = None
+        self.spl_deg = None
 
         # generating the multiplets which we will use
         load_from_file = False
@@ -273,6 +274,7 @@ class GlobalVars():
     def get_wsr_spline_params(self):
         # parameterizing in terms of cubic splines                                           
         t, c, k = splrep(self.r, self.wsr[0])
+        self.spl_deg = k
 
         # adjusting the zero-padding in c from splrep                                        
         c = c[:-(k+1)]
@@ -287,5 +289,5 @@ class GlobalVars():
             c = c[:-(k+1)]
             c_arr[i] = c
         
-        self.t_arr = t
-        self.c_arr = c_arr
+        self.knot_arr = t
+        self.ctrl_arr = c_arr
