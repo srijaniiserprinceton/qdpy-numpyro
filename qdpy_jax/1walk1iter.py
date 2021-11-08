@@ -42,7 +42,6 @@ lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
                                      nl_idx_pruned,
                                      omega_pruned)
 
-
 GVARS_PRUNED_TR = jf.create_namedtuple('GVARS_TR',
                                        ['r',
                                         'r_spline',
@@ -101,7 +100,6 @@ def model():
     ctrl_arr = [jnp.array(c1_list),
                 jnp.array(c3_list),
                 jnp.array(c5_list)]
-    print(ctrl_arr[0].shape)
 
     for i in range(nmults):
         n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
@@ -122,41 +120,43 @@ def model():
         print(f'Calculated supermatrix for multiplet = ({n0}, {ell0})')
     return ev_sum
 
-# jitting model()
-model_ = jax.jit(model)
+if __name__ == "__main__":
+    # jitting model()
+    model_ = jax.jit(model)
 
-# COMPILING JAX
-# looping over the ells
-t1c = time.time()
-__ = model_().block_until_ready()
-t2c = time.time()
-print(f'Time taken in seconds for compilation of {nmults} multiplets' +
-      f' =  {t2c-t1c:.2f} seconds')
-
-print("--------------------------------------------------")
-
-# EXECUTING JAX
-Niter = 1
-t1e = time.time()
-for i in range(Niter):
+    # COMPILING JAX
+    # looping over the ells
+    t1c = time.time()
     __ = model_().block_until_ready()
-t2e = time.time()
+    t2c = time.time()
+    print(f'Time taken in seconds for compilation of {nmults} multiplets' +
+        f' =  {t2c-t1c:.2f} seconds')
 
-factor4niter = 1500 * 200./3600.
-t_projected_jit = (t2e-t1e) / nmults /Niter * factor4niter
-t_projected_eigval = 2. * factor4niter
-print(f'Time taken in seconds by jax-jitted execution' +
-      f' of entire simulation (1500 iterations) = {t_projected_jit:.2f} hours')
+    print("--------------------------------------------------")
 
-# print(f'Assuming 2 seconds per eigenvalue problem solving, the ' +
-#       f'total time taken for EV solver (1500 iterations) = {t_projected_eigval:.2f} hours')
+    # EXECUTING JAX
+    Niter = 1
+    t1e = time.time()
+    for i in range(Niter):
+        __ = model_().block_until_ready()
+    t2e = time.time()
 
-# # print('------------------')
-# print(f'Total time taken (1500 iterations) = ' +
-#       f'{(t_projected_jit + t_projected_eigval)/24.:.2f} days')
+    factor4niter = 1500 * 200./3600.
+    t_projected_jit = (t2e-t1e) / nmults /Niter * factor4niter
+    t_projected_eigval = 2. * factor4niter
+    print(f'Time taken in seconds by jax-jitted execution' +
+        f' of entire simulation (1500 iterations) = {t_projected_jit:.2f} hours')
 
-# print(f'Fraction of time taken for setting up EV = ' +
-#       f'{t_projected_jit/t_projected_eigval:.3f}')
+    n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
+    CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST)
+    CENMULT_AND_NBS = jf.tree_map_CNM_AND_NBS(CENMULT_AND_NBS)
 
-# compare the freq computation of the forward problem
+    SUBMAT_DICT = build_SUBMAT_INDICES(CENMULT_AND_NBS)
+    SUBMAT_DICT = jf.tree_map_SUBMAT_DICT(SUBMAT_DICT)
 
+    supmatrix = build_supermatrix(CENMULT_AND_NBS,
+                                  SUBMAT_DICT,
+                                  GVARS_PRUNED_ST,
+                                  GVARS_PRUNED_TR,
+                                  GVARS_TR.ctrl_arr_dpt)
+    np.save('supmat-jax2-200.npy', np.array(supmatrix))

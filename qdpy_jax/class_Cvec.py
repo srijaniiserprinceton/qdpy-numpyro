@@ -84,10 +84,10 @@ class compute_submatrix:
                                                wigval_for_s)
 
             Tsr = self.jax_compute_Tsr(qdpt_mode, eigfuncs, wigs)
-            wsr = gen_wsr.get_wsr_from_spline(self.r_spline, self.wsr,
-                                              ctrl_arr, self.knot_arr,
-                                              self.rth_ind, spl_deg=self.spl_deg)
-            integrand = Tsr * wsr   # since U and V are scaled by sqrt(rho) * r
+            # wsr = gen_wsr.get_wsr_from_spline(self.r_spline, self.wsr,
+            #                                   ctrl_arr, self.knot_arr,
+            #                                   self.rth_ind, spl_deg=self.spl_deg)
+            integrand = Tsr * self.wsr   # since U and V are scaled by sqrt(rho) * r
 
             #### TO BE REPLACED WITH SIMPSON #####
             integral = jnp.trapz(integrand, axis=1, x=self.r)

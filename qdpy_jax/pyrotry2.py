@@ -72,15 +72,8 @@ def model():
                                       GVARS_PRUNED_ST,
                                       GVARS_PRUNED_TR,
                                       ctrl_arr)
+        eig_sample = jnp.append(eig_sample, get_eigs(supmatrix)[:2*ell0+1])
 
-        fac = 1.0
-        # fac *= (1 + w1*1e-3)
-        # fac *= (1 + w3*1e-3)
-        # fac *= (1 + w5*1e-3)
-        # fac /= 2.0*CENMULT_AND_NBS.omega_nbs[0]
-        eig_sample = jnp.append(eig_sample, get_eigs(supmatrix)*fac)
-
-    eigvals_true = jnp.ones_like(eig_sample) * eig_sample * 1.1
     # eig_sample = numpyro.deterministic('eig', eig_mcmc_func(w1=w1, w3=w3, w5=w5))
     return numpyro.sample('obs', dist.Normal(eig_sample, sigma), obs=eigvals_true)
 
@@ -122,7 +115,8 @@ GVARS_PRUNED_TR = jf.create_namedtuple('GVARS_TR',
                                         'wig_list',
                                         'ctrl_arr_up',
                                         'ctrl_arr_lo',
-                                        'knot_arr'],
+                                        'knot_arr',
+                                        'eigvals_true'],
                                        (GVARS_TR.r,
                                         GVARS_TR.r_spline,
                                         GVARS_TR.rth,
@@ -132,7 +126,8 @@ GVARS_PRUNED_TR = jf.create_namedtuple('GVARS_TR',
                                         wig_list,
                                         GVARS_TR.ctrl_arr_up,
                                         GVARS_TR.ctrl_arr_lo,
-                                        GVARS_TR.knot_arr))
+                                        GVARS_TR.knot_arr,
+                                        GVARS_TR.eigvals_true))
 
 GVARS_PRUNED_ST = jf.create_namedtuple('GVARS_ST',
                                        ['s_arr',
@@ -155,14 +150,7 @@ GVARS_PRUNED_ST = jf.create_namedtuple('GVARS_ST',
                                         GVARS_ST.spl_deg))
 
 nmults = len(GVARS.n0_arr)
-
-'''
-# trying to jit model
-model_ = jax.jit(model)
-model()
-model_()
-print('model_() runs')
-'''
+eigvals_true = jnp.asarray(GVARS_TR.eigvals_true)
 
 # Start from this source of randomness. We will split keys for subsequent operations.
 rng_key = random.PRNGKey(12)

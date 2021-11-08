@@ -2,6 +2,7 @@ from collections import namedtuple
 import jax.numpy as jnp
 import numpy as np
 from scipy.interpolate import splrep
+from numpy.polynomial.legendre import legval
 import os
 import matplotlib.pyplot as plt
 
@@ -9,8 +10,11 @@ import matplotlib.pyplot as plt
 from qdpy_jax import load_multiplets
 from qdpy_jax import jax_functions as jf
 
+current_dir = os.path.dirname(os.path.realpath(__file__))
+package_dir = os.path.dirname(current_dir)
+data_dir = f"{package_dir}/qdpy_jax"
 import sys
-sys.path.append("../plotter")
+sys.path.append(f"{package_dir}/plotter")
 import preplotter as preplotter
 
 #----------------------------------------------------------------------
@@ -49,7 +53,6 @@ class qdParams():
     fwindow =  150.0 
     smax = 5
     preplot = True
-    
 
 
 class GlobalVars():
@@ -88,9 +91,7 @@ class GlobalVars():
         self.progdir = self.local_dir
         self.hmidata = np.loadtxt(f"{self.snrnmais_dir}/data_files/hmi.6328.36")
 
-
         datadir = f"{self.snrnmais_dir}/data_files"
-
         qdPars = qdParams()
 
         # Frequency unit conversion factor (in Hz (cgs))
@@ -104,7 +105,8 @@ class GlobalVars():
         self.r = np.loadtxt(f"{datadir}/r.dat").astype('float')
         self.nl_all = np.loadtxt(f"{datadir}/nl.dat").astype('int')
         self.nl_all_list = np.loadtxt(f"{datadir}/nl.dat").astype('int').tolist()
-        self.omega_list = np.loadtxt(f"{datadir}/muhz.dat").astype('float') * 1e-6 / self.OM
+        self.omega_list = np.loadtxt(f"{datadir}/muhz.dat").astype('float')
+        self.omega_list *= 1e-6 / self.OM
 
         self.rmin = qdPars.rmin
         self.rmax = qdPars.rmax
@@ -119,6 +121,8 @@ class GlobalVars():
 
         self.fwindow = qdPars.fwindow
         self.wsr = -1.0*np.loadtxt(f'{self.datadir}/w_s/w.dat')
+        # self.wsr = np.load(f'wsr-spline.npy')
+        # self.wsr_extend()
 
         # generating the multiplets which we will use
         load_from_file = False
@@ -126,6 +130,7 @@ class GlobalVars():
                                               qdPars.radial_orders,
                                               qdPars.ell_bounds)
         self.n0_arr, self.ell0_arr = n_arr, ell_arr
+        self.eigvals_true = self.get_eigvals_true()
 
         # rth = r threshold beyond which the profiles are updated. 
         self.rth = qdPars.rth
@@ -143,10 +148,11 @@ class GlobalVars():
 
         # finding the spline params for wsr
         self.spl_deg = None
-        self.knot_num = 10
+        self.knot_num = 20
         # getting the spline params for the extreme profiles
         self.knot_arr, self.ctrl_arr_up = self.get_wsr_spline_params(which_ex='upex')
         __, self.ctrl_arr_lo = self.get_wsr_spline_params(which_ex='loex')
+        __, self.ctrl_arr_dpt = self.get_wsr_spline_params(which_ex=None)
 
         # making the ctrl_arr_up > ctrl_arr_lo at each point
         ind_swap = np.greater(self.ctrl_arr_lo, self.ctrl_arr_up)
@@ -165,12 +171,59 @@ class GlobalVars():
         # if preplot is True, plot the various things for
         # ensuring everything is working properly
         if qdPars.preplot:
-            preplotter.plot_extreme_wsr(self.r, self.r_spline, self.OM,
-                                        self.wsr, self.ctrl_arr_up,
+            preplotter.plot_extreme_wsr(self.r, self.r_spline, self.OM, self.wsr,
+                                        self.ctrl_arr_up, self.ctrl_arr_dpt,
                                         self.ctrl_arr_lo, self.knot_arr,
                                         self.rth_ind, self.spl_deg)
-        
-            
+
+    def get_eigvals_true(self):
+        n0arr = self.n0_arr
+        ell0arr = self.ell0_arr
+        nmults = len(n0arr)
+        eigvals_true = np.array([])
+        for i in range(nmults):
+            m = np.arange(-ell0arr[i], ell0arr[i]+1)
+            eigvals_true = np.append(eigvals_true,
+                                     self.findfreq(ell0arr[i], n0arr[i], m)[0])
+        return eigvals_true
+
+    # {{{ def findfreq_vecm(data, l, n, m):
+    def findfreq(self, l, n, m):
+        '''
+        Find the eigenfrequency for a given (l, n, m)
+        using the splitting coefficients
+
+        Inputs: (data, l, n, m)
+            data - array (hmi.6328.36)
+            l - harmonic degree
+            n - radial order
+            m - azimuthal order
+
+        Outputs: (nu_{nlm}, fwhm_{nl}, amp_{nl})
+            nu_{nlm}    - eigenfrequency in microHz
+            fwhm_{nl} - FWHM of the mode in microHz
+            amp_{nl}    - Mode amplitude (A_{nl})
+        '''
+        data = self.hmidata
+        L = np.sqrt(l*(l+1))
+        try:
+            modeindex = np.where((data[:, 0] == l) *
+                                (data[:, 1] == n))[0][0]
+        except IndexError:
+            print(f"MODE NOT FOUND : l = {l:03d}, n = {n:03d}")
+            modeindex = 0
+        (nu, amp, fwhm) = data[modeindex, 2:5]
+        amp = amp*np.ones(m.shape)
+        mask0 = m == 0
+        maskl = abs(m) >= l
+        splits = np.append([0.0], data[modeindex, 12:48])
+        totsplit = legval(1.0*m/L, splits)*L*0.001
+        totsplit[mask0] = 0
+        amp[maskl] = 0
+        return nu + totsplit, fwhm, amp
+    # }}} findfreq_vecm(data, l, n, m)
+
+
     def get_all_GVAR(self):
         '''Builds and returns the relevant dictionaries.
         At the location of this function call, the GVARS
@@ -248,7 +301,9 @@ class GlobalVars():
                                             'wsr',
                                             'ctrl_arr_up',
                                             'ctrl_arr_lo',
-                                            'knot_arr'],
+                                            'ctrl_arr_dpt',
+                                            'knot_arr',
+                                            'eigvals_true'],
                                            (self.r,
                                             self.r_spline,
                                             self.rth,
@@ -257,7 +312,9 @@ class GlobalVars():
                                             self.wsr,
                                             self.ctrl_arr_up,
                                             self.ctrl_arr_lo,
-                                            self.knot_arr))
+                                            self.ctrl_arr_dpt,
+                                            self.knot_arr,
+                                            self.eigvals_true))
         return GVAR_TRACED
 
     def get_namedtuple_gvar_static(self):
@@ -301,7 +358,6 @@ class GlobalVars():
         # removing end points because of requirement of splrep
         # endpoints are automatically padded up
         t_set = r_filtered[1:-1]
-
         self.spl_deg = 3
 
         t, c, k = splrep(self.r_spline, self.wsr[0, self.rth_ind:],
@@ -314,21 +370,8 @@ class GlobalVars():
         len_s = len(self.s_arr)
         c_arr = np.zeros((len_s, len(c)))
 
-        '''
-        if which_ex == 'upex':
-            # factor = self.fac_up
-            wsr_tapered = self.create_near_surface_profile(
-        elif which_ex == 'loex':
-            # factor = self.fac_lo
-            wsr_tapered = 
-        else:
-            factor = np.ones_like(self.fac_up)
-        '''
-
         for i in range(len_s):
-            wsr_i_tapered = self.create_nearsurface_profile(i,
-                                                             which_ex=which_ex)
-            
+            wsr_i_tapered = self.create_nearsurface_profile(i, which_ex=which_ex)
             t, c, __ = splrep(self.r_spline, wsr_i_tapered[self.rth_ind:],
                               s=0, t=t_set, k=self.spl_deg)
             # adjusting the zero-padding in c from splrep
@@ -337,22 +380,21 @@ class GlobalVars():
 
         return t, c_arr
 
-    
 
     def get_matching_function(self):
         return (np.tanh((self.r - self.rth - 0.07)/0.02) + 1)/2.0
 
     def create_nearsurface_profile(self, idx, which_ex='upex'):
         w_dpt = self.wsr[idx, :]
-
         w_new = np.zeros_like(w_dpt)
-
         matching_function = self.get_matching_function()
 
-        if (which_ex == 'upex'):
+        if which_ex == 'upex':
             scale_factor = self.fac_up[idx]
-        else:
+        elif which_ex == 'loex':
             scale_factor = self.fac_lo[idx]
+        else:
+            return w_dpt
 
         # near surface enhanced or suppressed profile
         # & adding the complementary part below the rth
@@ -360,5 +402,9 @@ class GlobalVars():
                 * w_dpt[np.argmax(np.abs(w_dpt))]\
                 * np.ones_like(w_dpt)
         w_new += (1 - matching_function) * w_dpt
-
         return w_new
+
+    def wsr_extend(self):
+        r1ind = np.argmin(abs(self.r - 1))
+        for i in range(len(self.wsr)):
+            self.wsr[i, r1ind:] = self.wsr[i, r1ind-1]
