@@ -1,27 +1,24 @@
-import bsplines as bsp
+import bsplines as bsp_adams
+import jax
+import jax.numpy as jnp
 
-def gen_wsr(r, c, t, k):
-    wsr_1 = bsp.bspline1d(r, c[0], t, k) 
-    wsr_2 = bsp.bspline1d(r, c[1], t, k)
-    wsr_3 = bsp.bspline1d(r, c[2], t, k)
-    
-    return jnp.array([wsr_1, wsr_3, wsr_5])
+bspline = bsp_adams.bspline1d
 
-def get_matching_function(self):
-    return (np.tanh((self.r - self.rth)/0.05) + 1)/2.0
+jidx = jax.ops.index
+jidx_update = jax.ops.index_update
 
-def create_nearsurface_profile(self, idx, which_ex='upex'):
-    w_dpt = self.wsr_dpt[idx, :]
-    w_new = np.zeros_like(w_dpt)
-
-    matching_function = self.get_matching_function()
-
-    if (which_ex == 'upex'): scale_factor = self.gvar.fac_up[idx]
-    else: scale_factor = self.gvar.fac_lo[idx]
-
-    # near surface enhanced or suppressed profile
-    # & adding the complementary part below the rth
-    w_new = matching_function * scale_factor * w_dpt
-    w_new += (1 - matching_function) * w_dpt
-
-    return w_new
+def get_wsr_from_spline(r_spline, wsr_dpt, ctrl_arr,
+                        knot_arr, rth_ind, spl_deg=3):
+    wsr_new = jnp.zeros_like(wsr_dpt)
+    wsr_1 = bspline(r_spline, ctrl_arr[0],
+                    knot_arr, spl_deg)
+    wsr_3 = bspline(r_spline, ctrl_arr[1],
+                    knot_arr, spl_deg)
+    wsr_5 = bspline(r_spline, ctrl_arr[2],
+                    knot_arr, spl_deg)
+    wsr_new = jidx_update(wsr_new, jidx[:, :rth_ind],
+                          wsr_dpt[:, :rth_ind])
+    wsr_new = jidx_update(wsr_new, jidx[0, rth_ind:], wsr_1)
+    wsr_new = jidx_update(wsr_new, jidx[1, rth_ind:], wsr_3)
+    wsr_new = jidx_update(wsr_new, jidx[2, rth_ind:], wsr_5)
+    return wsr_new

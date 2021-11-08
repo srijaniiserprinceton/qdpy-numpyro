@@ -8,6 +8,10 @@ import os
 from qdpy_jax import load_multiplets
 from qdpy_jax import jax_functions as jf
 
+import sys
+sys.path.append("../plotter")
+import preplotter as preplotter
+
 #----------------------------------------------------------------------
 #                       All qts in CGS
 #----------------------------------------------------------------------
@@ -40,11 +44,11 @@ class qdParams():
     # the bounds on angular degree for each radial order
     ell_bounds = np.array([[200, 200]])
 
-    rmin, rth, rmax = 0.0, 0.98, 1.2
+    rmin, rth, rmax = 0.0, 0.8, 1.2
     fwindow =  150.0 
     smax = 5
-    precompute = False
-    use_precomputed = False
+    preplot = True
+    
 
 
 class GlobalVars():
@@ -139,7 +143,7 @@ class GlobalVars():
         # finding the spline params for wsr
         self.spl_deg = None
         self.knot_num = 10
-        # self.knot_arr, self.ctrl_arr = self.get_wsr_spline_params()
+        # getting the spline params for the extreme profiles
         self.knot_arr, self.ctrl_arr_up = self.get_wsr_spline_params(which_ex='upex')
         __, self.ctrl_arr_lo = self.get_wsr_spline_params(which_ex='loex')
 
@@ -147,8 +151,15 @@ class GlobalVars():
         self.s_arr = tuple(self.s_arr)
         self.omega_list= tuple(self.omega_list)
         self.nl_all = tuple(map(tuple, self.nl_all))
-        
 
+        # if preplot is True, plot the various things for
+        # ensuring everything is working properly
+        if qdPars.preplot:
+            preplotter.plot_extreme_wsr(self.r, self.r_spline,
+                                        self.wsr, self.ctrl_arr_up,
+                                        self.ctrl_arr_lo, self.knot_arr,
+                                        self.rth_ind, self.spl_deg)
+            
     def get_all_GVAR(self):
         '''Builds and returns the relevant dictionaries.
         At the location of this function call, the GVARS
@@ -292,21 +303,30 @@ class GlobalVars():
         len_s = len(self.s_arr)
         c_arr = np.zeros((len_s, len(c)))
 
+        '''
         if which_ex == 'upex':
-            factor = self.fac_up
+            # factor = self.fac_up
+            wsr_tapered = self.create_near_surface_profile(
         elif which_ex == 'loex':
-            factor = self.fac_lo
+            # factor = self.fac_lo
+            wsr_tapered = 
         else:
             factor = np.ones_like(self.fac_up)
+        '''
 
         for i in range(len_s):
-            t, c, __ = splrep(self.r_spline, self.wsr[i, self.rth_ind:]*factor[i],
+            wsr_i_tapered = self.create_nearsurface_profile(i,
+                                                             which_ex=which_ex)
+            
+            t, c, __ = splrep(self.r_spline, wsr_i_tapered[self.rth_ind:],
                               s=0, t=t_set, k=self.spl_deg)
             # adjusting the zero-padding in c from splrep
             c = c[:-(k+1)]
             c_arr[i] = c
 
         return t, c_arr
+
+    
 
     def get_matching_function(self):
         return (np.tanh((self.r - self.rth)/0.05) + 1)/2.0
@@ -357,3 +377,4 @@ class GlobalVars():
         params_init = []
 
 
+    
