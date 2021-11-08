@@ -32,6 +32,16 @@ config.update('jax_enable_x64', True)
 numpyro.set_platform('cpu')
 
 
+import pickle
+def save_obj(obj, name):
+    with open(name + '.pkl', 'wb') as f:
+        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+
+def load_obj(name):
+    with open(name + '.pkl', 'rb') as f:
+        return pickle.load(f)
+
+
 #========================================================================
 
 W1T = 1.
@@ -56,7 +66,7 @@ def model():
                 jnp.array(c3_list),
                 jnp.array(c5_list)]
 
-    sigma = numpyro.sample('sigma', dist.Uniform(0.1, 10.0))
+    sigma = numpyro.sample('sigma', dist.Uniform(1e-3, 0.1))
     eig_sample = jnp.array([])
 
     for i in range(nmults):
@@ -72,7 +82,8 @@ def model():
                                       GVARS_PRUNED_ST,
                                       GVARS_PRUNED_TR,
                                       ctrl_arr)
-        eig_sample = jnp.append(eig_sample, get_eigs(supmatrix)[:2*ell0+1])
+        eig_sample = jnp.append(eig_sample,
+                                get_eigs(supmatrix)[:2*ell0+1]/2/CENMULT_AND_NBS.omega_nbs[0])
 
     # eig_sample = numpyro.deterministic('eig', eig_mcmc_func(w1=w1, w3=w3, w5=w5))
     return numpyro.sample('obs', dist.Normal(eig_sample, sigma), obs=eigvals_true)
@@ -160,3 +171,5 @@ rng_key, rng_key_ = random.split(rng_key)
 kernel = NUTS(model)
 mcmc = MCMC(kernel, num_warmup=50, num_samples=100)
 mcmc.run(rng_key_)
+
+save_obj(mcmc.get_samples(), f"{GVARS_PATHS.scratch_dir}/samples")
