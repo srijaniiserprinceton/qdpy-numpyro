@@ -158,3 +158,5 @@ print(f'Time taken in seconds by jax-jitted execution' +
 # print(f'Fraction of time taken for setting up EV = ' +
 #       f'{t_projected_jit/t_projected_eigval:.3f}')
 
+# compare the freq computation of the forward problem
+

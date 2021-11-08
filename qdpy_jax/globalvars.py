@@ -3,6 +3,7 @@ import jax.numpy as jnp
 import numpy as np
 from scipy.interpolate import splrep
 import os
+import matplotlib.pyplot as plt
 
 # loading custom libraries/classes
 from qdpy_jax import load_multiplets
@@ -44,7 +45,7 @@ class qdParams():
     # the bounds on angular degree for each radial order
     ell_bounds = np.array([[200, 200]])
 
-    rmin, rth, rmax = 0.0, 0.8, 1.2
+    rmin, rth, rmax = 0.0, 0.9, 1.2
     fwindow =  150.0 
     smax = 5
     preplot = True
@@ -117,7 +118,7 @@ class GlobalVars():
         self.s_arr = np.arange(1, self.smax+1, 2)
 
         self.fwindow = qdPars.fwindow
-        self.wsr = -1.0*np.loadtxt(f'{self.datadir}/w_s/w.dat') + 300
+        self.wsr = -1.0*np.loadtxt(f'{self.datadir}/w_s/w.dat')
 
         # generating the multiplets which we will use
         load_from_file = False
@@ -147,6 +148,15 @@ class GlobalVars():
         self.knot_arr, self.ctrl_arr_up = self.get_wsr_spline_params(which_ex='upex')
         __, self.ctrl_arr_lo = self.get_wsr_spline_params(which_ex='loex')
 
+        # making the ctrl_arr_up > ctrl_arr_lo at each point
+        ind_swap = np.greater(self.ctrl_arr_lo, self.ctrl_arr_up)
+        ctrl_arr_up_temp = self.ctrl_arr_up.copy()
+        self.ctrl_arr_up[ind_swap] = self.ctrl_arr_lo[ind_swap]
+        self.ctrl_arr_lo[ind_swap] = ctrl_arr_up_temp[ind_swap]
+
+        # throws an error if ctrl_arr_up is not always larger than ctrl_arr_lo
+        np.testing.assert_array_equal([np.sum(self.ctrl_arr_lo>self.ctrl_arr_up)],[0])
+
         # converting necessary arrays to tuples
         self.s_arr = tuple(self.s_arr)
         self.omega_list= tuple(self.omega_list)
@@ -155,10 +165,11 @@ class GlobalVars():
         # if preplot is True, plot the various things for
         # ensuring everything is working properly
         if qdPars.preplot:
-            preplotter.plot_extreme_wsr(self.r, self.r_spline,
+            preplotter.plot_extreme_wsr(self.r, self.r_spline, self.OM,
                                         self.wsr, self.ctrl_arr_up,
                                         self.ctrl_arr_lo, self.knot_arr,
                                         self.rth_ind, self.spl_deg)
+        
             
     def get_all_GVAR(self):
         '''Builds and returns the relevant dictionaries.
@@ -329,10 +340,11 @@ class GlobalVars():
     
 
     def get_matching_function(self):
-        return (np.tanh((self.r - self.rth)/0.05) + 1)/2.0
+        return (np.tanh((self.r - self.rth - 0.07)/0.02) + 1)/2.0
 
     def create_nearsurface_profile(self, idx, which_ex='upex'):
         w_dpt = self.wsr[idx, :]
+
         w_new = np.zeros_like(w_dpt)
 
         matching_function = self.get_matching_function()
@@ -344,37 +356,9 @@ class GlobalVars():
 
         # near surface enhanced or suppressed profile
         # & adding the complementary part below the rth
-        w_new = matching_function * scale_factor * w_dpt
+        w_new = matching_function * scale_factor\
+                * w_dpt[np.argmax(np.abs(w_dpt))]\
+                * np.ones_like(w_dpt)
         w_new += (1 - matching_function) * w_dpt
+
         return w_new
-
-    def get_spline_coeffs(self):
-        w1, w3, w5 = (self.wsr[0, self.rth_ind:],
-                      self.wsr[1, self.rth_ind:],
-                      self.wsr[2, self.rth_ind:])
-        # getting spline attributes (knots, coefficients, degree)
-        t, c1, __ = interpolate.splrep(self.r_spline, w1)
-        __, c3, __ = interpolate.splrep(self.r_spline, w3)
-        __, c5, __ = interpolate.splrep(self.r_spline, w5)
-
-        return t, c1, c3, c5
-
-    def get_ctrl_extreme(self):
-        self.wsr_upex_matched = np.zeros_like(self.wsr)
-        self.wsr_loex_matched = np.zeros_like(self.wsr)
-
-        # looping over all the s in wsr
-        for i in range(len(self.wsr)):
-            self.wsr_upex_matched[i, :] = self.create_nearsurface_profile(i,
-                                                                          which_ex='upex')
-            self.wsr_loex_matched[i, :] = self.create_nearsurface_profile(i,
-                                                                          which_ex='loex')
-
-        # generating and saving coefficients for the upper extreme profiles
-        c1, c3, c5 = self.get_spline_coeffs(self.wsr_upex_matched[:, self.rth_ind:],
-                                            return_coeffs=True) 
-
-        params_init = []
-
-
-    

@@ -116,6 +116,7 @@ def bspline1d_basis(u, knots, degree):
 
     return B
 
+
 def bspline1d(u, control, knots, degree):
     ''' Evaluate a one-dimensional bspline function.
      - u: The locations at which to evaluate the basis functions, generally
