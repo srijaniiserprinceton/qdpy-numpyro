@@ -4,6 +4,11 @@ import py3nj
 import time
 import sys
 
+import os
+num_chains = 4
+os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains} " +\
+                          "--xla_dump_to=/tmp/foo"
+
 import jax
 import jax.numpy as jnp
 import jax.tree_util as tu
@@ -169,7 +174,7 @@ rng_key, rng_key_ = random.split(rng_key)
 
 # Run NUTS.
 kernel = NUTS(model)
-mcmc = MCMC(kernel, num_warmup=50, num_samples=100)
+mcmc = MCMC(kernel, num_warmup=50, num_samples=100, num_chains=num_chains)
 mcmc.run(rng_key_)
 
 save_obj(mcmc.get_samples(), f"{GVARS_PATHS.scratch_dir}/samples")
