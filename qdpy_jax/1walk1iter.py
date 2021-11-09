@@ -120,6 +120,53 @@ def model():
         print(f'Calculated supermatrix for multiplet = ({n0}, {ell0})')
     return ev_sum
 
+'''
+def model():
+    # setting min and max value to be 0.1*true and 3.*true                                     
+    cmax = GVARS_TR.ctrl_arr_up
+    cmin = GVARS_TR.ctrl_arr_lo
+
+    c1_list = []
+    c3_list = []
+    c5_list = []
+    for i in range(cmax.shape[1]):
+        c1_list.append(numpyro.sample(f'c1_{i}', dist.Uniform(cmin[0, i], cmax[0, i])))
+        c3_list.append(numpyro.sample(f'c3_{i}', dist.Uniform(cmin[1, i], cmax[1, i])))
+        c5_list.append(numpyro.sample(f'c5_{i}', dist.Uniform(cmin[2, i], cmax[2, i])))
+
+    ctrl_arr = [jnp.array(c1_list),
+                jnp.array(c3_list),
+                jnp.array(c5_list)]
+
+    sigma = numpyro.sample('sigma', dist.Uniform(1e-3, 0.1))
+    eig_sample = jnp.array([])
+
+    for i in range(nmults):
+        n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
+        CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST)
+        CENMULT_AND_NBS = jf.tree_map_CNM_AND_NBS(CENMULT_AND_NBS)
+
+        SUBMAT_DICT = build_SUBMAT_INDICES(CENMULT_AND_NBS)
+        SUBMAT_DICT = jf.tree_map_SUBMAT_DICT(SUBMAT_DICT)
+
+        supmatrix = build_supermatrix(CENMULT_AND_NBS,
+                                      SUBMAT_DICT,
+                                      GVARS_PRUNED_ST,
+                                      GVARS_PRUNED_TR,
+                                      ctrl_arr)
+        eig_sample = jnp.append(eig_sample,
+                                get_eigs(supmatrix)[:2*ell0+1]/2./CENMULT_AND_NBS.omega_nbs[0]\
+)
+
+    # eig_sample = numpyro.deterministic('eig', eig_mcmc_func(w1=w1, w3=w3, w5=w5))            
+    return numpyro.sample('obs', dist.Normal(eig_sample, sigma), obs=eigvals_true)
+
+
+def get_eigs(mat):
+    eigvals, eigvecs = jnp.linalg.eigh(mat)
+    eigvals = build_supmat.eigval_sort_slice(eigvals, eigvecs)
+    return eigvals
+'''
 if __name__ == "__main__":
     # jitting model()
     model_ = jax.jit(model)

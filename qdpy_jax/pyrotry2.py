@@ -5,7 +5,7 @@ import time
 import sys
 
 import os
-num_chains = 4
+num_chains = 3
 os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains} " +\
                           "--xla_dump_to=/tmp/foo"
 
