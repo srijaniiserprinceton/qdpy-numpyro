@@ -83,7 +83,7 @@ def model():
                                       GVARS_PRUNED_TR,
                                       ctrl_arr)
         eig_sample = jnp.append(eig_sample,
-                                get_eigs(supmatrix)[:2*ell0+1]/2/CENMULT_AND_NBS.omega_nbs[0])
+                                get_eigs(supmatrix)[:2*ell0+1]/2./CENMULT_AND_NBS.omega_nbs[0])
 
     # eig_sample = numpyro.deterministic('eig', eig_mcmc_func(w1=w1, w3=w3, w5=w5))
     return numpyro.sample('obs', dist.Normal(eig_sample, sigma), obs=eigvals_true)
