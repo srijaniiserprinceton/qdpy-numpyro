@@ -20,21 +20,27 @@ config.update('jax_enable_x64', True)
 
 GVARS = gvar_jax.GlobalVars()
 GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
+nmults = len(GVARS.n0_arr) # total number of central multiplets
 
-nl_pruned_all, omega_pruned_all, HM_DICT =\
-                            precompute.precompute(GVARS, GVARS_ST)
+nl_pruned_all, omega_pruned_all, HM_DICT, nl_dict = precompute.precompute(GVARS, GVARS_ST)
+wig_hyper = np.zeros((3, nmults, HM_DICT.dim_hyper, HM_DICT.dim_hyper))
+for s in GVARS.s_arr:
+    for mult_idx in range(nmults):
+        s_idx = int((s-1)//2)
+        wig_hyper[s_idx, mult_idx, :, :] = \
+            precompute.build_wig_hyper(mult_idx, HM_DICT, nl_dict, s)
+wig_hyper = jnp.asarray(wig_hyper)
 
-# total number of central multiplets
-nmults = len(GVARS.n0_arr)
 
 def model():
     totalsum = 0.0
     #for i in range(nmults):
     def loop_over_mults(i, totalsum):
-        non_m_hypmat = build_hm.build_non_m_part(i, HM_DICT)
+        # non_m_hypmat = build_hm.build_non_m_uppertriang(i, HM_DICT)
+        hypmat = build_hm.build_full_hypmat(i, HM_DICT, wig_hyper[:, i, :, :])
         # elementsum = jnp.sum(non_m_hypmat)
         
-        eigvals, __ = jnp.linalg.eigh(non_m_hypmat)
+        eigvals, __ = jnp.linalg.eigh(hypmat)
         eigvalsum = jnp.sum(eigvals)
 
         totalsum += eigvalsum #+ elementsum
