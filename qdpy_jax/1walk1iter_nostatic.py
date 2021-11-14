@@ -1,6 +1,7 @@
 import numpy as np
 import time
 import sys
+from collections import namedtuple
 
 import jax
 import jax.numpy as jnp
@@ -9,7 +10,6 @@ import jax.numpy as jnp
 from qdpy_jax import globalvars as gvar_jax
 from qdpy_jax import precompute_and_load as precompute
 from qdpy_jax import build_hypermatrix_nostatic as build_hm
-
 
 jax.config.update("jax_log_compiles", 1)
 jax.config.update('jax_platform_name', 'cpu')
@@ -22,29 +22,32 @@ GVARS = gvar_jax.GlobalVars()
 GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 nmults = len(GVARS.n0_arr) # total number of central multiplets
 
-nl_pruned_all, omega_pruned_all, HM_DICT, nl_dict = precompute.precompute(GVARS, GVARS_ST)
-wig_hyper = np.zeros((3, nmults, HM_DICT.dim_hyper, HM_DICT.dim_hyper))
-for s in GVARS.s_arr:
-    for mult_idx in range(nmults):
-        s_idx = int((s-1)//2)
-        wig_hyper[s_idx, mult_idx, :, :] = \
-            precompute.build_wig_hyper(mult_idx, HM_DICT, nl_dict, s)
-wig_hyper = jnp.asarray(wig_hyper)
+nl_pruned_all, omega_pruned_all, HM_DICT = precompute.precompute(GVARS, GVARS_ST)
 
+# len_s = GVARS.wsr.shape[0]
+len_s = 3
+
+# converting np to jnp
+jnp_wsr = jnp.asarray(GVARS.wsr)
+jnp_r = jnp.asarray(GVARS.r)
 
 def model():
     totalsum = 0.0
     #for i in range(nmults):
     def loop_over_mults(i, totalsum):
-        # non_m_hypmat = build_hm.build_non_m_uppertriang(i, HM_DICT)
-        hypmat = build_hm.build_full_hypmat(i, HM_DICT, wig_hyper[:, i, :, :])
-        # elementsum = jnp.sum(non_m_hypmat)
+        # building the entire hypermatrix
+        hypmat = build_hm.build_full_hypmat(i,
+                                            HM_DICT,
+                                            jnp_wsr,
+                                            jnp_r,
+                                            len_s)
         
-        eigvals, __ = jnp.linalg.eigh(hypmat)
-        eigvalsum = jnp.sum(eigvals)
+        # finding the eigenvalues of hypermatrix
+        #eigvals, __ = jnp.linalg.eigh(hypmat)
+        #eigvalsum = jnp.sum(eigvals)
 
-        totalsum += eigvalsum #+ elementsum
-
+        #totalsum += eigvalsum #+ elementsum
+        totalsum += jnp.sum(hypmat)
         return totalsum
        
     totalsum = jax.lax.fori_loop(0, nmults, loop_over_mults, totalsum)

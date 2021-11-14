@@ -2,6 +2,8 @@ from collections import namedtuple
 from jax.experimental import host_callback as hcall
 import jax.tree_util as tu
 from jax import jit
+from jax.lax import cond as cond
+import jax.numpy as jnp
 
 def create_namedtuple(tname, keys, values):
     NT = namedtuple(tname, keys)
@@ -35,3 +37,19 @@ def tree_map_SUBMAT_DICT(SUBMAT_DICT):
     SUBMAT_DICT = tu.tree_map(lambda x: tuple(map(tuple, x)), SUBMAT_DICT)
 
     return SUBMAT_DICT
+
+def jax_Omega(ell, N):
+    """Computes Omega_N^\ell"""
+    return cond(abs(N) > ell,
+                lambda __: 0.0,
+                lambda __: jnp.sqrt(0.5 * (ell+N) * (ell-N+1)),
+                operand=None)
+    
+def jax_minus1pow_vec(num):
+    """Computes (-1)^n"""
+    modval = num % 2
+    return (-1)**modval
+
+def jax_gamma(ell):
+    """Computes gamma_ell"""
+    return jnp.sqrt((2*ell + 1)/4/jnp.pi)
