@@ -51,7 +51,7 @@ class qdParams():
 
     rmin, rth, rmax = 0.0, 0.9, 1.2
     fwindow =  150.0 
-    smax = 5
+    smax = 1
     preplot = True
 
 
