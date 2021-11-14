@@ -24,7 +24,8 @@ nmults = len(GVARS.n0_arr) # total number of central multiplets
 
 nl_pruned_all, omega_pruned_all, HM_DICT = precompute.precompute(GVARS, GVARS_ST)
 
-len_s = GVARS.wsr.shape[0]
+# len_s = GVARS.wsr.shape[0]
+len_s = 3
 
 # converting np to jnp
 jnp_wsr = jnp.asarray(GVARS.wsr)

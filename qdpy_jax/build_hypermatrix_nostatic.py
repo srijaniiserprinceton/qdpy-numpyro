@@ -18,7 +18,6 @@ def f_li_lj_s(Tsr, wsr, r):
     return postintegral
 
 def build_non_m_part(cenmult_ind, hm_dict, wsr, r, len_s):
-    len_s = wsr.shape[0]
     # the total dimension of the hypermatrix
     dim_hyper = hm_dict.dim_hyper
     # the non-m part of the hypermatrix
