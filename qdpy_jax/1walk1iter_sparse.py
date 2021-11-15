@@ -54,13 +54,13 @@ def model():
                  build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],                    
                                                   GVARS.ctrl_arr_dpt, 
                                                   nc, len_s)                          
-        '''
+        
         # finding the eigenvalues of hypermatrix                                               
         eigvals, __ = jnp.linalg.eigh(hypmat.todense())                                       
         eigvalsum = jnp.sum(eigvals)                                                          
         totalsum += eigvalsum #+ elementsum                                                   
-        '''
-        totalsum += jnp.sum(hypmat.todense())                                             
+        
+        # totalsum += jnp.sum(hypmat.todense())                                             
     
     return totalsum                                                                       
 

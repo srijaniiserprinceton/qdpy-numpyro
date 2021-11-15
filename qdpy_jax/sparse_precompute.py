@@ -77,10 +77,10 @@ def build_integrated_part(eig_idx1, eig_idx2, ell1, ell2, s):
     
     # total integrand
     # shape (nc x r)
-    integrand = eigfac * bsp_basis
+    integrand = bsp_basis * eigfac / GVARS.r
 
     # shape (nc,)
-    post_integral = integrate.simps(integrand, GVARS.r)
+    post_integral = integrate.simps(integrand, GVARS.r, axis=1)
 
     return post_integral
 
@@ -151,8 +151,8 @@ def build_hypmat_all_cenmults():
         for s_ind, s in enumerate(GVARS.s_arr):
             # shape (dim_hyper x dim_hyper) but sparse form
             non_c_hypmat = build_hypmat_nonint_1cenmult(CENMULT_AND_NBS,
-                                                               SUBMAT_DICT,
-                                                               dim_hyper, s)
+                                                        SUBMAT_DICT,
+                                                        dim_hyper, s)
             
             noc_hypmat_this_s.append(non_c_hypmat)
 
@@ -220,6 +220,7 @@ def build_hypmat_nonint_1cenmult(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
                 np.fill_diagonal(non_c_hypmat_arr[c_ind, startx:endx, starty:endy],
                                  non_c_submat_diag[c_ind])
     
+                
 
     # making it a list to allow easy c * hypermat later
     for c_ind in range(GVARS.nc):
