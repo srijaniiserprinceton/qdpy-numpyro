@@ -1,4 +1,4 @@
-import bsplines as bsp_adams
+from qdpy_jax import bsplines as bsp_adams
 import jax
 import jax.numpy as jnp
 

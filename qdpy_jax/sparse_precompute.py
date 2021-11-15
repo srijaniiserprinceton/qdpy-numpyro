@@ -1,0 +1,234 @@
+import numpy as np
+from jax.experimental import sparse
+from scipy import integrate
+from scipy.interpolate import splev
+from jax import jit
+import sys
+
+from qdpy_jax import globalvars as gvar_jax
+from qdpy_jax import prune_multiplets
+from qdpy_jax import load_multiplets
+from qdpy_jax import jax_functions as jf
+from qdpy_jax import build_cenmult_and_nbs as build_CENMULT_AND_NBS
+from qdpy_jax import wigner_map2 as wigmap
+
+# defining functions used in multiplet functions in the script                              
+get_namedtuple_for_cenmult_and_neighbours =\
+                    build_CENMULT_AND_NBS.get_namedtuple_for_cenmult_and_neighbours
+_find_idx = wigmap.find_idx
+jax_minus1pow_vec = jf.jax_minus1pow_vec
+
+# jitting the jax_gamma and jax_Omega functions                                               
+jax_Omega_ = jit(jf.jax_Omega)
+jax_gamma_ = jit(jf.jax_gamma)
+
+GVARS = gvar_jax.GlobalVars()
+GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
+nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx =\
+                    prune_multiplets.get_pruned_attributes(GVARS,
+                                                           GVARS_ST)
+
+lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
+                                     nl_idx_pruned,
+                                     omega_pruned)
+
+def get_bsp_basis_elements(x):
+    """Returns the integrated basis polynomials
+    forming the B-spline.
+    
+    Parameters
+    ----------
+    x : float, array-like
+        The grid to be used for integration.
+    
+    bsp_params : A tuple containing (nc, t, k),
+        where nc = the number of control points,
+        t = the knot array from splrep,
+        k = degree of the spline polynomials.
+    """
+
+    nc, t, k = GVARS.bsp_params
+
+    basis_elements = np.zeros((nc, len(x)))
+    # looping over the basis elements for each control point
+    for c_ind in range(nc):
+        c = np.zeros(nc)
+        c[c_ind] = 1.0
+        basis_elements[c_ind, :] = splev(x, (t, c, k))
+    
+    return basis_elements
+
+def build_integrated_part(eig_idx1, eig_idx2, ell1, ell2, s):
+    
+    # ls2fac
+    ls2fac = ell1*(ell1) + ell2*(ell2+1) - s*(s+1)
+
+    # slicing the required eigenfunctions
+    U1, V1 = lm.U_arr[eig_idx1], lm.V_arr[eig_idx1]
+    U2, V2 = lm.U_arr[eig_idx2], lm.V_arr[eig_idx2]
+    
+    # the factor in the integral dependent on eigenfunctions
+    # shape (r,)
+    eigfac = U2*V1 + V2*U1 - U1*U2 - 0.5*V1*V2*ls2fac
+
+    # extracting the B-spline basis elements
+    # shape (nc x r)
+    bsp_basis = get_bsp_basis_elements(GVARS.r)
+    
+    # total integrand
+    # shape (nc x r)
+    integrand = eigfac * bsp_basis
+
+    # shape (nc,)
+    post_integral = integrate.simps(integrand, GVARS.r)
+
+    return post_integral
+
+def get_dim_hyper():
+    # the dimension of the hypermatrix                                                        
+    dim_hyper = 0
+
+    # total number of multiplets used                                                         
+    nmults = len(GVARS.n0_arr)
+
+    # running a dummy loop to know                                                            
+    for i in range(nmults):
+        n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
+        CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST)
+        
+        # dim_super of local supermatrix                                                      
+        dim_super = np.sum(2*CENMULT_AND_NBS.nl_nbs[:, 1] + 1)
+
+        if(dim_super > dim_hyper): dim_hyper = dim_super
+
+    return dim_hyper
+
+
+def build_SUBMAT_INDICES(CNM_AND_NBS):
+    # supermatix can be tiled with submatrices corresponding to                               
+    # (l, n) - (l', n') coupling. The dimensions of the submatrix                             
+    # is (2l+1, 2l'+1)  
+    dim_blocks = len(CNM_AND_NBS.omega_nbs)
+    # nl array of neighbours                                                                  
+    nl_nbs = np.asarray(CNM_AND_NBS.nl_nbs)
+
+    dimX_submat = 2 * nl_nbs[:, 1] + 1
+
+    # creating the startx, startx, endx, endy for submatrices                                 
+    submat_tile_ind = np.zeros((dim_blocks, 2), dtype='int32')
+
+    for ix in range(0, dim_blocks):
+        for iy in range(0, dim_blocks):
+            submat_tile_ind[ix, 0] = np.sum(dimX_submat[:ix])
+            submat_tile_ind[ix, 1] = np.sum(dimX_submat[:ix+1])
+
+    # creating the submat-dictionary namedtuple                                               
+    SUBMAT_DICT = jf.create_namedtuple('SUBMAT_DICT',
+                                       ['startx_arr',
+                                        'endx_arr'],
+                                       (submat_tile_ind[:, 0],
+                                        submat_tile_ind[:, 1]))
+                                        
+    return SUBMAT_DICT
+
+def build_hypmat_all_cenmults():
+    # number of multiplets used                                                               
+    nmults = len(GVARS.n0_arr)
+
+    dim_hyper = get_dim_hyper()
+
+    # storing as a list of sparse matrices
+    noc_hypmat_all_sparse = []
+
+    for i in range(nmults):
+        # looping over all the central multiplets                                      
+        n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
+        # building the namedtuple for the central multiplet and its neighbours            
+        CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST)
+        SUBMAT_DICT = build_SUBMAT_INDICES(CENMULT_AND_NBS)
+        
+        noc_hypmat_this_s = []
+        for s_ind, s in enumerate(GVARS.s_arr):
+            # shape (dim_hyper x dim_hyper) but sparse form
+            non_c_hypmat = build_hypmat_nonint_1cenmult(CENMULT_AND_NBS,
+                                                               SUBMAT_DICT,
+                                                               dim_hyper, s)
+            
+            noc_hypmat_this_s.append(non_c_hypmat)
+
+        noc_hypmat_all_sparse.append(noc_hypmat_this_s)
+        
+    # list of shape (nmults x s x (nc x dim_hyper, dim_hyper))
+    # the last bracket denotes matrices of that shape but in sparse form
+    return noc_hypmat_all_sparse
+
+def build_hypmat_nonint_1cenmult(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
+    '''Computes elements in the hypermatrix excluding the
+    integral part.
+    '''
+    # the non-m part of the hypermatrix                                                       
+    non_c_hypmat_arr = np.zeros((GVARS.nc, dim_hyper, dim_hyper))
+    non_c_hypmat_list = []
+
+    # extracting attributes from CNM_AND_NBS
+    num_nbs = len(CNM_AND_NBS.omega_nbs)
+    nl_nbs = CNM_AND_NBS.nl_nbs
+
+    # extracting attributes from SUBMAT_DICT
+    startx_arr, endx_arr = SUBMAT_DICT.startx_arr, SUBMAT_DICT.endx_arr
+    # filling in the non-m part using the masks                                               
+    for i in range(num_nbs):
+        # filling only Upper Triangle
+        for j in range(i, num_nbs):
+            ell1, ell2 = nl_nbs[i,1], nl_nbs[j,1]
+            ellmin = min(ell1, ell2)
+
+            # computing the ell1, ell2 dependent factors such as
+            # gamma and Omega
+            gamma_prod = jax_gamma_(ell1) * jax_gamma_(ell2) * jax_gamma_(s) 
+            Omega_prod = jax_Omega_(ell1, 0) * jax_Omega_(ell2, 0)
+            
+            # also including 8 pi * omega_ref
+            ell1_ell2_fac = gamma_prod * Omega_prod *\
+                            8 * np.pi * CNM_AND_NBS.omega_nbs[0]
+
+            m_arr = np.arange(-ellmin, ellmin+1)
+            wig_idx_i, fac = _find_idx(ell1, s, ell2, m_arr)
+            wigidx_for_s = np.searchsorted(wig_idx, wig_idx_i)
+            wigvals = fac * wig_list[wigidx_for_s]
+
+            #-------------------------------------------------------
+            # parameters for calculating the integrated part
+            eig_idx1 = nl_idx_pruned.index(CNM_AND_NBS.nl_nbs_idx[i])
+            eig_idx2 = nl_idx_pruned.index(CNM_AND_NBS.nl_nbs_idx[j])
+
+            # shape (n_control_points,)
+            integrated_part = build_integrated_part(eig_idx1, eig_idx2, ell1, ell2, s)
+            #-------------------------------------------------------
+
+            wigvals *= (jax_minus1pow_vec(m_arr) * ell1_ell2_fac)
+
+            startx, endx = startx_arr[i], endx_arr[i]
+            starty, endy = startx_arr[j], endx_arr[j]
+            
+            for c_ind in range(GVARS.nc):
+                # non-ctrl points submat
+                # avoiding  newaxis multiplication
+                non_c_submat_diag = integrated_part[c_ind] *\
+                                    wigvals
+
+                np.fill_diagonal(non_c_hypmat_arr[c_ind, startx:endx, starty:endy],
+                                 non_c_submat_diag[c_ind])
+    
+
+    # making it a list to allow easy c * hypermat later
+    for c_ind in range(GVARS.nc):
+        # making sparse array
+        non_c_hypmat_arr_sparse =\
+                sparse.BCOO.fromdense(non_c_hypmat_arr[c_ind])
+        non_c_hypmat_list.append(non_c_hypmat_arr_sparse)
+
+    # deleting for ensuring no extra memory
+    del non_c_hypmat_arr
+    
+    return non_c_hypmat_list

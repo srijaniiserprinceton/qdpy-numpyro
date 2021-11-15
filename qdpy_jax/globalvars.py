@@ -148,11 +148,16 @@ class GlobalVars():
 
         # finding the spline params for wsr
         self.spl_deg = None
-        self.knot_num = 20
+        self.knot_num = 12
         # getting the spline params for the extreme profiles
         self.knot_arr, self.ctrl_arr_up = self.get_wsr_spline_params(which_ex='upex')
         __, self.ctrl_arr_lo = self.get_wsr_spline_params(which_ex='loex')
         __, self.ctrl_arr_dpt = self.get_wsr_spline_params(which_ex=None)
+
+        # creating the bsp_params to be used in precomputation
+        # self.ctrl_arr has shape (s x num_ctrl_pts)
+        self.nc = self.ctrl_arr_dpt.shape[1]
+        self.bsp_params = (self.nc, self.knot_arr, self.spl_deg)
 
         # making the ctrl_arr_up > ctrl_arr_lo at each point
         ind_swap = np.greater(self.ctrl_arr_lo, self.ctrl_arr_up)
