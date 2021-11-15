@@ -47,7 +47,7 @@ class qdParams():
     # the radial orders present
     radial_orders = np.array([0])
     # the bounds on angular degree for each radial order
-    ell_bounds = np.array([[195, 210]])
+    ell_bounds = np.array([[195, 230]])
 
     rmin, rth, rmax = 0.0, 0.9, 1.2
     fwindow =  150.0 

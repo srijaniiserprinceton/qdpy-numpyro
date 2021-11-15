@@ -32,6 +32,7 @@ lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
                                      nl_idx_pruned,
                                      omega_pruned)
 
+
 def get_bsp_basis_elements(x):
     """Returns the integrated basis polynomials
     forming the B-spline.
@@ -58,8 +59,8 @@ def get_bsp_basis_elements(x):
     
     return basis_elements
 
+
 def build_integrated_part(eig_idx1, eig_idx2, ell1, ell2, s):
-    
     # ls2fac
     ls2fac = ell1*(ell1) + ell2*(ell2+1) - s*(s+1)
 
@@ -71,12 +72,10 @@ def build_integrated_part(eig_idx1, eig_idx2, ell1, ell2, s):
     # shape (r,)
     eigfac = U2*V1 + V2*U1 - U1*U2 - 0.5*V1*V2*ls2fac
 
-    # extracting the B-spline basis elements
-    # shape (nc x r)
-    bsp_basis = get_bsp_basis_elements(GVARS.r)
-    
     # total integrand
     # shape (nc x r)
+    # nc = number of control points, the additional value indicates the
+    # integral between (rmin, rth), which is constant across MCMC iterations
     integrand = bsp_basis * eigfac / GVARS.r
 
     # shape (nc,)
@@ -85,18 +84,18 @@ def build_integrated_part(eig_idx1, eig_idx2, ell1, ell2, s):
     return post_integral
 
 def get_dim_hyper():
-    # the dimension of the hypermatrix                                                        
+    # the dimension of the hypermatrix
     dim_hyper = 0
 
-    # total number of multiplets used                                                         
+    # total number of multiplets used
     nmults = len(GVARS.n0_arr)
 
-    # running a dummy loop to know                                                            
+    # running a dummy loop to know
     for i in range(nmults):
         n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
         CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST)
-        
-        # dim_super of local supermatrix                                                      
+
+        # dim_super of local supermatrix
         dim_super = np.sum(2*CENMULT_AND_NBS.nl_nbs[:, 1] + 1)
 
         if(dim_super > dim_hyper): dim_hyper = dim_super
@@ -105,16 +104,16 @@ def get_dim_hyper():
 
 
 def build_SUBMAT_INDICES(CNM_AND_NBS):
-    # supermatix can be tiled with submatrices corresponding to                               
-    # (l, n) - (l', n') coupling. The dimensions of the submatrix                             
+    # supermatix can be tiled with submatrices corresponding to
+    # (l, n) - (l', n') coupling. The dimensions of the submatrix
     # is (2l+1, 2l'+1)  
     dim_blocks = len(CNM_AND_NBS.omega_nbs)
-    # nl array of neighbours                                                                  
+    # nl array of neighbours
     nl_nbs = np.asarray(CNM_AND_NBS.nl_nbs)
 
     dimX_submat = 2 * nl_nbs[:, 1] + 1
 
-    # creating the startx, startx, endx, endy for submatrices                                 
+    # creating the startx, startx, endx, endy for submatrices
     submat_tile_ind = np.zeros((dim_blocks, 2), dtype='int32')
 
     for ix in range(0, dim_blocks):
@@ -122,7 +121,7 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
             submat_tile_ind[ix, 0] = np.sum(dimX_submat[:ix])
             submat_tile_ind[ix, 1] = np.sum(dimX_submat[:ix+1])
 
-    # creating the submat-dictionary namedtuple                                               
+    # creating the submat-dictionary namedtuple
     SUBMAT_DICT = jf.create_namedtuple('SUBMAT_DICT',
                                        ['startx_arr',
                                         'endx_arr'],
@@ -132,7 +131,7 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
     return SUBMAT_DICT
 
 def build_hypmat_all_cenmults():
-    # number of multiplets used                                                               
+    # number of multiplets used
     nmults = len(GVARS.n0_arr)
 
     dim_hyper = get_dim_hyper()
@@ -166,7 +165,7 @@ def build_hypmat_nonint_1cenmult(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
     '''Computes elements in the hypermatrix excluding the
     integral part.
     '''
-    # the non-m part of the hypermatrix                                                       
+    # the non-m part of the hypermatrix
     non_c_hypmat_arr = np.zeros((GVARS.nc, dim_hyper, dim_hyper))
     non_c_hypmat_list = []
 
@@ -176,7 +175,7 @@ def build_hypmat_nonint_1cenmult(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
 
     # extracting attributes from SUBMAT_DICT
     startx_arr, endx_arr = SUBMAT_DICT.startx_arr, SUBMAT_DICT.endx_arr
-    # filling in the non-m part using the masks                                               
+    # filling in the non-m part using the masks
     for i in range(num_nbs):
         # filling only Upper Triangle
         for j in range(i, num_nbs):
