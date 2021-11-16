@@ -1,7 +1,7 @@
 from collections import namedtuple
 import jax.numpy as jnp
 import numpy as np
-from scipy.interpolate import splrep, splev
+from scipy.interpolate import splrep, splev, interp1d
 from numpy.polynomial.legendre import legval
 import os
 import matplotlib.pyplot as plt
@@ -149,18 +149,13 @@ class GlobalVars():
         # finding the spline params for wsr
         self.spl_deg = None
         self.knot_num = 100
+        self.ctrl_ind_th = 80#np.argmin(abs(self.knot_arr - self.rth))
+
+        # getting the spline params for the extreme profiles
+        self.knot_arr, self.ctrl_arr_up = self.get_spline_full_r(which_ex='upex')
 
         # the index of the control point below which it is held fixed
-        self.ctrl_ind_th = 95
 
-        '''
-        # getting the spline params for the extreme profiles
-        self.knot_arr, self.ctrl_arr_up = self.get_wsr_spline_params(which_ex='upex')
-        __, self.ctrl_arr_lo = self.get_wsr_spline_params(which_ex='loex')
-        __, self.ctrl_arr_dpt = self.get_wsr_spline_params(which_ex=None)
-        '''
-        # getting the spline params for the extreme profiles                                  
-        self.knot_arr, self.ctrl_arr_up = self.get_spline_full_r(which_ex='upex')         
         __, self.ctrl_arr_lo = self.get_spline_full_r(which_ex='loex')                    
         __, self.ctrl_arr_dpt = self.get_spline_full_r(which_ex=None)
         self.nc_total = self.ctrl_arr_up.shape[1]
@@ -174,6 +169,7 @@ class GlobalVars():
         ctrl_arr_fixed = np.zeros_like(ctrl_arr_wdpt_full_r)
         ctrl_arr_fixed[:, :self.ctrl_ind_th] =\
                         ctrl_arr_wdpt_full_r[:, :self.ctrl_ind_th]
+        self.ctrl_arr_fixed = ctrl_arr_fixed
         # creating the w_dpt which is just a smooth curve
         # dying out to zero near the desired rth (given by the
         # self.ctrl_ind_th
@@ -486,8 +482,11 @@ class GlobalVars():
 
     def wsr_extend(self):
         r1ind = np.argmin(abs(self.r - 1))
+        x = self.r[r1ind-300:r1ind]
         for i in range(len(self.wsr)):
-            self.wsr[i, r1ind:] = self.wsr[i, r1ind-1]
+            y = self.wsr[i, r1ind-300:r1ind]
+            f = interp1d(x, y, fill_value='extrapolate')
+            self.wsr[i, r1ind:] = f(self.r[r1ind:])
 
     def gen_wsr_from_c(self, x, bsp_params):
         t, c_arr, k = bsp_params
@@ -498,4 +497,3 @@ class GlobalVars():
             wsr[s_ind] = splev(x, (t, c, k))
 
         return wsr
-            

@@ -48,13 +48,13 @@ def get_bsp_basis_elements(x):
         k = degree of the spline polynomials.
     """
     nc_total, t, k = GVARS.bsp_params
-    nc_offset = nc_total - GVARS.nc
-
     basis_elements = np.zeros((GVARS.nc, len(x)))
+
     # looping over the basis elements for each control point
     for c_ind in range(GVARS.nc):
-        c = np.zeros(nc_total)
-        c[c_ind + nc_offset] = 1.0
+        # c = np.zeros(GVARS.ctrl_arr_dpt.shape[1])
+        c = np.zeros_like(t)
+        c[c_ind + GVARS.ctrl_ind_th] = 1.0
         basis_elements[c_ind, :] = splev(x, (t, c, k))
     return basis_elements
 
@@ -97,9 +97,9 @@ def integrate_fixed_wsr(eig_idx1, eig_idx2, ell1, ell2, s):
     # total integrand
     # nc = number of control points, the additional value indicates the
     # integral between (rmin, rth), which is constant across MCMC iterations
-    # integrand = -1. * GVARS.wsr_fixed[s_ind] * eigfac / GVARS.r
-    integrand = -1. * GVARS.wsr[s_ind] * eigfac / GVARS.r
-    post_integral = integrate.trapz(integrand, GVARS.r) # a scalar
+    integrand = -1. * GVARS.wsr_fixed[s_ind] * eigfac / GVARS.r
+    # integrand = -1. * GVARS.wsr[s_ind] * eigfac / GVARS.r
+    post_integral = integrate.simps(integrand, GVARS.r) # a scalar
     return post_integral
 
 
@@ -144,6 +144,17 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
     return SUBMAT_DICT
 
 
+def build_hypmat_freqdiag(CNM_AND_NBS, SUBMAT_DICT, dim_hyper):
+    freqdiag = np.zeros(dim_hyper)
+    omegaref = CNM_AND_NBS.omega_nbs[0]
+    for i in range(len(CNM_AND_NBS.omega_nbs)):
+        omega_nl = CNM_AND_NBS.omega_nbs[i]
+        startx = SUBMAT_DICT.startx_arr[i]
+        endx = SUBMAT_DICT.endx_arr[i]
+        freqdiag[startx:endx] += omega_nl**2 - omegaref**2
+    return sparse.BCOO.fromdense(np.diag(freqdiag))
+
+
 def build_hypmat_all_cenmults():
     # number of multiplets used
     nmults = len(GVARS.n0_arr)
@@ -166,6 +177,10 @@ def build_hypmat_all_cenmults():
         CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST)
         SUBMAT_DICT = build_SUBMAT_INDICES(CENMULT_AND_NBS)
         omegaref_nmults.append(CENMULT_AND_NBS.omega_nbs[0])
+
+        freqdiag_sparse = build_hypmat_freqdiag(CENMULT_AND_NBS,
+                                                SUBMAT_DICT,
+                                                dim_hyper)
         
         noc_hypmat_this_s = []
         
@@ -184,13 +199,13 @@ def build_hypmat_all_cenmults():
                 fixed_hypmat_this_mult = fixed_hypmat_s
             else:
                 fixed_hypmat_this_mult += fixed_hypmat_s
-        
+
         # appending the sparse form of the fixed hypmat
-        fixed_hypmat_all_sparse.append(fixed_hypmat_this_mult)
+        fixed_hypmat_all_sparse.append(fixed_hypmat_this_mult + freqdiag_sparse)
 
         # appending the list of sparse matrices in s to the list in cenmults
         noc_hypmat_all_sparse.append(noc_hypmat_this_s)
-        
+
     # list of shape (nmults x s x (nc x dim_hyper, dim_hyper))
     # the last bracket denotes matrices of that shape but in sparse form
     return noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_nmults, omegaref_nmults
@@ -221,6 +236,16 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
         
         for j in range(num_nbs):
             ell1, ell2 = nl_nbs[i, 1], nl_nbs[j, 1]
+            dell = ell1 - ell2
+            dellx, delly = 0, 0
+
+            if dell > 0:
+                dellx = abs(dell)
+                delly = 0
+            elif dell < 0:
+                dellx = 0
+                delly = abs(dell)
+
             ellmin = min(ell1, ell2)
 
             wig1_idx, fac1 = _find_idx(ell1, s, ell2, 1)
@@ -264,18 +289,15 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
                 # avoiding  newaxis multiplication
                 # ??
                 # non_c_submat_diag = integrated_part[c_ind] * wigvalm
-                np.fill_diagonal(non_c_hypmat_arr[c_ind, startx:endx, starty:endy],
+                np.fill_diagonal(non_c_hypmat_arr[c_ind, startx+dellx:endx-dellx,
+                                                  starty+delly:endy-delly],
                                  integrated_part[c_ind] * wigvalm * wigval1)
                                  # non_c_submat_diag[c_ind])
     
             # the fixed hypermatrix
-            if i == j:
-                np.fill_diagonal(fixed_hypmat[startx:endx, starty:endy],
-                                 fixed_integral*wigvalm*wigval1 +
-                                 omega_nl**2 - omegaref**2)
-            else:
-                np.fill_diagonal(fixed_hypmat[startx:endx, starty:endy],
-                                fixed_integral * wigvalm * wigval1)
+            np.fill_diagonal(fixed_hypmat[startx+dellx:endx-dellx,
+                                          starty+delly:endy-delly],
+                            fixed_integral * wigvalm * wigval1)
 
     # deleting wigvalm 
     del wigvalm
