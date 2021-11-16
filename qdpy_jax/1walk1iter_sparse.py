@@ -22,11 +22,12 @@ GVARS = gvar_jax.GlobalVars()
 GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 nmults = len(GVARS.n0_arr) # total number of central multiplets
 
-noc_hypmat_all_sparse = precompute.build_hypmat_all_cenmults()
+noc_hypmat_all_sparse, fixed_hypmat_all_sparse =\
+                            precompute.build_hypmat_all_cenmults()
 
 # necessary arguments to pass to build full hypermatrix
 len_s = GVARS.wsr.shape[0]
-nc = GVARS.nc
+nc = len(GVARS.ctrl_arr_up)
 
 def model():
     totalsum = 0.0
@@ -49,13 +50,14 @@ def model():
     totalsum = jax.lax.fori_loop(0, nmults, loop_over_mults, totalsum)
     '''
     for i in range(nmults):                                                                   
-        # building the entire hypermatrix                                                      
+        # building the entire hypermatrix                                                     
         hypmat =\
-                 build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],                    
-                                                  GVARS.ctrl_arr_dpt, 
+                 build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],                   
+                                                  fixed_hypmat_all_sparse[i],
+                                                  GVARS.ctrl_arr_up, 
                                                   nc, len_s)                          
         
-        # finding the eigenvalues of hypermatrix                                               
+        # finding the eigenvalues of hypermatrix                                              
         eigvals, __ = jnp.linalg.eigh(hypmat.todense())                                       
         eigvalsum = jnp.sum(eigvals)                                                          
         totalsum += eigvalsum #+ elementsum                                                   
@@ -83,7 +85,6 @@ t1e = time.time()
 for i in range(Niter): 
     print(i)
     __ = model_().block_until_ready()
-    print(__)
 t2e = time.time()
 
 print('Time for execution in seconds:', (t2e-t1e)/Niter)

@@ -59,6 +59,8 @@ def get_bsp_basis_elements(x):
     
     return basis_elements
 
+# extracting the basis elements once 
+bsp_basis = get_bsp_basis_elements(GVARS.r)
 
 def build_integrated_part(eig_idx1, eig_idx2, ell1, ell2, s):
     # ls2fac
@@ -80,6 +82,29 @@ def build_integrated_part(eig_idx1, eig_idx2, ell1, ell2, s):
 
     # shape (nc,)
     post_integral = integrate.simps(integrand, GVARS.r, axis=1)
+
+    return post_integral
+
+def integrate_fixed_wsr(eig_idx1, eig_idx2, ell1, ell2, s):
+    s_ind = (s-1)//2
+    # ls2fac                                                                                  
+    ls2fac = ell1*(ell1) + ell2*(ell2+1) - s*(s+1)
+
+    # slicing the required eigenfunctions                                                     
+    U1, V1 = lm.U_arr[eig_idx1], lm.V_arr[eig_idx1]
+    U2, V2 = lm.U_arr[eig_idx2], lm.V_arr[eig_idx2]
+
+    # the factor in the integral dependent on eigenfunctions                                  
+    # shape (r,)                                                                              
+    eigfac = U2*V1 + V2*U1 - U1*U2 - 0.5*V1*V2*ls2fac
+    # total integrand                                                                         
+    # shape (r,)                                                                          
+    # nc = number of control points, the additional value indicates the                       
+    # integral between (rmin, rth), which is constant across MCMC iterations                  
+    integrand = GVARS.wsr_fixed[s_ind] * eigfac / GVARS.r
+
+    # a scalar                                                                             
+    post_integral = integrate.simps(integrand, GVARS.r)
 
     return post_integral
 
@@ -139,6 +164,9 @@ def build_hypmat_all_cenmults():
     # storing as a list of sparse matrices
     noc_hypmat_all_sparse = []
 
+    # the fixed hypat
+    fixed_hypmat_all_sparse = []
+
     for i in range(nmults):
         # looping over all the central multiplets                                      
         n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
@@ -147,27 +175,46 @@ def build_hypmat_all_cenmults():
         SUBMAT_DICT = build_SUBMAT_INDICES(CENMULT_AND_NBS)
         
         noc_hypmat_this_s = []
+        
+        # the fixed part that is summed over s
+        fixed_hypmat_this_mult = np.zeros((dim_hyper, dim_hyper))
+        
         for s_ind, s in enumerate(GVARS.s_arr):
             # shape (dim_hyper x dim_hyper) but sparse form
-            non_c_hypmat = build_hypmat_nonint_1cenmult(CENMULT_AND_NBS,
-                                                        SUBMAT_DICT,
-                                                        dim_hyper, s)
+            non_c_hypmat, fixed_hypmat_s =\
+                            build_hm_nonint_n_fxd_1cnm(CENMULT_AND_NBS,
+                                                       SUBMAT_DICT,
+                                                       dim_hyper, s)
             
+            # appending the different m part in the list
             noc_hypmat_this_s.append(non_c_hypmat)
+            
+            # adding up the different s for the fixed part
+            if(s_ind == 0):
+                fixed_hypmat_this_mult = fixed_hypmat_s
+            else:
+                fixed_hypmat_this_mult += fixed_hypmat_s
+        
+        # appending the sparse form of the fixed hypmat
+        fixed_hypmat_all_sparse.append(fixed_hypmat_this_mult)
 
+        # appending the list of sparse matrices in s to the list in cenmults
         noc_hypmat_all_sparse.append(noc_hypmat_this_s)
         
     # list of shape (nmults x s x (nc x dim_hyper, dim_hyper))
     # the last bracket denotes matrices of that shape but in sparse form
-    return noc_hypmat_all_sparse
+    return noc_hypmat_all_sparse, fixed_hypmat_all_sparse
 
-def build_hypmat_nonint_1cenmult(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
+def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
     '''Computes elements in the hypermatrix excluding the
     integral part.
     '''
     # the non-m part of the hypermatrix
     non_c_hypmat_arr = np.zeros((GVARS.nc, dim_hyper, dim_hyper))
     non_c_hypmat_list = []
+
+    # the fixed hypermatrix (contribution below rth)
+    fixed_hypmat = np.zeros((dim_hyper, dim_hyper))
 
     # extracting attributes from CNM_AND_NBS
     num_nbs = len(CNM_AND_NBS.omega_nbs)
@@ -204,6 +251,9 @@ def build_hypmat_nonint_1cenmult(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
             # shape (n_control_points,)
             integrated_part = build_integrated_part(eig_idx1, eig_idx2, ell1, ell2, s)
             #-------------------------------------------------------
+            # integrating wsr_fixed for the fixed part
+            s_ind = (s-1)//2
+            fixed_integral = integrate_fixed_wsr(eig_idx1, eig_idx2, ell1, ell2, s)
 
             wigvals *= (jax_minus1pow_vec(m_arr) * ell1_ell2_fac)
 
@@ -219,8 +269,13 @@ def build_hypmat_nonint_1cenmult(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
                 np.fill_diagonal(non_c_hypmat_arr[c_ind, startx:endx, starty:endy],
                                  non_c_submat_diag[c_ind])
     
-                
+            # the fixed hypermatrix
+            np.fill_diagonal(fixed_hypmat[startx:endx, starty:endy],
+                             fixed_integral * wigvals)
 
+    # deleting wigvals 
+    del wigvals
+            
     # making it a list to allow easy c * hypermat later
     for c_ind in range(GVARS.nc):
         # making sparse array
@@ -231,4 +286,9 @@ def build_hypmat_nonint_1cenmult(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
     # deleting for ensuring no extra memory
     del non_c_hypmat_arr
     
-    return non_c_hypmat_list
+    # sparsifying the fixed hypmat
+    fixed_hypmat_sparse = sparse.BCOO.fromdense(fixed_hypmat)
+    del fixed_hypmat
+
+    return non_c_hypmat_list, fixed_hypmat_sparse
+

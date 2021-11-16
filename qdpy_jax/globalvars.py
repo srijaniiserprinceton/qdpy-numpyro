@@ -1,7 +1,7 @@
 from collections import namedtuple
 import jax.numpy as jnp
 import numpy as np
-from scipy.interpolate import splrep
+from scipy.interpolate import splrep, splev
 from numpy.polynomial.legendre import legval
 import os
 import matplotlib.pyplot as plt
@@ -47,7 +47,7 @@ class qdParams():
     # the radial orders present
     radial_orders = np.array([0])
     # the bounds on angular degree for each radial order
-    ell_bounds = np.array([[195, 230]])
+    ell_bounds = np.array([[195, 195]])
 
     rmin, rth, rmax = 0.0, 0.9, 1.2
     fwindow =  150.0 
@@ -145,18 +145,44 @@ class GlobalVars():
         self.wsr = self.mask_minmax(self.wsr, axis=1)
         self.rth_ind = self.get_ind(self.r, self.rth)
         self.r_spline = self.r[self.rth_ind:]
-
+        
         # finding the spline params for wsr
         self.spl_deg = None
-        self.knot_num = 12
+        self.knot_num = 100
+
+        # the index of the control point below which it is held fixed
+        self.ctrl_ind_th = 95
+
+        '''
         # getting the spline params for the extreme profiles
         self.knot_arr, self.ctrl_arr_up = self.get_wsr_spline_params(which_ex='upex')
         __, self.ctrl_arr_lo = self.get_wsr_spline_params(which_ex='loex')
         __, self.ctrl_arr_dpt = self.get_wsr_spline_params(which_ex=None)
+        '''
+        # getting the spline params for the extreme profiles                                  
+        self.knot_arr, self.ctrl_arr_up = self.get_spline_full_r(which_ex='upex')         
+        __, self.ctrl_arr_lo = self.get_spline_full_r(which_ex='loex')                    
+        __, self.ctrl_arr_dpt = self.get_spline_full_r(which_ex=None)
+
+        # since we'll be varying them only beyond rth
+        self.ctrl_arr_up = self.ctrl_arr_up[:, self.ctrl_ind_th:]
+        self.ctrl_arr_lo = self.ctrl_arr_lo[:, self.ctrl_ind_th:]
+
+        # creating the ctrl_arr for the fixed points
+        t_full_r, ctrl_arr_wdpt_full_r = self.get_spline_full_r(which_ex=None)
+        ctrl_arr_fixed = np.zeros_like(ctrl_arr_wdpt_full_r)
+        ctrl_arr_fixed[:, :self.ctrl_ind_th] =\
+                        ctrl_arr_wdpt_full_r[:, :self.ctrl_ind_th]
+        # creating the w_dpt which is just a smooth curve
+        # dying out to zero near the desired rth (given by the
+        # self.ctrl_ind_th
+        self.wsr_fixed = self.gen_wsr_from_c(self.r, (t_full_r,
+                                                      ctrl_arr_fixed,
+                                                      self.spl_deg))
 
         # creating the bsp_params to be used in precomputation
         # self.ctrl_arr has shape (s x num_ctrl_pts)
-        self.nc = self.ctrl_arr_dpt.shape[1]
+        self.nc = self.ctrl_arr_up.shape[1]
         self.bsp_params = (self.nc, self.knot_arr, self.spl_deg)
 
         # making the ctrl_arr_up > ctrl_arr_lo at each point
@@ -175,11 +201,13 @@ class GlobalVars():
 
         # if preplot is True, plot the various things for
         # ensuring everything is working properly
+        '''
         if qdPars.preplot:
             preplotter.plot_extreme_wsr(self.r, self.r_spline, self.OM, self.wsr,
                                         self.ctrl_arr_up, self.ctrl_arr_dpt,
                                         self.ctrl_arr_lo, self.knot_arr,
                                         self.rth_ind, self.spl_deg)
+        '''
 
     def get_eigvals_true(self):
         n0arr = self.n0_arr
@@ -385,6 +413,36 @@ class GlobalVars():
 
         return t, c_arr
 
+    def get_spline_full_r(self, which_ex='upex'):
+        # parameterizing in terms of cubic splines                                            
+        lenr = len(self.r)
+        r_spacing = int(lenr//self.knot_num)
+        r_filtered = self.r[::r_spacing]
+
+        # removing end points because of requirement of splrep                                
+        # endpoints are automatically padded up                                               
+        t_set = r_filtered[1:-1]
+        self.spl_deg = 3
+
+        t, c, k = splrep(self.r, self.wsr[0],
+                         s=0, t=t_set, k=self.spl_deg)
+        self.spl_deg = k
+
+        # adjusting the zero-padding in c from splrep                                         
+        c = c[:-(k+1)]
+
+        len_s = len(self.s_arr)
+        c_arr = np.zeros((len_s, len(c)))
+
+        for i in range(len_s):
+            wsr_i_tapered = self.create_nearsurface_profile(i, which_ex=which_ex)
+            t, c, __ = splrep(self.r, wsr_i_tapered,
+                              s=0, t=t_set, k=self.spl_deg)
+            # adjusting the zero-padding in c from splrep                                     
+            c = c[:-(k+1)]
+            c_arr[i] = c
+
+        return t, c_arr
 
     def get_matching_function(self):
         return (np.tanh((self.r - self.rth - 0.07)/0.02) + 1)/2.0
@@ -413,3 +471,14 @@ class GlobalVars():
         r1ind = np.argmin(abs(self.r - 1))
         for i in range(len(self.wsr)):
             self.wsr[i, r1ind:] = self.wsr[i, r1ind-1]
+
+    def gen_wsr_from_c(self, x, bsp_params):
+        t, c_arr, k = bsp_params
+        wsr = np.zeros((len(self.s_arr), len(x)))
+        
+        for s_ind in range(len(self.s_arr)):
+            c = c_arr[s_ind]
+            wsr[s_ind] = splev(x, (t, c, k))
+
+        return wsr
+            
