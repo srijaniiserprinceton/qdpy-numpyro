@@ -49,25 +49,21 @@ def model():
        
     totalsum = jax.lax.fori_loop(0, nmults, loop_over_mults, totalsum)
     '''
-    for i in range(nmults):                                                                   
-        # building the entire hypermatrix                                                     
+    for i in range(nmults):
+        # building the entire hypermatrix
         hypmat =\
-                 build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],                   
+                 build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
                                                   fixed_hypmat_all_sparse[i],
-                                                  GVARS.ctrl_arr_up, 
-                                                  nc, len_s)                          
+                                                  GVARS.ctrl_arr_up,
+                                                  nc, len_s)
         
-        # finding the eigenvalues of hypermatrix                                              
-        eigvals, __ = jnp.linalg.eigh(hypmat.todense())                                       
-        eigvalsum = jnp.sum(eigvals)                                                          
-        totalsum += eigvalsum #+ elementsum                                                   
-        
+        # finding the eigenvalues of hypermatrix
+        eigvals, __ = jnp.linalg.eigh(hypmat.todense())
+        eigvalsum = jnp.sum(eigvals)
+        totalsum += eigvalsum #+ elementsum
+
         # totalsum += jnp.sum(hypmat.todense())                                             
-    
     return totalsum                                                                       
-
-
-
 
 # jitting model
 model_ = jax.jit(model)

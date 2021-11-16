@@ -47,7 +47,7 @@ class qdParams():
     # the radial orders present
     radial_orders = np.array([0])
     # the bounds on angular degree for each radial order
-    ell_bounds = np.array([[195, 195]])
+    ell_bounds = np.array([[200, 205]])
 
     rmin, rth, rmax = 0.0, 0.9, 1.2
     fwindow =  150.0 
@@ -122,7 +122,7 @@ class GlobalVars():
         self.fwindow = qdPars.fwindow
         self.wsr = -1.0*np.loadtxt(f'{self.datadir}/w_s/w.dat')
         # self.wsr = np.load(f'wsr-spline.npy')
-        # self.wsr_extend()
+        self.wsr_extend()
 
         # generating the multiplets which we will use
         load_from_file = False
@@ -130,7 +130,7 @@ class GlobalVars():
                                               qdPars.radial_orders,
                                               qdPars.ell_bounds)
         self.n0_arr, self.ell0_arr = n_arr, ell_arr
-        self.eigvals_true = self.get_eigvals_true()
+        self.eigvals_true, self.eigvals_sigma = self.get_eigvals_true()
 
         # rth = r threshold beyond which the profiles are updated. 
         self.rth = qdPars.rth
@@ -163,6 +163,7 @@ class GlobalVars():
         self.knot_arr, self.ctrl_arr_up = self.get_spline_full_r(which_ex='upex')         
         __, self.ctrl_arr_lo = self.get_spline_full_r(which_ex='loex')                    
         __, self.ctrl_arr_dpt = self.get_spline_full_r(which_ex=None)
+        self.nc_total = self.ctrl_arr_up.shape[1]
 
         # since we'll be varying them only beyond rth
         self.ctrl_arr_up = self.ctrl_arr_up[:, self.ctrl_ind_th:]
@@ -183,7 +184,7 @@ class GlobalVars():
         # creating the bsp_params to be used in precomputation
         # self.ctrl_arr has shape (s x num_ctrl_pts)
         self.nc = self.ctrl_arr_up.shape[1]
-        self.bsp_params = (self.nc, self.knot_arr, self.spl_deg)
+        self.bsp_params = (self.nc_total, self.knot_arr, self.spl_deg)
 
         # making the ctrl_arr_up > ctrl_arr_lo at each point
         ind_swap = np.greater(self.ctrl_arr_lo, self.ctrl_arr_up)
@@ -208,35 +209,47 @@ class GlobalVars():
                                         self.ctrl_arr_lo, self.knot_arr,
                                         self.rth_ind, self.spl_deg)
         '''
+        return None
 
     def get_eigvals_true(self):
         n0arr = self.n0_arr
         ell0arr = self.ell0_arr
         nmults = len(n0arr)
         eigvals_true = np.array([])
+        eigvals_sigma = np.array([])
         for i in range(nmults):
             m = np.arange(-ell0arr[i], ell0arr[i]+1)
-            eigvals_true = np.append(eigvals_true,
-                                     self.findfreq(ell0arr[i], n0arr[i], m)[0])
-        return eigvals_true
+            _eval, _esig, __ = self.findfreq(ell0arr[i], n0arr[i], m)
+            eigvals_true = np.append(eigvals_true, _eval)
+            eigvals_sigma = np.append(eigvals_sigma, _esig)
+        return eigvals_true, eigvals_sigma
 
-    # {{{ def findfreq_vecm(data, l, n, m):
+    # {{{ def findfreq(data, l, n, m):
     def findfreq(self, l, n, m):
         '''
         Find the eigenfrequency for a given (l, n, m)
         using the splitting coefficients
-
         Inputs: (data, l, n, m)
             data - array (hmi.6328.36)
             l - harmonic degree
             n - radial order
             m - azimuthal order
-
         Outputs: (nu_{nlm}, fwhm_{nl}, amp_{nl})
             nu_{nlm}    - eigenfrequency in microHz
             fwhm_{nl} - FWHM of the mode in microHz
             amp_{nl}    - Mode amplitude (A_{nl})
         '''
+        def compute_totsigma(sigmas, m, L):
+            coeffs = np.zeros_like(sigmas)
+            totsigma = np.zeros_like(m, dtype=np.float64)
+            lencoeffs = len(coeffs)
+            for i in range(lencoeffs):
+                coeff1 = np.zeros_like(sigmas)
+                coeff1[i] = 1
+                leg = legval(1.0*m/L, coeff1)*L*0.001
+                totsigma += (leg * sigmas[i])**2
+            return np.sqrt(totsigma)
+
         data = self.hmidata
         L = np.sqrt(l*(l+1))
         try:
@@ -250,11 +263,13 @@ class GlobalVars():
         mask0 = m == 0
         maskl = abs(m) >= l
         splits = np.append([0.0], data[modeindex, 12:48])
+        split_sigmas = np.append([0.0], data[modeindex, 49:85])
+        totsigma = compute_totsigma(split_sigmas, m, L)
         totsplit = legval(1.0*m/L, splits)*L*0.001
         totsplit[mask0] = 0
         amp[maskl] = 0
-        return nu + totsplit, fwhm, amp
-    # }}} findfreq_vecm(data, l, n, m)
+        return totsplit, totsigma, amp
+    # }}} findfreq(data, l, n, m)
 
 
     def get_all_GVAR(self):
@@ -336,7 +351,8 @@ class GlobalVars():
                                             'ctrl_arr_lo',
                                             'ctrl_arr_dpt',
                                             'knot_arr',
-                                            'eigvals_true'],
+                                            'eigvals_true',
+                                            'eigvals_sigma'],
                                            (self.r,
                                             self.r_spline,
                                             self.rth,
@@ -347,7 +363,8 @@ class GlobalVars():
                                             self.ctrl_arr_lo,
                                             self.ctrl_arr_dpt,
                                             self.knot_arr,
-                                            self.eigvals_true))
+                                            self.eigvals_true,
+                                            self.eigvals_sigma))
         return GVAR_TRACED
 
     def get_namedtuple_gvar_static(self):

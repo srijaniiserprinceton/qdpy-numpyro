@@ -48,13 +48,14 @@ def get_bsp_basis_elements(x):
         k = degree of the spline polynomials.
     """
 
-    nc, t, k = GVARS.bsp_params
+    nc_total, t, k = GVARS.bsp_params
+    nc_offset = nc_total - GVARS.nc
 
-    basis_elements = np.zeros((nc, len(x)))
+    basis_elements = np.zeros((GVARS.nc, len(x)))
     # looping over the basis elements for each control point
-    for c_ind in range(nc):
-        c = np.zeros(nc)
-        c[c_ind] = 1.0
+    for c_ind in range(GVARS.nc):
+        c = np.zeros(nc_total)
+        c[c_ind + nc_offset] = 1.0
         basis_elements[c_ind, :] = splev(x, (t, c, k))
     
     return basis_elements
@@ -163,6 +164,9 @@ def build_hypmat_all_cenmults():
 
     # storing as a list of sparse matrices
     noc_hypmat_all_sparse = []
+    ell0_nmults = []
+    omegaref_nmults = []
+    
 
     # the fixed hypat
     fixed_hypmat_all_sparse = []
@@ -170,9 +174,12 @@ def build_hypmat_all_cenmults():
     for i in range(nmults):
         # looping over all the central multiplets                                      
         n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
+        ell0_nmults.append(ell0)
+
         # building the namedtuple for the central multiplet and its neighbours            
         CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST)
         SUBMAT_DICT = build_SUBMAT_INDICES(CENMULT_AND_NBS)
+        omegaref_nmults.append(CENMULT_AND_NBS.omega_nbs[0])
         
         noc_hypmat_this_s = []
         
@@ -203,7 +210,7 @@ def build_hypmat_all_cenmults():
         
     # list of shape (nmults x s x (nc x dim_hyper, dim_hyper))
     # the last bracket denotes matrices of that shape but in sparse form
-    return noc_hypmat_all_sparse, fixed_hypmat_all_sparse
+    return noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_nmults, omegaref_nmults
 
 def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
     '''Computes elements in the hypermatrix excluding the
@@ -275,20 +282,24 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
 
     # deleting wigvals 
     del wigvals
-            
+
     # making it a list to allow easy c * hypermat later
     for c_ind in range(GVARS.nc):
         # making sparse array
-        non_c_hypmat_arr_sparse =\
-                sparse.BCOO.fromdense(non_c_hypmat_arr[c_ind])
+        non_c_hypmat_UT = 0.5*np.diag(np.diag(non_c_hypmat_arr[c_ind]))
+        non_c_hypmat_UT += np.triu(non_c_hypmat_arr[c_ind], k=1)
+        non_c_hypmat = non_c_hypmat_UT + non_c_hypmat_UT.T
+        non_c_hypmat_arr_sparse = sparse.BCOO.fromdense(non_c_hypmat)
         non_c_hypmat_list.append(non_c_hypmat_arr_sparse)
 
     # deleting for ensuring no extra memory
     del non_c_hypmat_arr
     
     # sparsifying the fixed hypmat
+    fixed_hypmat_UT = 0.5*np.diag(np.diag(fixed_hypmat))
+    fixed_hypmat_UT += np.triu(fixed_hypmat, k=1)
+    fixed_hypmat = fixed_hypmat_UT + fixed_hypmat_UT.T
     fixed_hypmat_sparse = sparse.BCOO.fromdense(fixed_hypmat)
-    del fixed_hypmat
+    del fixed_hypmat, fixed_hypmat_UT
 
     return non_c_hypmat_list, fixed_hypmat_sparse
-

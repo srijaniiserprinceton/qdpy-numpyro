@@ -5,9 +5,9 @@ import time
 import sys
 
 import os
-num_chains = 3
-os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains} " +\
-                          "--xla_dump_to=/tmp/foo"
+num_chains = 1
+# os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
+#+"--xla_dump_to=/tmp/foo"
 
 import jax
 import jax.numpy as jnp
@@ -15,27 +15,24 @@ import jax.tree_util as tu
 from jax import random, vmap
 
 # new package in jax.numpy
-from qdpy_jax import build_cenmult_and_nbs as build_CENMULT_AND_NBS 
-from qdpy_jax import build_supermatrix as build_supmat
 from qdpy_jax import globalvars as gvar_jax
-from qdpy_jax import load_multiplets
-from qdpy_jax import jax_functions as jf
-from qdpy_jax import wigner_map2 as wigmap
-from qdpy_jax import prune_multiplets
+from qdpy_jax import sparse_precompute as precompute
+from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
+from qdpy_jax import build_supermatrix as build_supmat
 
 # importing pyro related packages
 import numpyro
 from numpyro.diagnostics import hpdi
 import numpyro.distributions as dist
-from numpyro.infer import NUTS, MCMC
+from numpyro.infer import NUTS, MCMC, SA
 from numpyro import handlers
 
 
 from jax.config import config
+jax.config.update("jax_log_compiles", 1)
 jax.config.update('jax_platform_name', 'cpu')
 config.update('jax_enable_x64', True)
 numpyro.set_platform('cpu')
-
 
 import pickle
 def save_obj(obj, name):
@@ -46,13 +43,17 @@ def load_obj(name):
     with open(name + '.pkl', 'rb') as f:
         return pickle.load(f)
 
+GVARS = gvar_jax.GlobalVars()
+GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
+eigvals_true = jnp.asarray(GVARS_TR.eigvals_true)
+eigvals_sigma = jnp.asarray(GVARS_TR.eigvals_sigma)
 
-#========================================================================
+noc_hypmat_all_sparse, fixed_hypmat_all_sparse,\
+    ell0_nmults, omegaref_nmults = precompute.build_hypmat_all_cenmults()
 
-W1T = 1.
-W3T = 1.
-W5T = 1.
-
+nc = GVARS.nc
+len_s = len(GVARS.s_arr)
+nmults = len(GVARS.n0_arr)
 
 def model():
     # setting min and max value to be 0.1*true and 3.*true
@@ -71,109 +72,36 @@ def model():
                 jnp.array(c3_list),
                 jnp.array(c5_list)]
 
-    sigma = numpyro.sample('sigma', dist.Uniform(1e-3, 0.1))
     eig_sample = jnp.array([])
 
     for i in range(nmults):
-        n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
-        CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST)
-        CENMULT_AND_NBS = jf.tree_map_CNM_AND_NBS(CENMULT_AND_NBS)
+        # building the entire hypermatrix
+        hypmat = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
+                                                  fixed_hypmat_all_sparse[i],
+                                                  ctrl_arr, nc, len_s)
 
-        SUBMAT_DICT = build_SUBMAT_INDICES(CENMULT_AND_NBS)
-        SUBMAT_DICT = jf.tree_map_SUBMAT_DICT(SUBMAT_DICT)
+        ell0 = ell0_nmults[i]
+        omegaref = omegaref_nmults[i]
+        _eigval_mult = get_eigs(hypmat.todense())[:2*ell0+1]/2./omegaref
+        eig_sample = jnp.append(eig_sample, _eigval_mult*GVARS.OM*1e6)
 
-        supmatrix = build_supermatrix(CENMULT_AND_NBS,
-                                      SUBMAT_DICT,
-                                      GVARS_PRUNED_ST,
-                                      GVARS_PRUNED_TR,
-                                      ctrl_arr)
-        eig_sample = jnp.append(eig_sample,
-                                get_eigs(supmatrix)[:2*ell0+1]/2./CENMULT_AND_NBS.omega_nbs[0])
-
-    # eig_sample = numpyro.deterministic('eig', eig_mcmc_func(w1=w1, w3=w3, w5=w5))
-    return numpyro.sample('obs', dist.Normal(eig_sample, sigma), obs=eigvals_true)
+    return numpyro.factor('obs', dist.Normal(eig_sample,
+                                             eigvals_sigma).log_prob(eigvals_true))
 
 
 def get_eigs(mat):
     eigvals, eigvecs = jnp.linalg.eigh(mat)
     eigvals = build_supmat.eigval_sort_slice(eigvals, eigvecs)
     return eigvals
-#========================================================================
 
-eigvals_true = np.array([])
-GVARS = gvar_jax.GlobalVars()
-GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
-
-# jitting various functions
-get_namedtuple_for_cenmult_and_neighbours = build_CENMULT_AND_NBS.get_namedtuple_for_cenmult_and_neighbours
-
-build_SUBMAT_INDICES = build_supmat.build_SUBMAT_INDICES
-
-# initialzing the class instance for supermatrix computation
-build_supmat_funcs = build_supmat.build_supermatrix_functions()
-build_supermatrix = build_supmat_funcs.get_func2build_supermatrix()
-
-# extracting the pruned parameters for multiplets of interest
-nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx =\
-                prune_multiplets.get_pruned_attributes(GVARS, GVARS_ST)
-
-lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
-                                     nl_idx_pruned,
-                                     omega_pruned)
-
-GVARS_PRUNED_TR = jf.create_namedtuple('GVARS_TR',
-                                       ['r',
-                                        'r_spline',
-                                        'rth',
-                                        'wsr',
-                                        'U_arr',
-                                        'V_arr',
-                                        'wig_list',
-                                        'ctrl_arr_up',
-                                        'ctrl_arr_lo',
-                                        'knot_arr',
-                                        'eigvals_true'],
-                                       (GVARS_TR.r,
-                                        GVARS_TR.r_spline,
-                                        GVARS_TR.rth,
-                                        GVARS_TR.wsr,
-                                        lm.U_arr,
-                                        lm.V_arr,
-                                        wig_list,
-                                        GVARS_TR.ctrl_arr_up,
-                                        GVARS_TR.ctrl_arr_lo,
-                                        GVARS_TR.knot_arr,
-                                        GVARS_TR.eigvals_true))
-
-GVARS_PRUNED_ST = jf.create_namedtuple('GVARS_ST',
-                                       ['s_arr',
-                                        'nl_all',
-                                        'nl_idx_pruned',
-                                        'omega_list',
-                                        'fwindow',
-                                        'OM',
-                                        'wig_idx',
-                                        'rth_ind',
-                                        'spl_deg'],
-                                       (GVARS_ST.s_arr,
-                                        lm.nl_pruned,
-                                        lm.nl_idx_pruned,
-                                        lm.omega_pruned,
-                                        GVARS_ST.fwindow,
-                                        GVARS_ST.OM,
-                                        wig_idx,
-                                        GVARS_ST.rth_ind,
-                                        GVARS_ST.spl_deg))
-
-nmults = len(GVARS.n0_arr)
-eigvals_true = jnp.asarray(GVARS_TR.eigvals_true)
 
 # Start from this source of randomness. We will split keys for subsequent operations.
 rng_key = random.PRNGKey(12)
 rng_key, rng_key_ = random.split(rng_key)
 
 # Run NUTS.
-kernel = NUTS(model)
+#kernel = NUTS(model)
+kernel = SA(model)
 mcmc = MCMC(kernel, num_warmup=50, num_samples=100, num_chains=num_chains)
 mcmc.run(rng_key_)
 
