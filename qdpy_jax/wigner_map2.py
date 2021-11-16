@@ -6,6 +6,7 @@ import jax
 import time
 
 jax.config.update('jax_platform_name', 'cpu')
+jax.config.update('jax_enable_x64', True)
 # from jax.lib import xla_bridge
 # print(xla_bridge.get_backend().platform)
 

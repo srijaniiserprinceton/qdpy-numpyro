@@ -47,7 +47,7 @@ class qdParams():
     # the radial orders present
     radial_orders = np.array([0])
     # the bounds on angular degree for each radial order
-    ell_bounds = np.array([[200, 205]])
+    ell_bounds = np.array([[200, 200]])
 
     rmin, rth, rmax = 0.0, 0.9, 1.2
     fwindow =  150.0 
@@ -122,7 +122,7 @@ class GlobalVars():
         self.fwindow = qdPars.fwindow
         self.wsr = -1.0*np.loadtxt(f'{self.datadir}/w_s/w.dat')
         # self.wsr = np.load(f'wsr-spline.npy')
-        self.wsr_extend()
+        # self.wsr_extend()
 
         # generating the multiplets which we will use
         load_from_file = False
@@ -431,13 +431,13 @@ class GlobalVars():
         return t, c_arr
 
     def get_spline_full_r(self, which_ex='upex'):
-        # parameterizing in terms of cubic splines                                            
+        # parameterizing in terms of cubic splines
         lenr = len(self.r)
         r_spacing = int(lenr//self.knot_num)
         r_filtered = self.r[::r_spacing]
 
-        # removing end points because of requirement of splrep                                
-        # endpoints are automatically padded up                                               
+        # removing end points because of requirement of splrep
+        # endpoints are automatically padded up
         t_set = r_filtered[1:-1]
         self.spl_deg = 3
 
@@ -445,7 +445,7 @@ class GlobalVars():
                          s=0, t=t_set, k=self.spl_deg)
         self.spl_deg = k
 
-        # adjusting the zero-padding in c from splrep                                         
+        # adjusting the zero-padding in c from splrep
         c = c[:-(k+1)]
 
         len_s = len(self.s_arr)
