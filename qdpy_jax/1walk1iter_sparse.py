@@ -85,6 +85,7 @@ t1e = time.time()
 for i in range(Niter): 
     print(i)
     __ = model_().block_until_ready()
+    print(__)
 t2e = time.time()
 
 print('Time for execution in seconds:', (t2e-t1e)/Niter)
