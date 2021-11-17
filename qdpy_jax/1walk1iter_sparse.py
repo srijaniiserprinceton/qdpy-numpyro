@@ -5,10 +5,12 @@ from collections import namedtuple
 
 import jax
 import jax.numpy as jnp
+from jax.lax import fori_loop as foril
+jidx = jax.ops.index
+jidx_update = jax.ops.index_update
 
 # new package in jax.numpy
 from qdpy_jax import globalvars as gvar_jax
-from qdpy_jax import build_supermatrix as build_supmat
 from qdpy_jax import sparse_precompute as precompute
 from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
 
@@ -66,9 +68,19 @@ def model():
         totalsum += eigvalsum #+ elementsum
     return hypmat_dense
 
+
+def eigval_sort_slice(eigval, eigvec):
+    def body_func(i, ebs):
+        return jidx_update(ebs, jidx[i], jnp.argmax(jnp.abs(eigvec[i])))
+
+    eigbasis_sort = np.zeros(len(eigval), dtype=int)
+    eigbasis_sort = foril(0, len(eigval), body_func, eigbasis_sort)
+
+    return eigval[eigbasis_sort]
+
 def get_eigs(mat):
     eigvals, eigvecs = jnp.linalg.eigh(mat)
-    eigvals = build_supmat.eigval_sort_slice(eigvals, eigvecs)
+    eigvals = eigval_sort_slice(eigvals, eigvecs)
     return eigvals
 
 

@@ -15,7 +15,7 @@ package_dir = os.path.dirname(current_dir)
 data_dir = f"{package_dir}/qdpy_jax"
 import sys
 sys.path.append(f"{package_dir}/plotter")
-import preplotter as preplotter
+# import preplotter as preplotter
 
 #----------------------------------------------------------------------
 #                       All qts in CGS
