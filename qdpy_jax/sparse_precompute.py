@@ -53,8 +53,8 @@ def get_bsp_basis_elements(x):
     # looping over the basis elements for each control point
     for c_ind in range(GVARS.nc):
         # c = np.zeros(GVARS.ctrl_arr_dpt.shape[1])
-        c = np.zeros_like(t)
-        c[c_ind + GVARS.ctrl_ind_th] = 1.0
+        c = np.zeros_like(GVARS.ctrl_arr_fixed[0, :])
+        c[GVARS.ctrl_ind_th + c_ind] = 1.0
         basis_elements[c_ind, :] = splev(x, (t, c, k))
     return basis_elements
 
@@ -80,10 +80,11 @@ def build_integrated_part(eig_idx1, eig_idx2, ell1, ell2, s):
     integrand = -1. * bsp_basis * eigfac / GVARS.r
 
     # shape (nc,)
-    post_integral = integrate.simps(integrand, GVARS.r, axis=1)
+    post_integral = integrate.trapz(integrand, GVARS.r, axis=1)
     return post_integral
 
-def integrate_fixed_wsr(eig_idx1, eig_idx2, ell1, ell2, s):
+def integrate_fixed_wsr(eig_idx1, eig_idx2, ell1, ell2, s,
+                        compute4bsp=False):
     s_ind = (s-1)//2
     ls2fac = ell1*(ell1+1) + ell2*(ell2+1) - s*(s+1)
 
@@ -97,9 +98,12 @@ def integrate_fixed_wsr(eig_idx1, eig_idx2, ell1, ell2, s):
     # total integrand
     # nc = number of control points, the additional value indicates the
     # integral between (rmin, rth), which is constant across MCMC iterations
-    integrand = -1. * GVARS.wsr_fixed[s_ind] * eigfac / GVARS.r
-    # integrand = -1. * GVARS.wsr[s_ind] * eigfac / GVARS.r
-    post_integral = integrate.simps(integrand, GVARS.r) # a scalar
+
+    if compute4bsp:
+        integrand = -1. * bsp_basis * eigfac / GVARS.r
+    else:
+        integrand = -1. * GVARS.wsr_fixed[s_ind] * eigfac / GVARS.r
+    post_integral = integrate.trapz(integrand, GVARS.r) # a scalar
     return post_integral
 
 
@@ -154,61 +158,6 @@ def build_hypmat_freqdiag(CNM_AND_NBS, SUBMAT_DICT, dim_hyper):
         freqdiag[startx:endx] += omega_nl**2 - omegaref**2
     return sparse.BCOO.fromdense(np.diag(freqdiag))
 
-
-def build_hypmat_all_cenmults():
-    # number of multiplets used
-    nmults = len(GVARS.n0_arr)
-    dim_hyper = get_dim_hyper()
-
-    # storing as a list of sparse matrices
-    # the fixed hypat (the part of hypermatrix that does not
-    # change across iterations)
-    fixed_hypmat_all_sparse = []
-    noc_hypmat_all_sparse = []
-    omegaref_nmults = []
-    ell0_nmults = []
-
-    for i in range(nmults):
-        # looping over all the central multiplets                                      
-        n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
-        ell0_nmults.append(ell0)
-
-        # building the namedtuple for the central multiplet and its neighbours            
-        CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST)
-        SUBMAT_DICT = build_SUBMAT_INDICES(CENMULT_AND_NBS)
-        omegaref_nmults.append(CENMULT_AND_NBS.omega_nbs[0])
-
-        freqdiag_sparse = build_hypmat_freqdiag(CENMULT_AND_NBS,
-                                                SUBMAT_DICT,
-                                                dim_hyper)
-        
-        noc_hypmat_this_s = []
-        
-        for s_ind, s in enumerate(GVARS.s_arr):
-            # shape (dim_hyper x dim_hyper) but sparse form
-            non_c_hypmat, fixed_hypmat_s =\
-                    build_hm_nonint_n_fxd_1cnm(CENMULT_AND_NBS,
-                                               SUBMAT_DICT,
-                                               dim_hyper, s)
-            
-            # appending the different m part in the list
-            noc_hypmat_this_s.append(non_c_hypmat)
-            
-            # adding up the different s for the fixed part
-            if s_ind == 0:
-                fixed_hypmat_this_mult = fixed_hypmat_s
-            else:
-                fixed_hypmat_this_mult += fixed_hypmat_s
-
-        # appending the sparse form of the fixed hypmat
-        fixed_hypmat_all_sparse.append(fixed_hypmat_this_mult + freqdiag_sparse)
-
-        # appending the list of sparse matrices in s to the list in cenmults
-        noc_hypmat_all_sparse.append(noc_hypmat_this_s)
-
-    # list of shape (nmults x s x (nc x dim_hyper, dim_hyper))
-    # the last bracket denotes matrices of that shape but in sparse form
-    return noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_nmults, omegaref_nmults
 
 def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
     """Computes elements in the hypermatrix excluding the
@@ -273,7 +222,9 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
             eig_idx2 = nl_idx_pruned.index(CNM_AND_NBS.nl_nbs_idx[j])
 
             # shape (n_control_points,)
-            integrated_part = build_integrated_part(eig_idx1, eig_idx2, ell1, ell2, s)
+            # integrated_part = build_integrated_part(eig_idx1, eig_idx2, ell1, ell2, s)
+            integrated_part = integrate_fixed_wsr(eig_idx1, eig_idx2, ell1, ell2, s,
+                                                  compute4bsp=True)
             #-------------------------------------------------------
             # integrating wsr_fixed for the fixed part
             s_ind = (s-1)//2
@@ -287,12 +238,9 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
             for c_ind in range(GVARS.nc):
                 # non-ctrl points submat
                 # avoiding  newaxis multiplication
-                # ??
-                # non_c_submat_diag = integrated_part[c_ind] * wigvalm
                 np.fill_diagonal(non_c_hypmat_arr[c_ind, startx+dellx:endx-dellx,
                                                   starty+delly:endy-delly],
                                  integrated_part[c_ind] * wigvalm * wigval1)
-                                 # non_c_submat_diag[c_ind])
     
             # the fixed hypermatrix
             np.fill_diagonal(fixed_hypmat[startx+dellx:endx-dellx,
@@ -324,3 +272,59 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
     del fixed_hypmat#, fixed_hypmat_UT
 
     return non_c_hypmat_list, fixed_hypmat_sparse
+
+
+def build_hypmat_all_cenmults():
+    # number of multiplets used
+    nmults = len(GVARS.n0_arr)
+    dim_hyper = get_dim_hyper()
+
+    # storing as a list of sparse matrices
+    # the fixed hypat (the part of hypermatrix that does not
+    # change across iterations)
+    fixed_hypmat_all_sparse = []
+    noc_hypmat_all_sparse = []
+    omegaref_nmults = []
+    ell0_nmults = []
+
+    for i in range(nmults):
+        # looping over all the central multiplets                                      
+        n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
+        ell0_nmults.append(ell0)
+
+        # building the namedtuple for the central multiplet and its neighbours            
+        CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST)
+        SUBMAT_DICT = build_SUBMAT_INDICES(CENMULT_AND_NBS)
+        omegaref_nmults.append(CENMULT_AND_NBS.omega_nbs[0])
+
+        freqdiag_sparse = build_hypmat_freqdiag(CENMULT_AND_NBS,
+                                                SUBMAT_DICT,
+                                                dim_hyper)
+        
+        noc_hypmat_this_s = []
+        
+        for s_ind, s in enumerate(GVARS.s_arr):
+            # shape (dim_hyper x dim_hyper) but sparse form
+            non_c_hypmat, fixed_hypmat_s =\
+                    build_hm_nonint_n_fxd_1cnm(CENMULT_AND_NBS,
+                                               SUBMAT_DICT,
+                                               dim_hyper, s)
+            
+            # appending the different m part in the list
+            noc_hypmat_this_s.append(non_c_hypmat)
+            
+            # adding up the different s for the fixed part
+            if s_ind == 0:
+                fixed_hypmat_this_mult = fixed_hypmat_s
+            else:
+                fixed_hypmat_this_mult += fixed_hypmat_s
+
+        # appending the sparse form of the fixed hypmat
+        fixed_hypmat_all_sparse.append(fixed_hypmat_this_mult + freqdiag_sparse)
+
+        # appending the list of sparse matrices in s to the list in cenmults
+        noc_hypmat_all_sparse.append(noc_hypmat_this_s)
+
+    # list of shape (nmults x s x (nc x dim_hyper, dim_hyper))
+    # the last bracket denotes matrices of that shape but in sparse form
+    return noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_nmults, omegaref_nmults

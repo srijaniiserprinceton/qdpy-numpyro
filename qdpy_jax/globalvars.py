@@ -49,7 +49,7 @@ class qdParams():
     # the bounds on angular degree for each radial order
     ell_bounds = np.array([[200, 200]])
 
-    rmin, rth, rmax = 0.0, 0.9, 1.2
+    rmin, rth, rmax = 0.0, 0.95, 1.2
     fwindow =  150.0 
     smax = 5
     preplot = True
@@ -121,8 +121,9 @@ class GlobalVars():
 
         self.fwindow = qdPars.fwindow
         self.wsr = -1.0*np.loadtxt(f'{self.datadir}/w_s/w.dat')
+        # self.wsr = np.ones_like(self.wsr) #!!
         # self.wsr = np.load(f'wsr-spline.npy')
-        # self.wsr_extend()
+        self.wsr_extend()
 
         # generating the multiplets which we will use
         load_from_file = False
@@ -149,12 +150,12 @@ class GlobalVars():
         # finding the spline params for wsr
         self.spl_deg = None
         self.knot_num = 100
-        self.ctrl_ind_th = 80#np.argmin(abs(self.knot_arr - self.rth))
 
         # getting the spline params for the extreme profiles
         self.knot_arr, self.ctrl_arr_up = self.get_spline_full_r(which_ex='upex')
 
         # the index of the control point below which it is held fixed
+        self.ctrl_ind_th = np.argmin(abs(self.knot_arr - self.rth))
 
         __, self.ctrl_arr_lo = self.get_spline_full_r(which_ex='loex')                    
         __, self.ctrl_arr_dpt = self.get_spline_full_r(which_ex=None)
@@ -170,6 +171,7 @@ class GlobalVars():
         ctrl_arr_fixed[:, :self.ctrl_ind_th] =\
                         ctrl_arr_wdpt_full_r[:, :self.ctrl_ind_th]
         self.ctrl_arr_fixed = ctrl_arr_fixed
+        self.t_full_r = t_full_r
         # creating the w_dpt which is just a smooth curve
         # dying out to zero near the desired rth (given by the
         # self.ctrl_ind_th
@@ -180,7 +182,7 @@ class GlobalVars():
         # creating the bsp_params to be used in precomputation
         # self.ctrl_arr has shape (s x num_ctrl_pts)
         self.nc = self.ctrl_arr_up.shape[1]
-        self.bsp_params = (self.nc_total, self.knot_arr, self.spl_deg)
+        self.bsp_params = (self.nc_total, self.t_full_r, self.spl_deg)
 
         # making the ctrl_arr_up > ctrl_arr_lo at each point
         ind_swap = np.greater(self.ctrl_arr_lo, self.ctrl_arr_up)
@@ -195,6 +197,7 @@ class GlobalVars():
         self.s_arr = tuple(self.s_arr)
         self.omega_list= tuple(self.omega_list)
         self.nl_all = tuple(map(tuple, self.nl_all))
+        print(self.ctrl_arr_dpt[0, self.ctrl_ind_th:])
 
         # if preplot is True, plot the various things for
         # ensuring everything is working properly

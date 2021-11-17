@@ -12,7 +12,7 @@ from qdpy_jax import build_supermatrix as build_supmat
 from qdpy_jax import sparse_precompute as precompute
 from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
 
-jax.config.update("jax_log_compiles", 1)
+#jax.config.update("jax_log_compiles", 1)
 jax.config.update('jax_platform_name', 'cpu')
 
 # enabling 64 bits
@@ -26,9 +26,11 @@ nmults = len(GVARS.n0_arr) # total number of central multiplets
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse,\
     ell0_nmults, omegaref_nmults = precompute.build_hypmat_all_cenmults()
 
+noc_hypmat = tuple(map(tuple, (map(tuple, noc_hypmat_all_sparse))))
+fixed_hypmat = tuple(fixed_hypmat_all_sparse)
+
 # necessary arguments to pass to build full hypermatrix
 len_s = GVARS.wsr.shape[0]
-nc = len(GVARS.ctrl_arr_up)
 
 def model():
     totalsum = 0.0
@@ -54,15 +56,15 @@ def model():
         # building the entire hypermatrix
         hypmat = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
                                                   fixed_hypmat_all_sparse[i],
-                                                  # GVARS.ctrl_arr_dpt[:, GVARS.ctrl_ind_th:],
-                                                  GVARS.ctrl_arr_up,
-                                                  nc, len_s)
+                                                  GVARS.ctrl_arr_dpt[:, GVARS.ctrl_ind_th:],
+                                                  GVARS.nc, len_s)
         
         # finding the eigenvalues of hypermatrix
-        eigvals, __ = jnp.linalg.eigh(hypmat.todense())
+        hypmat_dense = hypmat.todense()
+        eigvals, __ = jnp.linalg.eigh(hypmat_dense)
         eigvalsum = jnp.sum(eigvals)
         totalsum += eigvalsum #+ elementsum
-    return hypmat
+    return hypmat_dense
 
 def get_eigs(mat):
     eigvals, eigvecs = jnp.linalg.eigh(mat)
@@ -75,22 +77,15 @@ model_ = jax.jit(model)
 
 # compiling
 t1c = time.time()
-hypmat = model_()#.block_until_ready()
+hypmat = model_().block_until_ready()
+# hypmat_eigs = get_eigs(hypmat.todense())[:401]/2./omegaref_nmults[0]*GVARS.OM*1e6
 t2c = time.time()
 
-print('Time for compilation in seconds:', (t2c-t1c))
+print(f'Time for compilation in seconds: {(t2c-t1c):.3f}')
 
-
-Niter = 10
 t1e = time.time()
-for i in range(Niter): 
-    print(i)
-    hypmat = model_().todense()
-    hypmat_eigs = get_eigs(hypmat)[:401]/2./omegaref_nmults[0]*GVARS.OM*1e6
+Niter = 10
+for i in range(Niter):
+    hypmat = model_().block_until_ready()
 t2e = time.time()
-
-m_arr = np.arange(-200, 201)
-print(hypmat_eigs/m_arr)
-
-
-print('Time for execution in seconds:', (t2e-t1e)/Niter)
+print(f'Time for execution in seconds: {(t2e-t1e)/Niter:.3f}')
