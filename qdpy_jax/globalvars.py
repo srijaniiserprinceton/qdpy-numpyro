@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 # loading custom libraries/classes
 from qdpy_jax import load_multiplets
 from qdpy_jax import jax_functions as jf
+from qdpy_jax import bsplines as bsp
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
@@ -138,8 +139,8 @@ class GlobalVars():
 
         # the factor to be multiplied to make the upper and lower 
         # bounds of the model space to be explored
-        self.fac_up = np.array([1.1, 2.0, 2.0])
-        self.fac_lo = np.array([0.9, 0.0, 0.0])
+        self.fac_arr = np.array([[1.1, 2.0, 2.0],
+                                 [0.9, 0.0, 0.0]])
 
         # retaining only region between rmin and rmax
         self.r = self.mask_minmax(self.r)
@@ -148,9 +149,26 @@ class GlobalVars():
         self.r_spline = self.r[self.rth_ind:]
         
         # finding the spline params for wsr
-        self.spl_deg = None
+        self.spl_deg = 3
         self.knot_num = 100
 
+        # getting  wsr_fixed and spline_coefficients
+        bsplines = bsp.get_splines(self.r, self.rth, self.wsr,
+                                   self.knot_num, self.fac_arr,
+                                   self.spl_deg)
+        self.wsr_fixed = bsplines.wsr_fixed
+        self.ctrl_arr_up = bsplines.c_arr_up
+        self.ctrl_arr_lo = bsplines.c_arr_lo
+        self.ctrl_arr_dpt_clipped = bsplines.c_arr_dpt_clipped
+        self.ctrl_arr_dpt_full = bsplines.c_arr_dpt_full
+        self.t_internal = bsplines.t_internal
+        self.knot_ind_th = bsplines.knot_ind_th
+        
+        self.bsp_params = (len(self.ctrl_arr_dpt_full),
+                           self.t_internal,
+                           self.spl_deg)
+        self.nc = len(self.ctrl_arr_dpt_clipped)
+        '''
         # getting the spline params for the extreme profiles
         self.knot_arr, self.ctrl_arr_up = self.get_spline_full_r(which_ex='upex')
 
@@ -189,15 +207,16 @@ class GlobalVars():
         ctrl_arr_up_temp = self.ctrl_arr_up.copy()
         self.ctrl_arr_up[ind_swap] = self.ctrl_arr_lo[ind_swap]
         self.ctrl_arr_lo[ind_swap] = ctrl_arr_up_temp[ind_swap]
-
+        '''
+        
         # throws an error if ctrl_arr_up is not always larger than ctrl_arr_lo
         np.testing.assert_array_equal([np.sum(self.ctrl_arr_lo>self.ctrl_arr_up)],[0])
-
+        
         # converting necessary arrays to tuples
         self.s_arr = tuple(self.s_arr)
         self.omega_list= tuple(self.omega_list)
         self.nl_all = tuple(map(tuple, self.nl_all))
-        print(self.ctrl_arr_dpt[0, self.ctrl_ind_th:])
+        print(self.ctrl_arr_dpt_full[0, self.knot_ind_th:])
 
         # if preplot is True, plot the various things for
         # ensuring everything is working properly
@@ -348,7 +367,7 @@ class GlobalVars():
                                             'wsr',
                                             'ctrl_arr_up',
                                             'ctrl_arr_lo',
-                                            'ctrl_arr_dpt',
+                                            'ctrl_arr_dpt_clipped',
                                             'knot_arr',
                                             'eigvals_true',
                                             'eigvals_sigma'],
@@ -360,8 +379,8 @@ class GlobalVars():
                                             self.wsr,
                                             self.ctrl_arr_up,
                                             self.ctrl_arr_lo,
-                                            self.ctrl_arr_dpt,
-                                            self.knot_arr,
+                                            self.ctrl_arr_dpt_clipped,
+                                            self.t_internal,
                                             self.eigvals_true,
                                             self.eigvals_sigma))
         return GVAR_TRACED

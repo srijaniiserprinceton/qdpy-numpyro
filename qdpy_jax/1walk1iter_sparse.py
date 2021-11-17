@@ -58,7 +58,7 @@ def model():
         # building the entire hypermatrix
         hypmat = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
                                                   fixed_hypmat_all_sparse[i],
-                                                  GVARS.ctrl_arr_dpt[:, GVARS.ctrl_ind_th:],
+                                                  GVARS.ctrl_arr_dpt_clipped,
                                                   GVARS.nc, len_s)
         
         # finding the eigenvalues of hypermatrix

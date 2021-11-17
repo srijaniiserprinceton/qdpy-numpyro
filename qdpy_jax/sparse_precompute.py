@@ -53,8 +53,8 @@ def get_bsp_basis_elements(x):
     # looping over the basis elements for each control point
     for c_ind in range(GVARS.nc):
         # c = np.zeros(GVARS.ctrl_arr_dpt.shape[1])
-        c = np.zeros_like(GVARS.ctrl_arr_fixed[0, :])
-        c[GVARS.ctrl_ind_th + c_ind] = 1.0
+        c = np.zeros_like(GVARS.ctrl_arr_dpt_full[0, :])
+        c[GVARS.knot_ind_th + c_ind] = 1.0
         basis_elements[c_ind, :] = splev(x, (t, c, k))
     return basis_elements
 
