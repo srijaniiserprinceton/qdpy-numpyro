@@ -103,6 +103,7 @@ class preplotter:
         
         plt.tight_layout()
         plt.savefig('wsr_splined.pdf')
+        plt.close()
 
     def plot_wsr_extreme(self):
         # getting the dpt profile from clipped dpt
@@ -154,8 +155,8 @@ class preplotter:
                            color='gray', alpha=0.5)
 
         plt.tight_layout()
-
         plt.savefig('wsr_extreme.pdf')
+        plt.close()
 
     def get_percent_error(self, a1, a2):
         errperc = np.zeros_like(a1)

@@ -55,7 +55,7 @@ def model():
         eigvals, __ = jnp.linalg.eigh(hypmat_dense)
         eigvalsum = jnp.sum(eigvals)
         totalsum += eigvalsum
-    return totalsum
+    return hypmat_dense
 
 
 def eigval_sort_slice(eigval, eigvec):
@@ -74,23 +74,24 @@ def get_eigs(mat):
     eigvals = eigval_sort_slice(eigvals, eigvecs)
     return eigvals
 
-'''
 def compare_hypmat():
     hypmat = model_().block_until_ready()
     import matplotlib.pyplot as plt
     import numpy as np
     # plotting difference with qdpt.py
-    supmat_qdpt = np.load('../../qdPy/supmat_qdpt.npy')
+    supmat_qdpt = np.load("supmat_qdpt.npy").real
 
     sm1 = np.diag(hypmat)
-    sm2 = np.diag(supmat_qdpt.real)
+    sm2 = np.diag(supmat_qdpt)
 
-    plt.figure()
-    plt.plot(sm1 - sm2)
-    plt.savefig('supmat_diff.pdf')
-    plt.close()
-    return None
-'''
+    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(10, 5))
+    axs = axs.flatten()
+    axs[0].plot(sm1 - sm2)
+    im = axs[1].imshow(hypmat - supmat_qdpt)
+    plt.colorbar(im, ax=axs[1])
+    print(f"Max diff = {abs(hypmat - supmat_qdpt).max():.3e}")
+    fig.savefig('supmat_diff.pdf')
+    return hypmat
 
 if __name__ == "__main__":
     model_ = jit(model)
@@ -99,3 +100,5 @@ if __name__ == "__main__":
     jf.time_run(model_, prefix="compilation")
     jf.time_run(model_, prefix="execution", Niter=10,
                 block_until_ready=True)
+
+    # hypmat = compare_hypmat()
