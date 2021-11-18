@@ -89,9 +89,9 @@ class preplotter:
         w3r_errperc = self.get_percent_error(wsr_spl_full[1], self.wsr_dpt[1])
         w5r_errperc = self.get_percent_error(wsr_spl_full[2], self.wsr_dpt[2])
         
-        ax[0,1].plot(self.r, w1r_errperc, 'r', alpha=0.5)
-        ax[1,1].plot(self.r, w3r_errperc, 'r', alpha=0.5)
-        ax[2,1].plot(self.r, w5r_errperc, 'r', alpha=0.5)
+        ax[0,1].semilogy(self.r, abs(w1r_errperc), 'r', alpha=0.5)
+        ax[1,1].semilogy(self.r, abs(w3r_errperc), 'r', alpha=0.5)
+        ax[2,1].semilogy(self.r, abs(w5r_errperc), 'r', alpha=0.5)
         
         # settin axis labels
         ax[2,1].set_xlabel('$r$ in $R_{\odot}$', size=16)
