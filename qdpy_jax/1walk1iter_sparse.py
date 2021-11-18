@@ -69,7 +69,7 @@ def model():
         eigvals, __ = jnp.linalg.eigh(hypmat_dense)
         eigvalsum = jnp.sum(eigvals)
         totalsum += eigvalsum #+ elementsum
-    return hypmat_dense
+    return totalsum #hypmat_dense
 
 
 def eigval_sort_slice(eigval, eigvec):
@@ -101,12 +101,13 @@ print(f'Time for compilation in seconds: {(t2c-t1c):.3f}')
 t1e = time.time()
 Niter = 10
 for i in range(Niter):
+    print(i)
     hypmat = model_().block_until_ready()
 t2e = time.time()
 print(f'Time for execution in seconds: {(t2e-t1e)/Niter:.3f}')
 
 
-
+'''
 # plotting difference with qdpt.py
 supmat_qdpt = np.load('../../qdPy/supmat_qdpt.npy')
 
@@ -118,3 +119,4 @@ plt.figure()
 plt.plot(sm1 - sm2)
 
 plt.savefig('supmat_diff.pdf')
+'''
