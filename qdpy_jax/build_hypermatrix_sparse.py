@@ -17,7 +17,7 @@ def build_hypmat_w_c(noc_hypmat, fixed_hypmat, c_arr, nc, len_s):
     noc_hypmat : list of sparse matrices. It is of 
                  shape (s x (dim_hyper x dim_hyper))
                  where the inner bracket shows matrix.
-    
+
     fixed_hypmat : float sparse array. It is of 
                    shape (dim_hyper x dim_hyper)
                    in its dense form.
@@ -26,9 +26,8 @@ def build_hypmat_w_c(noc_hypmat, fixed_hypmat, c_arr, nc, len_s):
             This is the (s x n_ctrl_pts) matrix
             of control points sampled from Nympyro.
     '''
+    # initializing the hypmat
     hypmat_cs_summed = 0.0*noc_hypmat[0][0]
-    # making it all zero
-    # hypmat_cs_summed *= 0.0
 
     for s_ind in range(len_s):
         for c_ind in range(nc):

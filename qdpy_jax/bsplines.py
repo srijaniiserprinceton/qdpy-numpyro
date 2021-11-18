@@ -1,5 +1,5 @@
-import numpy as np
 import sys
+import numpy as np
 from scipy.interpolate import splrep, splev
 
 class get_splines:
@@ -15,7 +15,6 @@ class get_splines:
         self.knot_ind_th = None
         self.t_scipy = None
         self.t_internal = None
-        # self.c_arr_full = None
         self.c_arr_dpt_full = None
         self.c_arr_dpt_clipped = None
         self.c_arr_up = None
@@ -35,7 +34,9 @@ class get_splines:
         
         # making internal knots (excluding the first external point)
         t_internal = self.t_scipy[self.spl_deg+1:self.knot_ind_th]
-        # putting certain number of knots in the surface part (excluding the outermost point)
+        # putting certain number of knots in the surface part
+        # (excluding the outermost point)
+
         t_internal = np.append(t_internal, np.linspace(self.t_scipy[self.knot_ind_th],
                                                        self.t_scipy[-(self.spl_deg+2)],
                                                        self.custom_knot_num))
@@ -45,7 +46,7 @@ class get_splines:
                             self.wsr[0],
                             k=self.spl_deg,
                             t=t_internal)
-        
+
         # in the above step we did a dummy run to get the correctly padded knot
         self.t_internal = t
 
@@ -62,7 +63,8 @@ class get_splines:
     def get_uplo_dpt_carr(self):
         # making internal knots (excluding the first external point)
         t_internal = self.t_scipy[self.spl_deg+1:self.knot_ind_th]
-        # putting certain number of knots in the surface part (excluding the outermost point)
+        # putting certain number of knots in the surface part
+        # (excluding the outermost point)
         t_internal = np.append(t_internal, np.linspace(self.t_scipy[self.knot_ind_th],
                                                        self.t_scipy[-(self.spl_deg+2)],
                                                        self.custom_knot_num))
@@ -84,7 +86,6 @@ class get_splines:
             c_arr_dpt = np.vstack((c_arr_dpt, c))
 
         self.t_internal = t
-            
         self.c_arr_dpt_full = c_arr_dpt
         
         # clipping it off below rth (approximately)
@@ -104,14 +105,15 @@ class get_splines:
         self.c_arr_up = c_arr_up
         self.c_arr_lo = c_arr_lo
 
-    
     def get_fixed_wsr(self):
         # creating the fixed control points
         c_arr_fixed = np.zeros_like(self.c_arr_dpt_full)
         c_arr_fixed[:, :self.knot_ind_th] = self.c_arr_dpt_full[:, :self.knot_ind_th]
+        self.wsr_fixed = splev(self.r,
+                               (self.t_internal,
+                                c_arr_fixed[0],
+                                self.spl_deg))
 
-        self.wsr_fixed = splev(self.r, (self.t_internal, c_arr_fixed[0], self.spl_deg))
-        
         # creating the fixed wsr
         for s_ind in range(1, self.len_s):
             self.wsr_fixed = np.vstack((self.wsr_fixed, 
