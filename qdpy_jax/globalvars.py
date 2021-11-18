@@ -16,7 +16,7 @@ package_dir = os.path.dirname(current_dir)
 data_dir = f"{package_dir}/qdpy_jax"
 import sys
 sys.path.append(f"{package_dir}/plotter")
-# import preplotter as preplotter
+import preplotter as preplotter
 
 #----------------------------------------------------------------------
 #                       All qts in CGS
@@ -50,7 +50,7 @@ class qdParams():
     # the bounds on angular degree for each radial order
     ell_bounds = np.array([[200, 200]])
 
-    rmin, rth, rmax = 0.0, 0.95, 1.2
+    rmin, rth, rmax = 0.3, 0.7, 1.2
     fwindow =  150.0 
     smax = 5
     preplot = True
@@ -122,9 +122,20 @@ class GlobalVars():
 
         self.fwindow = qdPars.fwindow
         self.wsr = -1.0*np.loadtxt(f'{self.datadir}/w_s/w.dat')
+
         # self.wsr = np.ones_like(self.wsr) #!!
         # self.wsr = np.load(f'wsr-spline.npy')
         self.wsr_extend()
+
+        
+        # rth = r threshold beyond which the profiles are updated. 
+        self.rth = qdPars.rth
+        
+        # retaining only region between rmin and rmax
+        self.r = self.mask_minmax(self.r)
+        self.wsr = self.mask_minmax(self.wsr, axis=1)
+        self.rth_ind = self.get_ind(self.r, self.rth)
+        self.r_spline = self.r[self.rth_ind:]
 
         # generating the multiplets which we will use
         load_from_file = False
@@ -134,19 +145,11 @@ class GlobalVars():
         self.n0_arr, self.ell0_arr = n_arr, ell_arr
         self.eigvals_true, self.eigvals_sigma = self.get_eigvals_true()
 
-        # rth = r threshold beyond which the profiles are updated. 
-        self.rth = qdPars.rth
-
         # the factor to be multiplied to make the upper and lower 
         # bounds of the model space to be explored
         self.fac_arr = np.array([[1.1, 2.0, 2.0],
                                  [0.9, 0.0, 0.0]])
 
-        # retaining only region between rmin and rmax
-        self.r = self.mask_minmax(self.r)
-        self.wsr = self.mask_minmax(self.wsr, axis=1)
-        self.rth_ind = self.get_ind(self.r, self.rth)
-        self.r_spline = self.r[self.rth_ind:]
         
         # finding the spline params for wsr
         self.spl_deg = 3
@@ -167,7 +170,8 @@ class GlobalVars():
         self.bsp_params = (len(self.ctrl_arr_dpt_full),
                            self.t_internal,
                            self.spl_deg)
-        self.nc = len(self.ctrl_arr_dpt_clipped)
+        self.nc = len(self.ctrl_arr_dpt_clipped[0])
+
         '''
         # getting the spline params for the extreme profiles
         self.knot_arr, self.ctrl_arr_up = self.get_spline_full_r(which_ex='upex')
@@ -216,17 +220,16 @@ class GlobalVars():
         self.s_arr = tuple(self.s_arr)
         self.omega_list= tuple(self.omega_list)
         self.nl_all = tuple(map(tuple, self.nl_all))
-        print(self.ctrl_arr_dpt_full[0, self.knot_ind_th:])
 
         # if preplot is True, plot the various things for
         # ensuring everything is working properly
-        '''
+        
         if qdPars.preplot:
-            preplotter.plot_extreme_wsr(self.r, self.r_spline, self.OM, self.wsr,
-                                        self.ctrl_arr_up, self.ctrl_arr_dpt,
-                                        self.ctrl_arr_lo, self.knot_arr,
-                                        self.rth_ind, self.spl_deg)
-        '''
+            check_splines = preplotter.preplotter(self.r, self.OM, self.wsr, self.wsr_fixed,
+                                                  self.ctrl_arr_up, self.ctrl_arr_lo,
+                                                  self.ctrl_arr_dpt_full, self.ctrl_arr_dpt_clipped,
+                                                  self.t_internal, self.knot_ind_th, self.spl_deg)
+
         return None
 
     def get_eigvals_true(self):
@@ -504,11 +507,12 @@ class GlobalVars():
 
     def wsr_extend(self):
         r1ind = np.argmin(abs(self.r - 1))
-        x = self.r[r1ind-300:r1ind]
+        # x = self.r[r1ind-300:r1ind]
         for i in range(len(self.wsr)):
-            y = self.wsr[i, r1ind-300:r1ind]
-            f = interp1d(x, y, fill_value='extrapolate')
-            self.wsr[i, r1ind:] = f(self.r[r1ind:])
+            # y = self.wsr[i, r1ind-300:r1ind]
+            # f = interp1d(x, y, fill_value='extrapolate')
+            # self.wsr[i, r1ind:] = f(self.r[r1ind:])
+            self.wsr[i, r1ind:] = self.wsr[i, r1ind-1]
 
     def gen_wsr_from_c(self, x, bsp_params):
         t, c_arr, k = bsp_params

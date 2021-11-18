@@ -28,8 +28,10 @@ nmults = len(GVARS.n0_arr) # total number of central multiplets
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse,\
     ell0_nmults, omegaref_nmults = precompute.build_hypmat_all_cenmults()
 
+'''
 noc_hypmat = tuple(map(tuple, (map(tuple, noc_hypmat_all_sparse))))
 fixed_hypmat = tuple(fixed_hypmat_all_sparse)
+'''
 
 # necessary arguments to pass to build full hypermatrix
 len_s = GVARS.wsr.shape[0]
