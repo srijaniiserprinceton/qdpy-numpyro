@@ -172,47 +172,6 @@ class GlobalVars():
                            self.spl_deg)
         self.nc = len(self.ctrl_arr_dpt_clipped[0])
 
-        '''
-        # getting the spline params for the extreme profiles
-        self.knot_arr, self.ctrl_arr_up = self.get_spline_full_r(which_ex='upex')
-
-        # the index of the control point below which it is held fixed
-        self.ctrl_ind_th = np.argmin(abs(self.knot_arr - self.rth))
-
-        __, self.ctrl_arr_lo = self.get_spline_full_r(which_ex='loex')                    
-        __, self.ctrl_arr_dpt = self.get_spline_full_r(which_ex=None)
-        self.nc_total = self.ctrl_arr_up.shape[1]
-
-        # since we'll be varying them only beyond rth
-        self.ctrl_arr_up = self.ctrl_arr_up[:, self.ctrl_ind_th:]
-        self.ctrl_arr_lo = self.ctrl_arr_lo[:, self.ctrl_ind_th:]
-
-        # creating the ctrl_arr for the fixed points
-        t_full_r, ctrl_arr_wdpt_full_r = self.get_spline_full_r(which_ex=None)
-        ctrl_arr_fixed = np.zeros_like(ctrl_arr_wdpt_full_r)
-        ctrl_arr_fixed[:, :self.ctrl_ind_th] =\
-                        ctrl_arr_wdpt_full_r[:, :self.ctrl_ind_th]
-        self.ctrl_arr_fixed = ctrl_arr_fixed
-        self.t_full_r = t_full_r
-        # creating the w_dpt which is just a smooth curve
-        # dying out to zero near the desired rth (given by the
-        # self.ctrl_ind_th
-        self.wsr_fixed = self.gen_wsr_from_c(self.r, (t_full_r,
-                                                      ctrl_arr_fixed,
-                                                      self.spl_deg))
-
-        # creating the bsp_params to be used in precomputation
-        # self.ctrl_arr has shape (s x num_ctrl_pts)
-        self.nc = self.ctrl_arr_up.shape[1]
-        self.bsp_params = (self.nc_total, self.t_full_r, self.spl_deg)
-
-        # making the ctrl_arr_up > ctrl_arr_lo at each point
-        ind_swap = np.greater(self.ctrl_arr_lo, self.ctrl_arr_up)
-        ctrl_arr_up_temp = self.ctrl_arr_up.copy()
-        self.ctrl_arr_up[ind_swap] = self.ctrl_arr_lo[ind_swap]
-        self.ctrl_arr_lo[ind_swap] = ctrl_arr_up_temp[ind_swap]
-        '''
-        
         # throws an error if ctrl_arr_up is not always larger than ctrl_arr_lo
         np.testing.assert_array_equal([np.sum(self.ctrl_arr_lo>self.ctrl_arr_up)],[0])
         
@@ -225,11 +184,15 @@ class GlobalVars():
         # ensuring everything is working properly
         
         if qdPars.preplot:
-            check_splines = preplotter.preplotter(self.r, self.OM, self.wsr, self.wsr_fixed,
-                                                  self.ctrl_arr_up, self.ctrl_arr_lo,
-                                                  self.ctrl_arr_dpt_full, self.ctrl_arr_dpt_clipped,
-                                                  self.t_internal, self.knot_ind_th, self.spl_deg)
-
+            check_splines = preplotter.preplotter(self.r, self.OM, self.wsr,
+                                                  self.wsr_fixed,
+                                                  self.ctrl_arr_up,
+                                                  self.ctrl_arr_lo,
+                                                  self.ctrl_arr_dpt_full,
+                                                  self.ctrl_arr_dpt_clipped,
+                                                  self.t_internal,
+                                                  self.knot_ind_th,
+                                                  self.spl_deg)
         return None
 
     def get_eigvals_true(self):

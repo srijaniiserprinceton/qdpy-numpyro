@@ -39,24 +39,6 @@ len_s = GVARS.wsr.shape[0]
 
 def model():
     totalsum = 0.0
-    '''
-    #for i in range(nmults):
-    def loop_over_mults(i, totalsum):
-        # building the entire hypermatrix
-        hypmat =\
-            build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
-                                                  GVARS.ctrl_arr_dpt)
-        
-        # finding the eigenvalues of hypermatrix
-        #eigvals, __ = jnp.linalg.eigh(hypmat)
-        #eigvalsum = jnp.sum(eigvals)
-
-        #totalsum += eigvalsum #+ elementsum
-        totalsum += jnp.sum(hypmat)
-        return totalsum
-       
-    totalsum = jax.lax.fori_loop(0, nmults, loop_over_mults, totalsum)
-    '''
     for i in range(nmults):
         # building the entire hypermatrix
         hypmat = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
@@ -78,7 +60,6 @@ def eigval_sort_slice(eigval, eigvec):
 
     eigbasis_sort = np.zeros(len(eigval), dtype=int)
     eigbasis_sort = foril(0, len(eigval), body_func, eigbasis_sort)
-
     return eigval[eigbasis_sort]
 
 def get_eigs(mat):
