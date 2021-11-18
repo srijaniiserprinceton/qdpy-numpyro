@@ -65,16 +65,21 @@ def model():
             numpyro.sample(f'c5_{i}', dist.Uniform(cmin[2, i], cmax[2, i])))
         return c_arr
 
-    ctrl_arr = foril(0, nc, true_func, ctrl_arr)
+    ctrl_arr = foril(0, nc-4, true_func, ctrl_arr)
     '''
     c1_list = []
     c3_list = []
     c5_list = []
 
-    for i in range(cmax.shape[1]):
+    for i in range(cmax.shape[1]-4):
         c1_list.append(numpyro.sample(f'c1_{i}', dist.Uniform(cmin[0, i], cmax[0, i])))
         c3_list.append(numpyro.sample(f'c3_{i}', dist.Uniform(cmin[1, i], cmax[1, i])))
         c5_list.append(numpyro.sample(f'c5_{i}', dist.Uniform(cmin[2, i], cmax[2, i])))
+
+    for i in range(4):
+        c1_list.append(0.0)
+        c1_list.append(0.0)
+        c1_list.append(0.0)
 
     ctrl_arr = [jnp.array(c1_list),
                 jnp.array(c3_list),
@@ -119,7 +124,7 @@ rng_key, rng_key_ = random.split(rng_key)
 # Run NUTS.
 #kernel = NUTS(model)
 kernel = SA(model, init_strategy=init_to_value(values=ctrl_arr_dpt))
-mcmc = MCMC(kernel, num_warmup=50, num_samples=100)
+mcmc = MCMC(kernel, num_warmup=1500, num_samples=2000)
 mcmc.run(rng_key_)
 
 save_obj(mcmc.get_samples(), f"{GVARS_PATHS.scratch_dir}/samples")

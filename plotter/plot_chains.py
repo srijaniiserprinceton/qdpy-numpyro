@@ -35,7 +35,7 @@ def plot_chains(wnum):
 
 
 if __name__ == "__main__":
-    samples1 = load_obj(f"{dirnames[1]}/samples-test1")
+    samples1 = load_obj(f"{dirnames[1]}/samples")
     sample_keys = samples1.keys()
-    fig = plot_chains(1)
+    fig = plot_chains(5)
     fig.show()

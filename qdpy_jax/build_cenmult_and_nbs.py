@@ -1,16 +1,33 @@
-import jax
 import numpy as np   
-
-# imports from qdpy_jax
 from qdpy_jax import jax_functions as jf
 
-def get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS):
+def getnt4cenmult(n0, ell0, GVARS):
     """Function that returns the name tuple for the
     attributes of the central mode and the neighbours for 
     that central mode. n0 and ell0 are static since everything
-    else depends on n0 and ell0."""
+    else depends on n0 and ell0.
 
+    Parameters:
+    -----------
+    n0 - int
+        The radial order of the central multiplet
+    ell0 - int
+        The spherical harmonic degree of central multiplet
+    GVARS - object
+        Python object with the following attributes:
+        nl_neighbours - np.ndarray(ndim=2, dtype=int)
+        nl_all - np.ndarray(ndim=2, dtype=int)
+        omega_list - np.ndarray(ndim=1, dtype=float)
+        s_arr - np.ndarray(ndim=1, dtype=int)
+        fwindow - float
+        OM - float
+
+    Returns:
+    --------
+    CENMULT_AND_NBS - namedtuple containing 'nl_nbs', 'nl_nbs_idx', 'omega_nbs'
+    """
     def nl_idx(n0, ell0):
+        """Find the index for given n0, ell0"""
         try:
             idx = nl_list.index([n0, ell0])
         except ValueError:
@@ -19,6 +36,7 @@ def get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS):
         return idx
 
     def nl_idx_vec(nl_neighbours):
+        """Find the index for given n0, ell0"""
         nlnum = nl_neighbours.shape[0]
         nlidx = np.zeros(nlnum, dtype='int32')
         for i in range(nlnum):
@@ -27,6 +45,7 @@ def get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS):
         return nlidx
 
     def get_omega_neighbors(nl_idx):
+        """Get omega of the neighbours of central multiplet"""
         nlnum = len(nl_idx)
         omega_neighbors = np.zeros(nlnum)
         for i in range(nlnum):
@@ -66,7 +85,6 @@ def get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS):
     nl_neighbours = nl_arr[mask_nb][sort_idx]
     nl_neighbours_idx = nl_idx_vec(nl_neighbours)
     omega_neighbours = get_omega_neighbors(nl_neighbours_idx)
-    
 
     CENMULT_AND_NBS = jf.create_namedtuple('CENMULT_AND_NBS',
                                            ['nl_nbs',

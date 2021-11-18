@@ -1,20 +1,19 @@
 import numpy as np
-from jax.experimental import sparse
 from scipy import integrate
 from scipy.interpolate import splev
-from jax import jit
-import sys
 
-from qdpy_jax import globalvars as gvar_jax
-from qdpy_jax import prune_multiplets
+from jax.experimental import sparse
+from jax import jit
+
 from qdpy_jax import load_multiplets
+from qdpy_jax import prune_multiplets
 from qdpy_jax import jax_functions as jf
-from qdpy_jax import build_cenmult_and_nbs as build_CENMULT_AND_NBS
 from qdpy_jax import wigner_map2 as wigmap
+from qdpy_jax import globalvars as gvar_jax
+from qdpy_jax import build_cenmult_and_nbs as build_cnm
 
 # defining functions used in multiplet functions in the script
-get_namedtuple_for_cenmult_and_neighbours =\
-                    build_CENMULT_AND_NBS.get_namedtuple_for_cenmult_and_neighbours
+getnt4cenmult = build_cnm.getnt4cenmult
 _find_idx = wigmap.find_idx
 jax_minus1pow_vec = jf.jax_minus1pow_vec
 
@@ -116,7 +115,7 @@ def get_dim_hyper():
 
     for i in range(nmults):
         n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
-        CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST)
+        CENMULT_AND_NBS = getnt4cenmult(n0, ell0, GVARS_ST)
         dim_super_local = np.sum(2*CENMULT_AND_NBS.nl_nbs[:, 1] + 1)
         if (dim_super_local > dim_hyper): dim_hyper = dim_super_local
     return dim_hyper
@@ -252,22 +251,12 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
 
     # making it a list to allow easy c * hypermat later
     for c_ind in range(GVARS.nc):
-        # making sparse array
-        # non_c_hypmat_UT = 0.5*np.diag(np.diag(non_c_hypmat_arr[c_ind]))
-        # non_c_hypmat_UT += np.triu(non_c_hypmat_arr[c_ind], k=1)
-        # non_c_hypmat = non_c_hypmat_UT + non_c_hypmat_UT.T
-        # non_c_hypmat_arr_sparse = sparse.BCOO.fromdense(non_c_hypmat)
         non_c_hypmat_arr_sparse = sparse.BCOO.fromdense(non_c_hypmat_arr[c_ind])
         non_c_hypmat_list.append(non_c_hypmat_arr_sparse)
 
-    # deleting for ensuring no extra memory
-    del non_c_hypmat_arr
-    
+    del non_c_hypmat_arr # deleting for ensuring no extra memory
+
     # sparsifying the fixed hypmat
-    # fixed_hypmat_UT = 0.5*np.diag(np.diag(fixed_hypmat))
-    # fixed_hypmat_UT += np.triu(fixed_hypmat, k=1)
-    # fixed_hypmat = fixed_hypmat_UT + fixed_hypmat_UT.T
-    # fixed_hypmat_sparse = sparse.BCOO.fromdense(fixed_hypmat)
     fixed_hypmat_sparse = sparse.BCOO.fromdense(fixed_hypmat)
     del fixed_hypmat#, fixed_hypmat_UT
 
@@ -293,7 +282,7 @@ def build_hypmat_all_cenmults():
         ell0_nmults.append(ell0)
 
         # building the namedtuple for the central multiplet and its neighbours            
-        CENMULT_AND_NBS = get_namedtuple_for_cenmult_and_neighbours(n0, ell0, GVARS_ST)
+        CENMULT_AND_NBS = getnt4cenmult(n0, ell0, GVARS_ST)
         SUBMAT_DICT = build_SUBMAT_INDICES(CENMULT_AND_NBS)
         omegaref_nmults.append(CENMULT_AND_NBS.omega_nbs[0])
 
