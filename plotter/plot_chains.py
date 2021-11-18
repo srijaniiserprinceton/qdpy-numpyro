@@ -1,20 +1,27 @@
-import numpy as np
-import pickle
 import os
+import argparse
 import matplotlib.pyplot as plt
+from qdpy_jax import jax_functions as jf
+
+with open(f"{package_dir}/.config", "r") as f:
+    dirnames = f.read().splitlines()
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
 data_dir = f"{package_dir}/qdpy_jax"
 
-with open(f"{package_dir}/.config", "r") as f:
-    dirnames = f.read().splitlines()
-
-
-
-def load_obj(name):
-    with open(name + ".pkl", "rb") as f:
-        return pickle.load(f)
+parser = argparse.ArgumentParser()
+parser.add_argument("--n0", help="radial order",
+                    type=int, default=0)
+parser.add_argument("--lmin", help="min angular degree",
+                    type=int, default=200)
+parser.add_argument("--lmax", help="max angular degree",
+                    type=int, default=200)
+parser.add_argument("--maxiter", help="max MCMC iterations",
+                    type=int, default=100)
+parser.add_argument("--cplot", help="= (1, 3, 5)?",
+                    type=int, default=1)
+ARGS = parser.parse_args()
 
 
 def plot_chains(wnum):
@@ -32,10 +39,9 @@ def plot_chains(wnum):
     fig.tight_layout()
     return fig
 
-
-
 if __name__ == "__main__":
-    samples1 = load_obj(f"{dirnames[1]}/samples")
+    fname = f"samples-{ARGS.n0}-{ARGS.lmin}-{ARGS.lmax}-{ARGS.maxiter}"
+    samples1 = jf.load_obj(f"{dirnames[1]}/{fname}")
     sample_keys = samples1.keys()
-    fig = plot_chains(5)
+    fig = plot_chains(ARGS.cplot)
     fig.show()

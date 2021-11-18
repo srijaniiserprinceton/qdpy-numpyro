@@ -21,7 +21,10 @@ jax_minus1pow_vec = jf.jax_minus1pow_vec
 jax_Omega_ = jit(jf.jax_Omega)
 jax_gamma_ = jit(jf.jax_gamma)
 
-GVARS = gvar_jax.GlobalVars()
+ARGS = np.loadtxt(".n0-lmin-lmax.dat", dtype=int)
+GVARS = gvar_jax.GlobalVars(n0=ARGS[0],
+                            lmin=ARGS[1],
+                            lmax=ARGS[2])
 GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx =\
                     prune_multiplets.get_pruned_attributes(GVARS,

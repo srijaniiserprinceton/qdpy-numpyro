@@ -1,3 +1,4 @@
+import argparse
 from jax import jit
 import jax.numpy as jnp
 from jax.config import config
@@ -10,13 +11,29 @@ from jax.ops import index_update as jidx_update
 config.update('jax_platform_name', 'cpu')
 config.update('jax_enable_x64', True)
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--n0", help="radial order",
+                    type=int, default=0)
+parser.add_argument("--lmin", help="min angular degree",
+                    type=int, default=200)
+parser.add_argument("--lmax", help="max angular degree",
+                    type=int, default=200)
+ARGS = parser.parse_args()
+
+with open(".n0-lmin-lmax.dat", "w") as f:
+    f.write(f"{ARGS.n0}" + "\n" +
+            f"{ARGS.lmin}" + "\n" +
+            f"{ARGS.lmax}")
+
 # importing local package 
 from qdpy_jax import jax_functions as jf
 from qdpy_jax import globalvars as gvar_jax
 from qdpy_jax import sparse_precompute as precompute
 from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
 
-GVARS = gvar_jax.GlobalVars()
+GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
+                            lmin=ARGS.lmin,
+                            lmax=ARGS.lmax)
 nmults = len(GVARS.n0_arr)  # total number of central multiplets
 len_s = GVARS.wsr.shape[0]  # number of s
 

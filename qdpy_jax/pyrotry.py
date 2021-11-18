@@ -1,3 +1,4 @@
+import argparse
 from jax import random
 import jax.numpy as jnp
 from jax.config import config
@@ -9,8 +10,27 @@ config.update("jax_log_compiles", 1)
 config.update('jax_platform_name', 'cpu')
 config.update('jax_enable_x64', True)
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--n0", help="radial order",
+                    type=int, default=0)
+parser.add_argument("--lmin", help="min angular degree",
+                    type=int, default=200)
+parser.add_argument("--lmax", help="max angular degree",
+                    type=int, default=200)
+parser.add_argument("--maxiter", help="max MCMC iterations",
+                    type=int, default=100)
+parser.add_argument("--chain_num", help="chain number",
+                    type=int, default=1)
+ARGS = parser.parse_args()
+
+with open(".n0-lmin-lmax.dat", "w") as f:
+    f.write(f"{ARGS.n0}" + "\n" +
+            f"{ARGS.lmin}" + "\n" +
+            f"{ARGS.lmax}")
+
 # new package in jax.numpy
 from qdpy_jax import globalvars as gvar_jax
+from qdpy_jax import jax_functions as jf
 from qdpy_jax import sparse_precompute as precompute
 from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
 
@@ -21,16 +41,10 @@ from numpyro.infer import NUTS, MCMC, SA
 from numpyro.infer import init_to_sample, init_to_value
 numpyro.set_platform('cpu')
 
-import pickle
-def save_obj(obj, name):
-    with open(name + '.pkl', 'wb') as f:
-        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
-
-def load_obj(name):
-    with open(name + '.pkl', 'rb') as f:
-        return pickle.load(f)
-
-GVARS = gvar_jax.GlobalVars()
+print(f"lmin = {ARGS.lmin}, lmax={ARGS.lmax}, n0={ARGS.n0}")
+GVARS = gvar_jax.GlobalVars(lmin=ARGS.lmin,
+                            lmax=ARGS.lmax,
+                            n0=ARGS.n0)
 GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 eigvals_true = jnp.asarray(GVARS_TR.eigvals_true)
 eigvals_sigma = jnp.asarray(GVARS_TR.eigvals_sigma)
@@ -53,20 +67,6 @@ ctrl_arr_dpt = jnp.asarray(GVARS.ctrl_arr_dpt_clipped)
 
 def model():
     # setting min and max value to be 0.1*true and 3.*true
-    '''
-    ctrl_arr = jnp.zeros((len_s, nc))
-
-    def true_func(i, c_arr):
-        c_arr = jidx_update(c_arr, jidx[0, i],
-            numpyro.sample(f'c1_{i}', dist.Uniform(cmin[0, i], cmax[0, i])))
-        c_arr = jidx_update(c_arr, jidx[1, i],
-            numpyro.sample(f'c3_{i}', dist.Uniform(cmin[1, i], cmax[1, i])))
-        c_arr = jidx_update(c_arr, jidx[2, i],
-            numpyro.sample(f'c5_{i}', dist.Uniform(cmin[2, i], cmax[2, i])))
-        return c_arr
-
-    ctrl_arr = foril(0, nc-4, true_func, ctrl_arr)
-    '''
     c1_list = []
     c3_list = []
     c5_list = []
@@ -118,13 +118,14 @@ def get_eigs(mat):
 
 
 # Start from this source of randomness. We will split keys for subsequent operations.
-rng_key = random.PRNGKey(12)
+rng_key = random.PRNGKey(ARGS.lmin+ARGS.lmax+ARGS.chain_num)
 rng_key, rng_key_ = random.split(rng_key)
 
 # Run NUTS.
 #kernel = NUTS(model)
-kernel = SA(model, init_strategy=init_to_value(values=ctrl_arr_dpt))
-mcmc = MCMC(kernel, num_warmup=1500, num_samples=2000)
+kernel = SA(model)#, init_strategy=init_to_value(values=ctrl_arr_dpt))
+mcmc = MCMC(kernel, num_warmup=10, num_samples=ARGS.maxiter)
 mcmc.run(rng_key_)
 
-save_obj(mcmc.get_samples(), f"{GVARS_PATHS.scratch_dir}/samples")
+fname = f"samples-{ARGS.n0}-{ARGS.lmin}-{ARGS.lmax}-{ARGS.maxiter}"
+jf.save_obj(mcmc.get_samples(), f"{GVARS_PATHS.scratch_dir}/{fname}")

@@ -45,15 +45,17 @@ class qdParams():
     # (2) a1 = \omega_0 ( 1 - 1/ell ) scaling
     # (Since we are using lmax = 300, 0.45*300 \approx 150)
 
-    # the radial orders present
-    radial_orders = np.array([0])
-    # the bounds on angular degree for each radial order
-    ell_bounds = np.array([[200, 200]])
+    def __init__(self, lmin=200, lmax=200, n0=0):
+        # the radial orders present
+        self.radial_orders = np.array([n0])
+        # the bounds on angular degree for each radial order
+        # self.ell_bounds = np.array([[lmin, lmax]])
+        self.ell_bounds = np.array([[lmin, lmax]])
 
-    rmin, rth, rmax = 0.3, 0.9, 1.2
-    fwindow =  150.0 
-    smax = 5
-    preplot = True
+        self.rmin, self.rth, self.rmax = 0.3, 0.9, 1.2
+        self.fwindow =  150.0 
+        self.smax = 5
+        self.preplot = True
 
 
 class GlobalVars():
@@ -82,7 +84,7 @@ class GlobalVars():
                    "get_namedtuple_gvar_traced",
                    "get_ind", "mask_minmax"]
 
-    def __init__(self): 
+    def __init__(self, lmin=200, lmax=200, n0=0): 
         self.local_dir = dirnames[0]
         self.scratch_dir = dirnames[1]
         self.snrnmais_dir = dirnames[2]
@@ -93,7 +95,7 @@ class GlobalVars():
         self.hmidata = np.loadtxt(f"{self.snrnmais_dir}/data_files/hmi.6328.36")
 
         datadir = f"{self.snrnmais_dir}/data_files"
-        qdPars = qdParams()
+        qdPars = qdParams(lmin=lmin, lmax=lmax, n0=n0)
 
         # Frequency unit conversion factor (in Hz (cgs))
         #all quantities in cgs

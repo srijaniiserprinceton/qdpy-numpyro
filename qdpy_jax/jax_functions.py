@@ -6,6 +6,16 @@ from tqdm import tqdm
 from jax import jit
 from jax.lax import cond as cond
 import jax.numpy as jnp
+import pickle
+
+def save_obj(obj, name):
+    with open(name + '.pkl', 'wb') as f:
+        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+
+def load_obj(name):
+    with open(name + '.pkl', 'rb') as f:
+        return pickle.load(f)
+
 
 def time_run(f, *args, unit="seconds", prefix="execution", Niter=1,
              block_until_ready=False):
