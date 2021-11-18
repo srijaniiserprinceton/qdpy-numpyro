@@ -50,7 +50,7 @@ class qdParams():
     # the bounds on angular degree for each radial order
     ell_bounds = np.array([[200, 200]])
 
-    rmin, rth, rmax = 0.3, 0.99, 1.2
+    rmin, rth, rmax = 0.3, 0.7, 1.2
     fwindow =  150.0 
     smax = 5
     preplot = True
@@ -153,7 +153,7 @@ class GlobalVars():
         
         # finding the spline params for wsr
         self.spl_deg = 3
-        self.knot_num = 10
+        self.knot_num = 100
 
         # getting  wsr_fixed and spline_coefficients
         bsplines = bsp.get_splines(self.r, self.rth, self.wsr,
