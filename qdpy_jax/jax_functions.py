@@ -1,20 +1,42 @@
 from collections import namedtuple
-from jax.experimental import host_callback as hcall
+# from jax.experimental import host_callback as hcall
 import jax.tree_util as tu
+import time
+from tqdm import tqdm
 from jax import jit
 from jax.lax import cond as cond
 import jax.numpy as jnp
+
+def time_run(f, *args, unit="seconds", prefix="execution", Niter=1,
+             block_until_ready=False):
+    t1 = time.time()
+    for i in tqdm(range(Niter)):
+        if block_until_ready:
+            __ = f(*args).block_until_ready()
+        else:
+            __ = f(*args)
+    t2 = time.time()
+    tdiff = t2 - t1
+    if unit == "minutes":
+        tdiff /= 60.
+    elif unit == "hours":
+        tdiff /= 3600.
+    elif unit == "days":
+        tdiff /= (3600.*24.)
+    print(f"[{prefix}] Time taken = {tdiff/Niter:.3f} {unit}")
 
 def create_namedtuple(tname, keys, values):
     NT = namedtuple(tname, keys)
     nt = NT(*values)
     return nt
 
+"""
 def jax_print(*args):
     str = ""
     for arg in args:
         str += f"{hcall.id_print(arg)}" + " "
     return str
+"""
 
 def tree_map_CNM_AND_NBS(CNM_AND_NBS):
     # converting to tuples and nestes tuples for easy of passing

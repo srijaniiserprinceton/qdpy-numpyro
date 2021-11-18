@@ -1,21 +1,13 @@
-from collections import namedtuple
-import numpy as np
-import py3nj
-import time
-import sys
-
-import os
-num_chains = 1
-# os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
-#+"--xla_dump_to=/tmp/foo"
-
-import jax
+from jax import random
 import jax.numpy as jnp
-import jax.tree_util as tu
-from jax import random, vmap
+from jax.config import config
+from jax.ops import index as jidx
+from jax.ops import index_update as jidx_update
 from jax.lax import fori_loop as foril
-jidx = jax.ops.index
-jidx_update = jax.ops.index_update
+
+config.update("jax_log_compiles", 1)
+config.update('jax_platform_name', 'cpu')
+config.update('jax_enable_x64', True)
 
 # new package in jax.numpy
 from qdpy_jax import globalvars as gvar_jax
@@ -24,17 +16,9 @@ from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
 
 # importing pyro related packages
 import numpyro
-from numpyro.diagnostics import hpdi
 import numpyro.distributions as dist
 from numpyro.infer import NUTS, MCMC, SA
 from numpyro.infer import init_to_sample, init_to_value
-from numpyro import handlers
-
-
-from jax.config import config
-jax.config.update("jax_log_compiles", 1)
-jax.config.update('jax_platform_name', 'cpu')
-config.update('jax_enable_x64', True)
 numpyro.set_platform('cpu')
 
 import pickle
@@ -53,6 +37,11 @@ eigvals_sigma = jnp.asarray(GVARS_TR.eigvals_sigma)
 
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse,\
     ell0_nmults, omegaref_nmults = precompute.build_hypmat_all_cenmults()
+
+'''
+noc_hypmat = tuple(map(tuple, (map(tuple, noc_hypmat_all_sparse))))
+fixed_hypmat = tuple(fixed_hypmat_all_sparse)
+'''
 
 nc = GVARS.nc
 len_s = len(GVARS.s_arr)
@@ -112,7 +101,7 @@ def eigval_sort_slice(eigval, eigvec):
     def body_func(i, ebs):
         return jidx_update(ebs, jidx[i], jnp.argmax(jnp.abs(eigvec[i])))
 
-    eigbasis_sort = np.zeros(len(eigval), dtype=int)
+    eigbasis_sort = jnp.zeros(len(eigval), dtype=int)
     eigbasis_sort = foril(0, len(eigval), body_func, eigbasis_sort)
     return eigval[eigbasis_sort]
 
@@ -130,7 +119,7 @@ rng_key, rng_key_ = random.split(rng_key)
 # Run NUTS.
 #kernel = NUTS(model)
 kernel = SA(model, init_strategy=init_to_value(values=ctrl_arr_dpt))
-mcmc = MCMC(kernel, num_warmup=50, num_samples=100, num_chains=num_chains)
+mcmc = MCMC(kernel, num_warmup=50, num_samples=100)
 mcmc.run(rng_key_)
 
 save_obj(mcmc.get_samples(), f"{GVARS_PATHS.scratch_dir}/samples")
