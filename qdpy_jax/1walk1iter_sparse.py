@@ -2,6 +2,7 @@ import numpy as np
 import time
 import sys
 from collections import namedtuple
+import matplotlib.pyplot as plt
 
 import jax
 import jax.numpy as jnp
@@ -103,3 +104,17 @@ for i in range(Niter):
     hypmat = model_().block_until_ready()
 t2e = time.time()
 print(f'Time for execution in seconds: {(t2e-t1e)/Niter:.3f}')
+
+
+
+# plotting difference with qdpt.py
+supmat_qdpt = np.load('../../qdPy/supmat_qdpt.npy')
+
+sm1 = np.diag(hypmat)
+sm2 = np.diag(supmat_qdpt.real)
+
+plt.figure()
+
+plt.plot(sm1 - sm2)
+
+plt.savefig('supmat_diff.pdf')

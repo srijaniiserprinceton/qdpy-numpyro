@@ -36,11 +36,13 @@ class preplotter:
         ax[1,0].plot(self.r, self.wsr_dpt[1], 'k')
         ax[2,0].plot(self.r, self.wsr_dpt[2], 'k')
         
+        '''
         # constructing f_filtered to cross-check
         knot_num = 100
         r_spacing = len(self.r)//knot_num
         r_filtered = self.r[::r_spacing]
-
+        '''
+        
         # construct the spline from ctrl_arr_dpt_full
         wsr_spl_full = gen_wsr.get_wsr_from_spline(self.r, self.ctrl_arr_dpt_full,
                                                    self.t_internal, self.spl_deg)
@@ -133,6 +135,10 @@ class preplotter:
         ax[1].plot(self.r, self.wsr_dpt[1], '--r')
         ax[2].plot(self.r, self.wsr_dpt[2], '--r')
 
+
+        # saving the profile being used in 1walk1iter_sparse.py forusing in qdpt.py
+        wsr_pyro = self.wsr_fixed + wsr_dpt_recon
+        np.save('wsr_pyro.npy', wsr_pyro)
         
         # shading the area where it is allowed to vary
         ax[0].fill_between(self.r, self.wsr_fixed[0] + wsr_up[0],
