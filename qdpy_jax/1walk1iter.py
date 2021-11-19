@@ -7,7 +7,7 @@ from jax.ops import index as jidx
 from jax.ops import index_update as jidx_update
 
 # enabling 64 bits and logging compilatino
-#config.update("jax_log_compiles", 1)
+config.update("jax_log_compiles", 1)
 config.update('jax_platform_name', 'cpu')
 config.update('jax_enable_x64', True)
 
