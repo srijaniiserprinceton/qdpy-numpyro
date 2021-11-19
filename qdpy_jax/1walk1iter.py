@@ -101,4 +101,4 @@ if __name__ == "__main__":
     jf.time_run(model_, prefix="execution", Niter=10,
                 block_until_ready=True)
 
-    # hypmat = compare_hypmat()
+    hypmat = compare_hypmat()

@@ -85,8 +85,7 @@ def build_integrated_part(eig_idx1, eig_idx2, ell1, ell2, s):
     post_integral = integrate.trapz(integrand, GVARS.r, axis=1)
     return post_integral
 
-def integrate_fixed_wsr(eig_idx1, eig_idx2, ell1, ell2, s,
-                        compute4bsp=False):
+def integrate_fixed_wsr(eig_idx1, eig_idx2, ell1, ell2, s):
     s_ind = (s-1)//2
     ls2fac = ell1*(ell1+1) + ell2*(ell2+1) - s*(s+1)
 
@@ -98,13 +97,7 @@ def integrate_fixed_wsr(eig_idx1, eig_idx2, ell1, ell2, s,
     # shape (r,)
     eigfac = U2*V1 + V2*U1 - U1*U2 - 0.5*V1*V2*ls2fac
     # total integrand
-    # nc = number of control points, the additional value indicates the
-    # integral between (rmin, rth), which is constant across MCMC iterations
-
-    if compute4bsp:
-        integrand = -1. * bsp_basis * eigfac / GVARS.r
-    else:
-        integrand = -1. * GVARS.wsr_fixed[s_ind] * eigfac / GVARS.r
+    integrand = -1. * GVARS.wsr_fixed[s_ind] * eigfac / GVARS.r
     post_integral = integrate.trapz(integrand, GVARS.r) # a scalar
     return post_integral
 
@@ -225,11 +218,9 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
 
             # shape (n_control_points,)
             # integrated_part = build_integrated_part(eig_idx1, eig_idx2, ell1, ell2, s)
-            integrated_part = integrate_fixed_wsr(eig_idx1, eig_idx2, ell1, ell2, s,
-                                                  compute4bsp=True)
+            integrated_part = build_integrated_part(eig_idx1, eig_idx2, ell1, ell2, s)
             #-------------------------------------------------------
             # integrating wsr_fixed for the fixed part
-            s_ind = (s-1)//2
             fixed_integral = integrate_fixed_wsr(eig_idx1, eig_idx2, ell1, ell2, s)
 
             wigvalm *= (jax_minus1pow_vec(m_arr) * ell1_ell2_fac)
