@@ -3,12 +3,13 @@ import argparse
 import matplotlib.pyplot as plt
 from qdpy_jax import jax_functions as jf
 
-with open(f"{package_dir}/.config", "r") as f:
-    dirnames = f.read().splitlines()
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
 data_dir = f"{package_dir}/qdpy_jax"
+
+with open(f"{package_dir}/.config", "r") as f:
+    dirnames = f.read().splitlines()
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--n0", help="radial order",
@@ -44,4 +45,5 @@ if __name__ == "__main__":
     samples1 = jf.load_obj(f"{dirnames[1]}/{fname}")
     sample_keys = samples1.keys()
     fig = plot_chains(ARGS.cplot)
+    fig.savefig(f"{dirnames[0]}/c{ARGS.cplot}.pdf")
     fig.show()

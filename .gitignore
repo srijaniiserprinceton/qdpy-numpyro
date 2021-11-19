@@ -9,3 +9,5 @@ __pycache__
 .config
 .datadump
 qdpy_output
+*.out
+*.err
