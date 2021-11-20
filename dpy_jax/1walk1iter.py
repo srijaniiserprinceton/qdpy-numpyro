@@ -42,7 +42,8 @@ GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
 nmults = len(GVARS.n0_arr)  # total number of central multiplets
 len_s = GVARS.wsr.shape[0]  # number of s
 
-noc_hypmat_all_sparse, fixed_hypmat_all_sparse = precompute.build_hypmat_all_cenmults()
+noc_hypmat_all_sparse, fixed_hypmat_all_sparse, omega0_arr =\
+                                precompute.build_hypmat_all_cenmults()
 
 # sys.exit()
 
@@ -77,7 +78,7 @@ def get_eigs(mat):
 
 def compare_hypmat():
     diag = model_().block_until_ready()
-    return diag
+    # return diag
     import matplotlib.pyplot as plt
     import numpy as np
     # plotting difference with qdpt.py

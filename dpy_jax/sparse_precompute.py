@@ -260,6 +260,17 @@ def build_hypmat_all_cenmults():
         else:
             fixed_diag += fixed_diag_s
             
+    # to store the cnm frequencies
+    omega0_arr = np.zeros(np.sum(2 * CNM.nl_cnm[:,1] + 1))
+    start_cnm_ind = 0
+    for i, omega_cnm in enumerate(CNM.omega_cnm):
+        # updating the start and end indices                                                                                                                                            
+        end_cnm_ind = np.sum(2 * CNM.nl_cnm[:i+1, 1] + 1)
         
+        omega0_arr[start_cnm_ind:end_cnm_ind] = CNM.omega_cnm[i]
+
+        # updating the start index                                                                                                                                                      
+        start_cnm_ind = end_cnm_ind
+
     # non_c_diag_s = (s x 2ellp1_sum_all), fixed_diag = (2ellp1_sum_all,)
-    return non_c_diag_cs, fixed_diag
+    return non_c_diag_cs, fixed_diag, omega0_arr
