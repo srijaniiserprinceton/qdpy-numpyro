@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH --job-name=rot-qdpt
-#SBATCH --nodes=1
+#SBATCH --job-name=1walk1iter
+#SBATCH --nodes=2
 #SBATCH --ntasks-per-node=40
 #SBATCH --mem=150G
-#SBATCH --time=130:00:00          # total run time limit (HH:MM:SS)
+#SBATCH --time=02:00:00          # total run time limit (HH:MM:SS)
 
 # commands commented out
 # SBATCH --cpus-per-task=40       # cpu-cores per task (>1 if multi-threaded tasks)
@@ -18,6 +18,5 @@ conda activate jax-gpu
 
 n0=0
 lmin=195
-lmax=225
-maxiter=2500
-python qdpy_jax/pyrotry.py --n0 ${n0} --lmin ${lmin} --lmax ${lmax} --maxiter ${maxiter} > jobscripts/slurm.out 2> jobscripts/slurm.err
+lmax=295
+python qdpy_jax/1walk1iter.py --n0 ${n0} --lmin ${lmin} --lmax ${lmax} > jobscripts/slurm_1w1i.out 2> jobscripts/slurm_1w1i.err
