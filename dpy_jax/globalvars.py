@@ -84,7 +84,7 @@ class GlobalVars():
                    "get_namedtuple_gvar_traced",
                    "get_ind", "mask_minmax"]
 
-    def __init__(self, lmin=200, lmax=200, n0=0): 
+    def __init__(self, lmin=200, lmax=200, n0=0, load_from_file=0): 
         self.local_dir = dirnames[0]
         self.scratch_dir = dirnames[1]
         self.snrnmais_dir = dirnames[2]
@@ -140,7 +140,6 @@ class GlobalVars():
         self.r_spline = self.r[self.rth_ind:]
 
         # generating the multiplets which we will use
-        load_from_file = False
         n_arr, ell_arr = self.get_mult_arrays(load_from_file,
                                               qdPars.radial_orders,
                                               qdPars.ell_bounds)

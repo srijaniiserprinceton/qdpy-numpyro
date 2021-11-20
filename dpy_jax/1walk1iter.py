@@ -19,12 +19,15 @@ parser.add_argument("--lmin", help="min angular degree",
                     type=int, default=200)
 parser.add_argument("--lmax", help="max angular degree",
                     type=int, default=200)
+parser.add_argument("--load_mults", help="load mults from file",
+                    type=int, default=0)
 ARGS = parser.parse_args()
 
 with open(".n0-lmin-lmax.dat", "w") as f:
     f.write(f"{ARGS.n0}" + "\n" +
             f"{ARGS.lmin}" + "\n" +
-            f"{ARGS.lmax}")
+            f"{ARGS.lmax}" + "\n" +
+            f"{ARGS.load_mults}")
 
 # importing local package 
 import jax_functions as jf
@@ -34,7 +37,8 @@ import build_hypermatrix_sparse as build_hm_sparse
 
 GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
                             lmin=ARGS.lmin,
-                            lmax=ARGS.lmax)
+                            lmax=ARGS.lmax,
+                            load_from_file=ARGS.load_mults)
 nmults = len(GVARS.n0_arr)  # total number of central multiplets
 len_s = GVARS.wsr.shape[0]  # number of s
 
@@ -73,6 +77,7 @@ def get_eigs(mat):
 
 def compare_hypmat():
     diag = model_().block_until_ready()
+    return diag
     import matplotlib.pyplot as plt
     import numpy as np
     # plotting difference with qdpt.py
@@ -94,7 +99,7 @@ if __name__ == "__main__":
 
     # compiling
     jf.time_run(model_, prefix="compilation")
-    jf.time_run(model_, prefix="execution", Niter=10000,
+    jf.time_run(model_, prefix="execution", Niter=100,
                 block_until_ready=True)
 
-    # hypmat = compare_hypmat()
+    diag = compare_hypmat()
