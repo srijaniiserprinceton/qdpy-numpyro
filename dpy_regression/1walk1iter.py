@@ -21,8 +21,6 @@ parser.add_argument("--lmax", help="max angular degree",
                     type=int, default=200)
 parser.add_argument("--rth", help="threshold radius",
                     type=float, default=0.95)
-parser.add_argument("--knot_num", help="number of knots beyond rth",
-                    type=int, default=15)
 parser.add_argument("--load_mults", help="load mults from file",
                     type=int, default=0)
 ARGS = parser.parse_args()
@@ -32,7 +30,6 @@ with open(".n0-lmin-lmax.dat", "w") as f:
             f"{ARGS.lmin}" + "\n" +
             f"{ARGS.lmax}"+ "\n" +
             f"{ARGS.rth}" + "\n" +
-            f"{ARGS.knot_num}" + "\n" +
             f"{ARGS.load_mults}")
 
 # importing local package 
@@ -45,7 +42,6 @@ GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
                             lmin=ARGS.lmin,
                             lmax=ARGS.lmax,
                             rth=ARGS.rth,
-                            knot_num=ARGS.knot_num,
                             load_from_file=ARGS.load_mults)
 nmults = len(GVARS.n0_arr)  # total number of central multiplets
 len_s = GVARS.wsr.shape[0]  # number of s
@@ -53,16 +49,35 @@ len_s = GVARS.wsr.shape[0]  # number of s
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse, omega0_arr =\
                                 precompute.build_hypmat_all_cenmults()
 
-def model():
+len_s = len(GVARS.s_arr)
+nc = GVARS.nc
+
+ctrl_arr_dict = {}
+hypmat_dict = {}
+hypmat_dict['noc'] = {}
+hypmat_dict['fixed'] = fixed_hypmat_all_sparse
+
+for iess in range(len_s):
+    for inc in range(nc):
+        argstr = f"c{iess}-{inc}"
+        ctrl_arr_dict[argstr] = GVARS.ctrl_arr_dpt_clipped[iess, inc]
+        hypmat_dict['noc'][argstr] = noc_hypmat_all_sparse[iess][inc]
+
+def model(c_dict, h_dict):
     # building the entire hypermatrix
-    diag_evals = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse,
-                                                  fixed_hypmat_all_sparse,
-                                                  GVARS.ctrl_arr_dpt_clipped,
-                                                  GVARS.nc, len_s)
-    
-    # finding the eigenvalues of hypermatrix
-    diag_dense = diag_evals.todense()
-    return diag_dense
+    noc_hypmat = h_dict['noc']
+    fix_hypmat = h_dict['fixed']
+
+    # initializing the hypmat
+    diag_cs_summed = 0.0*noc_hypmat['c0-0']
+
+    for s_ind in range(len_s):
+        for c_ind in range(nc):
+            argstr = f"c{iess}-{inc}"
+            diag_cs_summed += c_dict[argstr] * noc_hypmat[argstr]
+            
+    diag_cs_summed += fix_hypmat
+    return diag_cs_summed.todense()
 
 
 def eigval_sort_slice(eigval, eigvec):
@@ -104,8 +119,8 @@ if __name__ == "__main__":
     model_ = jit(model)
 
     # compiling
-    jf.time_run(model_, prefix="compilation")
-    jf.time_run(model_, prefix="execution", Niter=100,
+    jf.time_run(model_, ctrl_arr_dict, hypmat_dict, prefix="compilation")
+    jf.time_run(model_, ctrl_arr_dict, hypmat_dict, prefix="execution", Niter=100,
                 block_until_ready=True)
 
-    diag = compare_hypmat()
+    # diag = compare_hypmat()

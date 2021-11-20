@@ -4,7 +4,6 @@ from tqdm import tqdm
 from scipy.interpolate import splev
 
 from jax.experimental import sparse
-import jax.numpy as jnp
 from jax import jit
 
 from dpy_jax import load_multiplets
@@ -28,8 +27,7 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             lmin=int(ARGS[1]),
                             lmax=int(ARGS[2]),
                             rth=ARGS[3],
-                            knot_num=int(ARGS[4]),
-                            load_from_file=int(ARGS[5]))
+                            load_from_file=int(ARGS[4]))
 GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx =\
                     prune_multiplets.get_pruned_attributes(GVARS,
@@ -179,7 +177,6 @@ def build_hm_nonint_n_fxd_1cnm(s):
     # filling in the non-m part using the masks
     for i in tqdm(range(num_cnm), desc=f"Precomputing for s={s}"):
         # updating the start and end indices
-        omega0 = CNM.omega_cnm[i]
         end_cnm_ind = np.sum(2 * CNM.nl_cnm[:i+1, 1] + 1)
 
         # self coupling for isolated multiplets
@@ -224,7 +221,7 @@ def build_hm_nonint_n_fxd_1cnm(s):
                                     integrated_part[c_ind] * wigvalm * wigval1
 
         # the fixed hypermatrix
-        fixed_diag_arr[start_cnm_ind: end_cnm_ind] = fixed_integral * wigvalm * wigval1 
+        fixed_diag_arr[start_cnm_ind: end_cnm_ind] = fixed_integral * wigvalm * wigval1
 
         # updating the start index
         start_cnm_ind = end_cnm_ind 
@@ -247,19 +244,6 @@ def build_hm_nonint_n_fxd_1cnm(s):
 
 
 def build_hypmat_all_cenmults():
-
-    # to store the cnm frequencies
-    omega0_arr = np.zeros(np.sum(2 * CNM.nl_cnm[:,1] + 1))
-    start_cnm_ind = 0
-    for i, omega_cnm in enumerate(CNM.omega_cnm):
-        # updating the start and end indices
-        end_cnm_ind = np.sum(2 * CNM.nl_cnm[:i+1, 1] + 1)
-        omega0_arr[start_cnm_ind:end_cnm_ind] = CNM.omega_cnm[i]
-
-        # updating the start index
-        start_cnm_ind = end_cnm_ind
-
-
     # stores the diags as a function of s and c. Shape (s x c) 
     non_c_diag_cs = []
 
@@ -276,5 +260,16 @@ def build_hypmat_all_cenmults():
             fixed_diag = fixed_diag_s
         else:
             fixed_diag += fixed_diag_s
+    # to store the cnm frequencies
+    omega0_arr = np.zeros(np.sum(2 * CNM.nl_cnm[:,1] + 1))
+    start_cnm_ind = 0
+    for i, omega_cnm in enumerate(CNM.omega_cnm):
+        # updating the start and end indices
+        end_cnm_ind = np.sum(2 * CNM.nl_cnm[:i+1, 1] + 1)
+        omega0_arr[start_cnm_ind:end_cnm_ind] = CNM.omega_cnm[i]
+
+        # updating the start index
+        start_cnm_ind = end_cnm_ind
+
     # non_c_diag_s = (s x 2ellp1_sum_all), fixed_diag = (2ellp1_sum_all,)
     return non_c_diag_cs, fixed_diag, omega0_arr

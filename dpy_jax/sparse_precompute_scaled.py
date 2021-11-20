@@ -28,13 +28,23 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             lmin=int(ARGS[1]),
                             lmax=int(ARGS[2]),
                             rth=ARGS[3],
-                            knot_num=int(ARGS[4]),
-                            load_from_file=int(ARGS[5]))
+                            load_from_file=int(ARGS[4]))
 GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx =\
                     prune_multiplets.get_pruned_attributes(GVARS,
                                                            GVARS_ST)
+eigvals_true = jnp.asarray(GVARS_TR.eigvals_true)
+eigvals_sigma = jnp.asarray(GVARS_TR.eigvals_sigma)
 
+"""
+(x - mu)/sigma = (xf + c @ xc - mu)/sigma
+xf - mu -> xf
+xf/sigma -> xf
+xc/sigma -> xc
+
+y = xf + c @ xc
+0 mean and 1 stddev
+"""
 CNM = build_cnm.getnt4cenmult(GVARS)
 
 lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
@@ -222,9 +232,21 @@ def build_hm_nonint_n_fxd_1cnm(s):
             # non-ctrl points submat
             non_c_diag_arr[c_ind, start_cnm_ind: end_cnm_ind] =\
                                     integrated_part[c_ind] * wigvalm * wigval1
+            non_c_diag_arr[c_ind, start_cnm_ind: end_cnm_ind] *= \
+               (GVARS.OM*1e6)/2./omega0
+            non_c_diag_arr[c_ind, start_cnm_ind: end_cnm_ind] /= \
+                eigvals_sigma[start_cnm_ind:end_cnm_ind]
 
         # the fixed hypermatrix
-        fixed_diag_arr[start_cnm_ind: end_cnm_ind] = fixed_integral * wigvalm * wigval1 
+        fixed_diag_arr[start_cnm_ind: end_cnm_ind] = fixed_integral * wigvalm *\
+            wigval1 /2./omega0*GVARS.OM*1e6
+
+        fixed_diag_arr[start_cnm_ind:
+                       end_cnm_ind] -= eigvals_true[start_cnm_ind:
+                                                    end_cnm_ind]
+        fixed_diag_arr[start_cnm_ind:
+                       end_cnm_ind] /= eigvals_sigma[start_cnm_ind:
+                                                     end_cnm_ind]
 
         # updating the start index
         start_cnm_ind = end_cnm_ind 

@@ -1,4 +1,5 @@
 import argparse
+import numpy as np
 from jax import jit
 import jax.numpy as jnp
 from jax.config import config
@@ -88,11 +89,9 @@ def compare_hypmat():
     import numpy as np
     # plotting difference with qdpt.py
     supmat_qdpt = np.load("supmat_qdpt.npy").real
-    supmat_qdpt_201 = np.load("supmat_qdpt_201.npy").real
 
     sm1 = diag
-    sm2 = np.append(np.diag(supmat_qdpt)[:401],
-                    np.diag(supmat_qdpt_201)[:403])
+    sm2 = np.diag(supmat_qdpt)[:401]
 
     plt.figure(figsize=(10, 5))
     plt.plot(sm1 - sm2)
@@ -102,10 +101,6 @@ def compare_hypmat():
 
 if __name__ == "__main__":
     model_ = jit(model)
-
-    # compiling
-    jf.time_run(model_, prefix="compilation")
-    jf.time_run(model_, prefix="execution", Niter=100,
-                block_until_ready=True)
-
-    diag = compare_hypmat()
+    # eigvals_true = compare_hypmat()
+    eigvals_true = model_()
+    np.save("evals_model.npy", eigvals_true/2./omega0_arr*GVARS.OM*1e6)
