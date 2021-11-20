@@ -78,7 +78,7 @@ def get_eigs(mat):
 
 def compare_hypmat():
     diag = model_().block_until_ready()
-    # return diag
+    return diag
     import matplotlib.pyplot as plt
     import numpy as np
     # plotting difference with qdpt.py

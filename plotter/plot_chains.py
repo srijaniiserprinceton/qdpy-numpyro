@@ -45,5 +45,5 @@ if __name__ == "__main__":
     samples1 = jf.load_obj(f"{dirnames[1]}/{fname}")
     sample_keys = samples1.keys()
     fig = plot_chains(ARGS.cplot)
-    fig.savefig(f"{dirnames[0]}/c{ARGS.cplot}.pdf")
+    fig.savefig(f"{dirnames[1]}/c{ARGS.cplot}.pdf")
     fig.show()

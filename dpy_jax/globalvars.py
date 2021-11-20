@@ -154,7 +154,7 @@ class GlobalVars():
         
         # finding the spline params for wsr
         self.spl_deg = 3
-        self.knot_num = 100
+        self.knot_num = 10
 
         # getting  wsr_fixed and spline_coefficients
         bsplines = bsp.get_splines(self.r, self.rth, self.wsr,
