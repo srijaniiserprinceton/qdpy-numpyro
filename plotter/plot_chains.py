@@ -1,8 +1,8 @@
 import os
+import numpy as np
 import argparse
 import matplotlib.pyplot as plt
 from qdpy_jax import jax_functions as jf
-
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
@@ -20,8 +20,6 @@ parser.add_argument("--lmax", help="max angular degree",
                     type=int, default=200)
 parser.add_argument("--maxiter", help="max MCMC iterations",
                     type=int, default=100)
-parser.add_argument("--cplot", help="= (1, 3, 5)?",
-                    type=int, default=1)
 ARGS = parser.parse_args()
 
 
@@ -31,19 +29,29 @@ def plot_chains(wnum):
     num_plots = len(key_list)
     fig, axs = plt.subplots(nrows=num_plots, ncols=2, figsize=(5, 2*num_plots))
     for i in range(num_plots):
+        cmin = limits['cmin'][key_list[i]]
+        cmax = limits['cmax'][key_list[i]]
         axs[i, 0].plot(samples1[key_list[i]])
         axs[i, 0].set_xlabel('Iteration number')
         axs[i, 0].set_ylabel(key_list[i])
+        axs[i, 0].set_ylim([cmin, cmax])
 
         axs[i, 1].hist(samples1[key_list[i]])
         axs[i, 1].set_ylabel('Count')
+        axs[i, 1].set_xlim([cmin, cmax])
     fig.tight_layout()
     return fig
 
 if __name__ == "__main__":
-    fname = f"samples-{ARGS.n0}-{ARGS.lmin}-{ARGS.lmax}-{ARGS.maxiter}"
-    samples1 = jf.load_obj(f"{dirnames[1]}/{fname}")
+    fname = f"output-{ARGS.n0}-{ARGS.lmin}-{ARGS.lmax}-{ARGS.maxiter}"
+    output_data = jf.load_obj(f"{dirnames[1]}/{fname}")
+
+    samples1 = output_data['samples']
+    limits = output_data['ctrl_limits']
+    metadata = output_data['metadata']
+
     sample_keys = samples1.keys()
-    fig = plot_chains(ARGS.cplot)
-    fig.savefig(f"{dirnames[1]}/c{ARGS.cplot}.pdf")
-    fig.show()
+    for ic in np.array([1, 3, 5], dtype=np.int32):
+        fig = plot_chains(ic)
+        fig.savefig(f"{dirnames[1]}/c{ic}.pdf")
+        plt.close(fig)

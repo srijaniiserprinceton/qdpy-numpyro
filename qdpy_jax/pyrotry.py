@@ -65,6 +65,21 @@ cmax = jnp.asarray(GVARS.ctrl_arr_up)
 cmin = jnp.asarray(GVARS.ctrl_arr_lo)
 ctrl_arr_dpt = jnp.asarray(GVARS.ctrl_arr_dpt_clipped)
 
+ctrl_limits = {}
+ctrl_limits['cmin'] = {}
+ctrl_limits['cmax'] = {}
+
+for i in range(cmax.shape[1]-4):
+    ctrl_limits['cmin'][f'c1_{i}'] = cmin[0, i]
+    ctrl_limits['cmin'][f'c3_{i}'] = cmin[1, i]
+    ctrl_limits['cmin'][f'c5_{i}'] = cmin[2, i]
+    ctrl_limits['cmax'][f'c1_{i}'] = cmax[0, i]
+    ctrl_limits['cmax'][f'c3_{i}'] = cmax[1, i]
+    ctrl_limits['cmax'][f'c5_{i}'] = cmax[2, i]
+
+fname = f"limits-{ARGS.n0}-{ARGS.lmin}-{ARGS.lmax}-{ARGS.maxiter}"
+jf.save_obj(ctrl_limits, f"{GVARS_PATHS.scratch_dir}/{fname}")
+
 def model():
     # setting min and max value to be 0.1*true and 3.*true
     c1_list = []
@@ -78,8 +93,8 @@ def model():
 
     for i in range(4):
         c1_list.append(0.0)
-        c1_list.append(0.0)
-        c1_list.append(0.0)
+        c3_list.append(0.0)
+        c5_list.append(0.0)
 
     ctrl_arr = [jnp.array(c1_list),
                 jnp.array(c3_list),
@@ -127,5 +142,18 @@ kernel = SA(model)#, init_strategy=init_to_value(values=ctrl_arr_dpt))
 mcmc = MCMC(kernel, num_warmup=500, num_samples=ARGS.maxiter)
 mcmc.run(rng_key_)
 
-fname = f"samples-{ARGS.n0}-{ARGS.lmin}-{ARGS.lmax}-{ARGS.maxiter}"
-jf.save_obj(mcmc.get_samples(), f"{GVARS_PATHS.scratch_dir}/{fname}")
+metadata = {}
+metadata['n0'] = ARGS.n0
+metadata['lmin'] = ARGS.lmin
+metadata['lmax'] = ARGS.lmax
+metadata['rth'] = GVARS.rth
+metadata['knot_num'] = GVARS.knot_num
+metadata['maxiter'] = ARGS.maxiter
+
+output_data = {}
+output_data['samples'] = mcmc.get_samples()
+output_data['metadata'] = metadata
+output_data['ctrl_limits'] = ctrl_limits
+
+fname = f"output-{ARGS.n0}-{ARGS.lmin}-{ARGS.lmax}-{ARGS.maxiter}"
+jf.save_obj(output_data, f"{GVARS_PATHS.scratch_dir}/{fname}")

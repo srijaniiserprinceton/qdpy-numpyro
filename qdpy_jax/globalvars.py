@@ -45,14 +45,14 @@ class qdParams():
     # (2) a1 = \omega_0 ( 1 - 1/ell ) scaling
     # (Since we are using lmax = 300, 0.45*300 \approx 150)
 
-    def __init__(self, lmin=200, lmax=200, n0=0):
+    def __init__(self, lmin=200, lmax=200, n0=0, rth=0.9):
         # the radial orders present
         self.radial_orders = np.array([n0])
         # the bounds on angular degree for each radial order
         # self.ell_bounds = np.array([[lmin, lmax]])
         self.ell_bounds = np.array([[lmin, lmax]])
 
-        self.rmin, self.rth, self.rmax = 0.3, 0.9, 1.2
+        self.rmin, self.rth, self.rmax = 0.3, rth, 1.2
         self.fwindow =  150.0 
         self.smax = 5
         self.preplot = True
@@ -84,7 +84,7 @@ class GlobalVars():
                    "get_namedtuple_gvar_traced",
                    "get_ind", "mask_minmax"]
 
-    def __init__(self, lmin=200, lmax=200, n0=0): 
+    def __init__(self, lmin=200, lmax=200, n0=0, rth=0.9, knot_num=15): 
         self.local_dir = dirnames[0]
         self.scratch_dir = dirnames[1]
         self.snrnmais_dir = dirnames[2]
@@ -95,7 +95,7 @@ class GlobalVars():
         self.hmidata = np.loadtxt(f"{self.snrnmais_dir}/data_files/hmi.6328.36")
 
         datadir = f"{self.snrnmais_dir}/data_files"
-        qdPars = qdParams(lmin=lmin, lmax=lmax, n0=n0)
+        qdPars = qdParams(lmin=lmin, lmax=lmax, n0=n0, rth=rth)
 
         # Frequency unit conversion factor (in Hz (cgs))
         #all quantities in cgs
@@ -129,10 +129,9 @@ class GlobalVars():
         # self.wsr = np.load(f'wsr-spline.npy')
         self.wsr_extend()
 
-        
         # rth = r threshold beyond which the profiles are updated. 
         self.rth = qdPars.rth
-        
+
         # retaining only region between rmin and rmax
         self.r = self.mask_minmax(self.r)
         self.wsr = self.mask_minmax(self.wsr, axis=1)
@@ -155,7 +154,7 @@ class GlobalVars():
         
         # finding the spline params for wsr
         self.spl_deg = 3
-        self.knot_num = 100
+        self.knot_num = knot_num
 
         # getting  wsr_fixed and spline_coefficients
         bsplines = bsp.get_splines(self.r, self.rth, self.wsr,
@@ -168,7 +167,7 @@ class GlobalVars():
         self.ctrl_arr_dpt_full = bsplines.c_arr_dpt_full
         self.t_internal = bsplines.t_internal
         self.knot_ind_th = bsplines.knot_ind_th
-        
+
         self.bsp_params = (len(self.ctrl_arr_dpt_full),
                            self.t_internal,
                            self.spl_deg)
@@ -184,7 +183,7 @@ class GlobalVars():
 
         # if preplot is True, plot the various things for
         # ensuring everything is working properly
-        
+
         if qdPars.preplot:
             check_splines = preplotter.preplotter(self.r, self.OM, self.wsr,
                                                   self.wsr_fixed,
