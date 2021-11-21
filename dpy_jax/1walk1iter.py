@@ -20,9 +20,9 @@ parser.add_argument("--lmin", help="min angular degree",
 parser.add_argument("--lmax", help="max angular degree",
                     type=int, default=200)
 parser.add_argument("--rth", help="threshold radius",
-                    type=float, default=0.95)
+                    type=float, default=0.98)
 parser.add_argument("--knot_num", help="number of knots beyond rth",
-                    type=int, default=15)
+                    type=int, default=10)
 parser.add_argument("--load_mults", help="load mults from file",
                     type=int, default=0)
 ARGS = parser.parse_args()
@@ -87,7 +87,7 @@ def compare_hypmat():
     import matplotlib.pyplot as plt
     import numpy as np
     # plotting difference with qdpt.py
-    supmat_qdpt = np.load("supmat_qdpt.npy").real
+    supmat_qdpt = np.load("supmat_qdpt_200.npy").real
     supmat_qdpt_201 = np.load("supmat_qdpt_201.npy").real
 
     sm1 = diag

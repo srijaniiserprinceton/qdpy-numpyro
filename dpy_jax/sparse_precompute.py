@@ -107,58 +107,6 @@ def integrate_fixed_wsr(eig_idx, ell, s):
     return post_integral
 
 
-def get_dim_hyper():
-    """Returns the dimension of the hypermatrix
-    dim_hyper = max(dim_super)
-    """
-    dim_hyper = 0
-    nmults = len(GVARS.n0_arr)
-
-    for i in range(nmults):
-        n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
-        CENMULT_AND_NBS = getnt4cenmult(n0, ell0, GVARS_ST)
-        dim_super_local = np.sum(2*CENMULT_AND_NBS.nl_nbs[:, 1] + 1)
-        if (dim_super_local > dim_hyper): dim_hyper = dim_super_local
-    return dim_hyper
-
-
-def build_SUBMAT_INDICES(CNM_AND_NBS):
-    # supermatix can be tiled with submatrices corresponding to
-    # (l, n) - (l', n') coupling. The dimensions of the submatrix
-    # is (2l+1, 2l'+1)
-
-    dim_blocks = len(CNM_AND_NBS.omega_nbs) # number of submatrix blocks along axis
-    nl_nbs = np.asarray(CNM_AND_NBS.nl_nbs)
-    dimX_submat = 2 * nl_nbs[:, 1] + 1
-
-    # creating the startx, endx for submatrices
-    submat_tile_ind = np.zeros((dim_blocks, 2), dtype='int32')
-
-    for ix in range(0, dim_blocks):
-        for iy in range(0, dim_blocks):
-            submat_tile_ind[ix, 0] = np.sum(dimX_submat[:ix])
-            submat_tile_ind[ix, 1] = np.sum(dimX_submat[:ix+1])
-
-    # creating the submat-dictionary namedtuple
-    SUBMAT_DICT = jf.create_namedtuple('SUBMAT_DICT',
-                                       ['startx_arr',
-                                        'endx_arr'],
-                                       (submat_tile_ind[:, 0],
-                                        submat_tile_ind[:, 1]))
-    return SUBMAT_DICT
-
-
-def build_hypmat_freqdiag(CNM_AND_NBS, SUBMAT_DICT, dim_hyper):
-    freqdiag = np.zeros(dim_hyper)
-    omegaref = CNM_AND_NBS.omega_nbs[0]
-    for i in range(len(CNM_AND_NBS.omega_nbs)):
-        omega_nl = CNM_AND_NBS.omega_nbs[i]
-        startx = SUBMAT_DICT.startx_arr[i]
-        endx = SUBMAT_DICT.endx_arr[i]
-        freqdiag[startx:endx] += omega_nl**2 - omegaref**2
-    return sparse.BCOO.fromdense(np.diag(freqdiag))
-
-
 def build_hm_nonint_n_fxd_1cnm(s):
     """Computes elements in the hypermatrix excluding the
     integral part.
