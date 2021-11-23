@@ -1,5 +1,5 @@
 import os
-os.environ["XLA_FLAGS"] = "--xla_force_host_platform_device_count=35"
+os.environ["XLA_FLAGS"] = "--xla_force_host_platform_device_count=12"
 import numpy as np
 import jax
 print(jax.devices())
@@ -50,8 +50,9 @@ np.testing.assert_array_almost_equal(pred, data)
 num_params = len(cind_arr)
 
 # setting the prior limits
-cmin = 0.1 * true_params
-cmax = 1.9 * true_params
+cmin = 0.1 * true_params / 1e-3
+cmax = 1.9 * true_params / 1e-3
+param_coeff *= 1e-3
 
 def model():
     # sampling from a uniform prior
@@ -61,13 +62,30 @@ def model():
     for i in range(num_params):
       c3.append(numpyro.sample(f'c3_{i}', dist.Uniform(cmin[0,i], cmax[0,i])))
       c5.append(numpyro.sample(f'c5_{i}', dist.Uniform(cmin[1,i], cmax[1,i])))
+      # c3.append(numpyro.sample(f'c3_{i}', dist.Uniform(0.97, 1.03)))
+      # c5.append(numpyro.sample(f'c5_{i}', dist.Uniform(0.97, 1.03)))
 
     c3 = jnp.asarray(c3)
     c5 = jnp.asarray(c5)
+    # c3 = c3*true_params[0, i]
+    # c5 = c5*true_params[1, i]
     
     pred = fixed_part - data + c3 @ param_coeff[0] + c5 @ param_coeff[1]
     
     return numpyro.factor('obs', dist.Normal(0.0, 1.0).log_prob(pred))
+
+
+def print_summary(samples, ctrl_arr):
+    keys = samples.keys()
+    for key in keys:
+        sample = samples[key]
+        key_split = key.split("_")
+        idx = int(key_split[-1])
+        sidx = int((int(key_split[0][1])-1)//2)
+        obs = ctrl_arr[sidx-1, idx]
+        print(f"[{obs:11.4e}] {key}: {sample.mean():.4e} +/- {sample.std():.4e}:" +
+              f"error/sigma = {(sample.mean()-obs)/sample.std():8.3f}")
+    return None
 
 
 # Start from this source of randomness. We will split keys for subsequent operations.    
@@ -76,9 +94,10 @@ rng_key = random.PRNGKey(seed)
 rng_key, rng_key_ = random.split(rng_key)
 
 #kernel = SA(model, adapt_state_size=200)    
-kernel = NUTS(model)                                                               
-mcmc = MCMC(kernel, num_warmup=15000, num_samples=10000, num_chains=35)  
-mcmc.run(rng_key_, extra_fields=('potential_energy',))                                        
+kernel = NUTS(model,
+              max_tree_depth=(20, 5))
+mcmc = MCMC(kernel, num_warmup=5000, num_samples=6000, num_chains=12)  
+mcmc.run(rng_key_, extra_fields=('potential_energy',))
 pe = mcmc.get_extra_fields()['potential_energy']
 
 # extracting necessary fields for plotting
@@ -106,5 +125,6 @@ ax = az.plot_pair(
     reference_values_kwargs={'color':"red", "marker":"o", "markersize":6}
 )
 plt.tight_layout()
-
 plt.savefig('corner_reduced_prob.png')
+
+print_summary(mcmc_sample, true_params)
