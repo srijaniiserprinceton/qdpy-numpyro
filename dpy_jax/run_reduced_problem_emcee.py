@@ -3,7 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import emcee
 import corner
-import arviz as az
 import sys
 
 def log_likelihood(theta, y, yerr):
@@ -92,7 +91,7 @@ if __name__ == "__main__":
                                     ndim,
                                     log_probability,
                                     args=(data, 1.0))
-    sampler.run_mcmc(pos, 5250, progress=True);
+    sampler.run_mcmc(pos, 525, progress=True);
 
     fig1, axes = plt.subplots(ndim, figsize=(10, 7), sharex=True)
     samples = sampler.get_chain()

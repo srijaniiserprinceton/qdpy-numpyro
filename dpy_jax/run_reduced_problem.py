@@ -1,5 +1,5 @@
 import os
-num_chains = 1
+num_chains = 38
 os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
 import numpy as np
 import jax
@@ -97,8 +97,8 @@ rng_key, rng_key_ = random.split(rng_key)
 kernel = NUTS(model,
               max_tree_depth=(20, 5))
 mcmc = MCMC(kernel,
-            num_warmup=2000,
-            num_samples=8000,
+            num_warmup=1500,
+            num_samples=6000,
             num_chains=num_chains)  
 mcmc.run(rng_key_, extra_fields=('potential_energy',))
 pe = mcmc.get_extra_fields()['potential_energy']
