@@ -149,8 +149,8 @@ class GlobalVars():
 
         # the factor to be multiplied to make the upper and lower 
         # bounds of the model space to be explored
-        self.fac_arr = np.array([[1.03, 2.0, 2.0],
-                                 [0.97, 0.01, 0.01]])
+        self.fac_arr = np.array([[1.03, 1.03, 1.03],
+                                 [0.97, 0.97, 0.97]])
 
         
         # finding the spline params for wsr

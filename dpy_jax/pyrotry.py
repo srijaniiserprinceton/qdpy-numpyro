@@ -77,7 +77,7 @@ eigvals_sigma = jnp.asarray(GVARS_TR.eigvals_sigma)
 num_eigvals = len(eigvals_true)
 
 # the log prob shift due to the 1/sqrt(2pi sigma^2)
-log_prob_shift = - jnp.log(jnp.sqrt(2*jnp.pi) * jnp.sum(eigvals_sigma))
+# log_prob_shift = - jnp.log(jnp.sqrt(2*jnp.pi) * jnp.sum(eigvals_sigma))
 
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse, omega0_arr =\
                                         precompute.build_hypmat_all_cenmults()
@@ -123,18 +123,11 @@ def model():
     for i in range(cmax.shape[1]-4):
         # c1_list.append(numpyro.sample(f'c1_{i}', dist.Uniform(cmin[0, i], cmax[0, i])))
         c1_list.append(ctrl_arr_dpt[0, i])
-        if (i == 10) or (i==11):
-            
+        if (i <= 2):
             c3_list.append(numpyro.sample(f'c3_{i}',
-                                          dist.Uniform(cmin[1, i], cmax[1, i])))
+                                        dist.Uniform(cmin[1, i], cmax[1, i])))
             c5_list.append(numpyro.sample(f'c5_{i}',
-                                          dist.Uniform(cmin[2, i], cmax[2, i])))
-            '''
-            c3_list.append(numpyro.sample(f'c3_{i}',
-                                          dist.Normal(cmean[1, i], csigma[1, i])))
-            c5_list.append(numpyro.sample(f'c5_{i}',
-                                          dist.Normal(cmean[2, i], csigma[2, i])))
-            '''
+                                        dist.Uniform(cmin[2, i], cmax[2, i])))
         else:
             c3_list.append(ctrl_arr_dpt[1, i])
             c5_list.append(ctrl_arr_dpt[2, i])
@@ -156,15 +149,19 @@ def model():
                                                   ctrl_arr, nc, len_s)
     
     delta_omega = diag_evals.todense()/2./omega0_arr*GVARS.OM*1e6
+
     delta_omega = delta_omega - eigvals_model
     delta_omega /= eigvals_sigma
-
     
     return numpyro.factor('obs',
                           dist.Normal(delta_omega, jnp.ones_like(delta_omega)).\
                           log_prob(jnp.zeros_like(delta_omega)))
+    """
+    return numpyro.factor('obs',
+                          dist.Normal(delta_omega, eigvals_sigma).\
+                          log_prob(eigvals_true))
+    """
     
-
 def get_delta_omega():
     cdpt = GVARS.ctrl_arr_dpt_clipped
 
@@ -186,7 +183,7 @@ def get_posterior_grid():
     def true_func(ic, misfits):
         misfit_mod_arr, misfit_obs_arr = misfits
         cdpt = GVARS.ctrl_arr_dpt_clipped*1.0
-        cdpt = jidx_update(cdpt, jidx[1, 10], GVARS.ctrl_arr_dpt_clipped[1, 10] * fac[ic])
+        cdpt = jidx_update(cdpt, jidx[1, 11], GVARS.ctrl_arr_dpt_clipped[1, 11] * fac[ic])
 
         diag_evals = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse,
                                                   fixed_hypmat_all_sparse,
@@ -203,13 +200,34 @@ def get_posterior_grid():
         return (misfit_mod_arr, misfit_obs_arr)
     return fac, foril(0, N, true_func, (misfit_model_arr, misfit_obs_arr))
 
-"""
-with numpyro.handlers.reparam(config={'theta': TransformReparam()}):
-    theta = numpyro.sample('theta',
-    dist.TransformedDistribution(dist.Normal(0., 1.),
-                                 dist.transforms.AffineTransform(mu, tau)))
-numpyro.sample('obs', dist.Normal(theta, sigma), obs=y) 
-"""
+def print_summary(samples, ctrl_arr):
+    keys = samples.keys()
+    for key in keys:
+        sample = samples[key]
+        key_split = key.split("_")
+        idx = int(key_split[-1])
+        sidx = int((int(key_split[0][1])-1)//2)
+        obs = ctrl_arr[sidx, idx]
+        print(f"[{obs:11.4e}] {key}: {sample.mean():.4e} +/- {sample.std():.4e}:" +
+              f"error/sigma = {(sample.mean()-obs)/sample.std():8.3f}")
+    return None
+
+
+def get_pert_model(pert_frac):
+    GC = GVARS.ctrl_arr_dpt_clipped
+    frac = (1 + pert_frac*(np.random.rand(GC.shape[0], GC.shape[1])-0.5))
+    frac[0, :] = 1.0
+    print(f"fraction value = {frac}")
+    ctrl_arr = GC*frac
+
+    diag_evals = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse,
+                                                  fixed_hypmat_all_sparse,
+                                                  ctrl_arr, nc, len_s)
+    
+    delta_omega = diag_evals.todense()/2./omega0_arr*GVARS.OM*1e6
+    delta_omega = delta_omega - eigvals_model
+    return delta_omega, delta_omega/eigvals_sigma
+
 
 # Start from this source of randomness. We will split keys for subsequent operations.
 seed = int(ARGS.lmin + ARGS.lmax + ARGS.chain_num + int(100*np.random.rand()))
@@ -217,11 +235,11 @@ print(f"seed = {seed}")
 rng_key = random.PRNGKey(seed)
 rng_key, rng_key_ = random.split(rng_key)
 
-'''
 # Run NUTS.
-kernel = NUTS(model)
-# kernel = SA(model, adapt_state_size=100)#, init_strategy=init_to_value(values=ctrl_arr_dpt))
-mcmc = MCMC(kernel, num_warmup=1000, num_samples=ARGS.maxiter)
+# kernel = NUTS(model,
+#               max_tree_depth=(20, 5))
+kernel = SA(model, adapt_state_size=100)
+mcmc = MCMC(kernel, num_warmup=1250, num_samples=ARGS.maxiter)
 mcmc.run(rng_key_, extra_fields=('potential_energy',))
 pe = mcmc.get_extra_fields()['potential_energy']
 
@@ -239,11 +257,13 @@ output_data['metadata'] = metadata
 output_data['ctrl_limits'] = ctrl_limits
 output_data['potential_energy'] = pe
 
+print_summary(output_data['samples'],
+              GVARS.ctrl_arr_dpt_clipped)
+
 fname = f"output-{ARGS.n0}-{ARGS.lmin}-{ARGS.lmax}-{ARGS.maxiter}"
 jf.save_obj(output_data, f"{GVARS_PATHS.scratch_dir}/{fname}")
 
 
-'''
 
 _get_posterior_grid = jax.jit(get_posterior_grid)
 fac, misfits = get_posterior_grid()
@@ -259,15 +279,16 @@ axs[1].plot(fac, np.exp(misfits[0]), 'k', label='model')
 axs[1].legend()
 plt.savefig('model_vs_data_minfunc.png')
 
-
 #--------- SECTION TO STORE MATRICES FOR COLLAB PROBLEM ------------#
 c_fixed = np.zeros_like(GVARS.ctrl_arr_dpt_clipped)
 c_fixed = GVARS.ctrl_arr_dpt_clipped.copy()
 # for n0 = 0, lmin = lmax = 200, knots = 5, rth = 0.95
 # the c3[2] and c5[2] are the most sensitive (sharpest gaussians)
 # excluding their contribution in the total fixed part
-c_fixed[1, 2] = 0.0
-c_fixed[2, 2] = 0.0
+c_fixed[1, 10] = 0.0
+c_fixed[2, 10] = 0.0
+c_fixed[1, 11] = 0.0
+c_fixed[2, 11] = 0.0
 
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse, omega0_arr =\
                                         precompute.build_hypmat_all_cenmults()
@@ -281,23 +302,26 @@ diag_evals_fixed = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse,
 diag_evals_fixed *= fac_sig
 
 # we just need to save the noc_diag corresponding to the two ctrl_pts set to zero
-noc_diag = [noc_hypmat_all_sparse[1][2].todense() * fac_sig]
+noc_diag = []
+noc_diag.append(noc_hypmat_all_sparse[1][2].todense() * fac_sig)
 noc_diag.append(noc_hypmat_all_sparse[2][2].todense() * fac_sig)
 
 # scaling the data
 eigvals_model *= 1./eigvals_sigma
-
 # checking if the forward problem works with the above components
-pred = diag_evals_fixed + GVARS.ctrl_arr_dpt_clipped[1, 2] * noc_diag[0]\
-       + GVARS.ctrl_arr_dpt_clipped[2, 2] * noc_diag[1]
+pred = (diag_evals_fixed +
+        GVARS.ctrl_arr_dpt_clipped[1, 10] * noc_diag[0] +
+        GVARS.ctrl_arr_dpt_clipped[2, 10] * noc_diag[1] +
+        GVARS.ctrl_arr_dpt_clipped[1, 11] * noc_diag[2] +
+        GVARS.ctrl_arr_dpt_clipped[2, 11] * noc_diag[3])
 
-true_params = np.array([GVARS.ctrl_arr_dpt_clipped[1,2],
-                        GVARS.ctrl_arr_dpt_clipped[2,2]])
+true_params = np.array([GVARS.ctrl_arr_dpt_clipped[1, 10],
+                        GVARS.ctrl_arr_dpt_clipped[2, 10],
+                        GVARS.ctrl_arr_dpt_clipped[1, 11],
+                        GVARS.ctrl_arr_dpt_clipped[2, 11]])
 
-print('Pred - Data:\n', np.max(np.abs(pred - eigvals_model)))
-
+print('max(Pred - Data):', max(abs(pred - eigvals_model)))
 np.save('fixed_part.npy', diag_evals_fixed)
 np.save('param_coeff.npy', noc_diag)
 np.save('data.npy', eigvals_model)
 np.save('true_params.npy', true_params)
-
