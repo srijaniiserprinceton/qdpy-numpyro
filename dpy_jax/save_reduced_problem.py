@@ -132,8 +132,7 @@ def get_posterior_grid(cind, sind, N):
         delta_omega_model = delta_omega - eigvals_model
 
         delta_omega_model /= eigvals_sigma
-
-        misfit_mod = -0.5*np.sum(delta_omega_model**2)/len_data # + log_prob_shift             
+        misfit_mod = -0.5*np.sum(delta_omega_model**2)/len_data
         misfit_mod_arr = jidx_update(misfit_mod_arr, jidx[facind], misfit_mod)
 
         return misfit_mod_arr
@@ -146,7 +145,7 @@ _get_posterior_grid = jax.jit(get_posterior_grid, static_argnums=(2,))
 
 # the indices of ctrl points that we want to investigate
 N = 100
-ind_min, ind_max = 10, 12
+ind_min, ind_max = 0, 3
 cind_arr = np.arange(ind_min, ind_max + 1)
 
 # the misfit array of shape (s x ctrl_pts x N)

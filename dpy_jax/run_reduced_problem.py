@@ -1,5 +1,6 @@
 import os
-os.environ["XLA_FLAGS"] = "--xla_force_host_platform_device_count=12"
+num_chains = 1
+os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
 import numpy as np
 import jax
 print(jax.devices())
@@ -39,7 +40,7 @@ fixed_part = jnp.asarray(fixed_part)
 # checking that the loaded data are correct
 pred = fixed_part * 1.0
 
-# adding the contribution from the fitting part                                               
+# adding the contribution from the fitting part
 for sind in range(1,3):
     for ci, cind in enumerate(cind_arr):
         pred += true_params[sind-1, ci] * param_coeff[sind-1][ci]
@@ -60,10 +61,10 @@ def model():
     c5 = []
 
     for i in range(num_params):
-      c3.append(numpyro.sample(f'c3_{i}', dist.Uniform(cmin[0,i], cmax[0,i])))
-      c5.append(numpyro.sample(f'c5_{i}', dist.Uniform(cmin[1,i], cmax[1,i])))
-      # c3.append(numpyro.sample(f'c3_{i}', dist.Uniform(0.97, 1.03)))
-      # c5.append(numpyro.sample(f'c5_{i}', dist.Uniform(0.97, 1.03)))
+        c3.append(numpyro.sample(f'c3_{i}', dist.Uniform(cmin[0,i], cmax[0,i])))
+        c5.append(numpyro.sample(f'c5_{i}', dist.Uniform(cmin[1,i], cmax[1,i])))
+        # c3.append(numpyro.sample(f'c3_{i}', dist.Uniform(0.90, 1.10)))
+        # c5.append(numpyro.sample(f'c5_{i}', dist.Uniform(0.90, 1.10)))
 
     c3 = jnp.asarray(c3)
     c5 = jnp.asarray(c5)
@@ -71,7 +72,6 @@ def model():
     # c5 = c5*true_params[1, i]
     
     pred = fixed_part - data + c3 @ param_coeff[0] + c5 @ param_coeff[1]
-    
     return numpyro.factor('obs', dist.Normal(0.0, 1.0).log_prob(pred))
 
 
@@ -82,7 +82,7 @@ def print_summary(samples, ctrl_arr):
         key_split = key.split("_")
         idx = int(key_split[-1])
         sidx = int((int(key_split[0][1])-1)//2)
-        obs = ctrl_arr[sidx-1, idx]
+        obs = ctrl_arr[sidx-1, idx] / 1e-3
         print(f"[{obs:11.4e}] {key}: {sample.mean():.4e} +/- {sample.std():.4e}:" +
               f"error/sigma = {(sample.mean()-obs)/sample.std():8.3f}")
     return None
@@ -96,7 +96,10 @@ rng_key, rng_key_ = random.split(rng_key)
 #kernel = SA(model, adapt_state_size=200)    
 kernel = NUTS(model,
               max_tree_depth=(20, 5))
-mcmc = MCMC(kernel, num_warmup=5000, num_samples=6000, num_chains=12)  
+mcmc = MCMC(kernel,
+            num_warmup=2000,
+            num_samples=8000,
+            num_chains=num_chains)  
 mcmc.run(rng_key_, extra_fields=('potential_energy',))
 pe = mcmc.get_extra_fields()['potential_energy']
 
@@ -110,7 +113,7 @@ refs = {}
 for sind in range(1, 3):
     s = 2*sind + 1
     for ci in range(num_params):
-        refs[f"c{s}_{ci}"] = true_params[sind-1, ci]
+        refs[f"c{s}_{ci}"] = true_params[sind-1, ci] / 1e-3
 
 
 ax = az.plot_pair(

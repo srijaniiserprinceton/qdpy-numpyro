@@ -103,4 +103,5 @@ if __name__ == "__main__":
     model_ = jit(model)
     # eigvals_true = compare_hypmat()
     eigvals_true = model_()
+    print(f"num elements = {len(eigvals_true)}")
     np.save("evals_model.npy", eigvals_true/2./omega0_arr*GVARS.OM*1e6)
