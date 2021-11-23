@@ -20,7 +20,7 @@ import arviz as az
 import sys
 
 # loading the files forthe problem
-data = np.load('data.npy')
+data = np.load('data_model.npy')
 true_params = np.load('true_params.npy')
 param_coeff = np.load('param_coeff.npy')
 fixed_part = np.load('fixed_part.npy')

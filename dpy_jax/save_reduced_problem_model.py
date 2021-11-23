@@ -51,6 +51,19 @@ from dpy_jax import build_hypermatrix_sparse as build_hm_sparse
 from jax.lib import xla_bridge
 print('JAX using:', xla_bridge.get_backend().platform)
 
+
+######### parameters needed to be changed ###############
+
+# the indices of ctrl points that we want to investigate
+ind_min, ind_max = 0, 3
+cind_arr = np.arange(ind_min, ind_max + 1)
+
+smin, smax = 3, 5
+smin_ind, smax_ind = (smin-1)//2, (smax-1)//2
+sind_arr = np.array([smin_ind, smax_ind])
+ 
+#########################################################
+
 GVARS = gvar_jax.GlobalVars(lmin=ARGS.lmin,
                             lmax=ARGS.lmax,
                             n0=ARGS.n0,
@@ -61,12 +74,9 @@ GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 eigvals_model = np.load("evals_model.npy")
 eigvals_model = jnp.asarray(eigvals_model)
 # eigvals_sigma = jnp.ones_like(GVARS_TR.eigvals_sigma)
-eigvals_true = jnp.asarray(GVARS_TR.eigvals_true)
 eigvals_sigma = jnp.asarray(GVARS_TR.eigvals_sigma)
-num_eigvals = len(eigvals_true)
+num_eigvals = len(eigvals_model)
 
-# the log prob shift due to the 1/sqrt(2pi sigma^2)
-log_prob_shift = - jnp.log(jnp.sqrt(2*jnp.pi) * jnp.sum(eigvals_sigma))
 
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse, omega0_arr =\
                                         precompute.build_hypmat_all_cenmults()
@@ -99,6 +109,7 @@ for i in range(cmax.shape[1]-4):
     ctrl_limits['cmax'][f'c5_{i}'] = cmax[2, i]
     
 
+# checks if the forward problem is working fine
 def get_delta_omega():
     cdpt = GVARS.ctrl_arr_dpt_clipped
 
@@ -108,7 +119,7 @@ def get_delta_omega():
 
     delta_omega = diag_evals.todense()/2./omega0_arr*GVARS.OM*1e6
     delta_omega -= eigvals_model
-    # misfit = -0.5*np.sum(delta_omega**2)
+    
     return delta_omega
 
 def get_posterior_grid(cind, sind, N):
@@ -140,18 +151,14 @@ def get_posterior_grid(cind, sind, N):
     return fac, foril(0, N, loop_facind, misfit_model_arr)
 
 # jitting the function
-# putting the true params
 _get_posterior_grid = jax.jit(get_posterior_grid, static_argnums=(2,))
 
-# the indices of ctrl points that we want to investigate
 N = 100
-ind_min, ind_max = 0, 3
-cind_arr = np.arange(ind_min, ind_max + 1)
 
 # the misfit array of shape (s x ctrl_pts x N)
-misfit_arr_all = jnp.zeros((2, len(cind_arr), N))
+misfit_arr_all = jnp.zeros((smax_ind - smin_ind + 1, len(cind_arr), N))
 
-for sind in range(1,3):
+for sind in range(smin_ind, smax_ind+1):
     for ci, cind in enumerate(cind_arr):
         fac, misfit_cs = _get_posterior_grid(cind, sind, N)
 
@@ -161,13 +168,14 @@ for sind in range(1,3):
 
 print(f"delta_omega = {get_delta_omega()}")
 
-fig, axs = plt.subplots(2, ind_max-ind_min+1, figsize=(12, 8), sharex = True)
-axs = np.reshape(axs, (2, ind_max-ind_min+1))
+# 1D plot of the misfit as we scan across the terrain
 
-for si in range(1, 3):
+fig, axs = plt.subplots(smax_ind - smin_ind + 1, ind_max-ind_min+1, figsize=(12, 8), sharex = True)
+axs = np.reshape(axs, (smax_ind - smin_ind + 1, ind_max-ind_min+1))
+
+for si in range(smin_ind, smax_ind+1):
     for j, ci in enumerate(cind_arr):
         axs[si-1, j].plot(fac, np.exp(misfit_arr_all[si-1,j]), 'k', label='model')
-        # axs[si-1, j].legend()
         axs[si-1, j].set_title('$c_{%i}^{%i}$'%(ci, 2*si+1))
 
 plt.tight_layout()
@@ -180,7 +188,7 @@ c_fixed = np.zeros_like(GVARS.ctrl_arr_dpt_clipped)
 c_fixed = GVARS.ctrl_arr_dpt_clipped.copy()
 
 # making the c_fixed coeffs for the variable params zero
-for sind in range(1,3):
+for sind in range(smin_ind, smax_ind+1):
     for cind in cind_arr:
         c_fixed[sind, cind] = 0.0
         c_fixed[sind, cind] = 0.0
@@ -199,7 +207,7 @@ diag_evals_fixed *= fac_sig
 # we just need to save the noc_diag corresponding to the two ctrl_pts set to zero
 noc_diag = []
 
-for sind in range(1,3):
+for sind in range(smin_ind, smax_ind+1):
     noc_diag_s = []
     for cind in cind_arr:
         noc_diag_s.append(noc_hypmat_all_sparse[sind][cind].todense() * fac_sig)
@@ -212,14 +220,14 @@ eigvals_model *= 1./eigvals_sigma
 pred = diag_evals_fixed * 1.0
 
 # adding the contribution from the fitting part
-for sind in range(1,3):
+for sind in range(smin_ind, smax_ind+1):
     for ci, cind in enumerate(cind_arr):
         pred += GVARS.ctrl_arr_dpt_clipped[sind, cind] *\
                 noc_diag[sind-1][ci]
 
-true_params = np.zeros((2, ind_max - ind_min + 1))
+true_params = np.zeros((smax_ind - smin_ind + 1, ind_max - ind_min + 1))
 
-for sind in range(1,3):
+for sind in range(smin_ind, smax_ind+1):
     for ci, cind in enumerate(cind_arr):
         true_params[sind-1, ci] = GVARS.ctrl_arr_dpt_clipped[sind, cind]
 
@@ -227,12 +235,14 @@ print('Pred - Data:\n', np.max(np.abs(pred - eigvals_model)))
 
 np.save('fixed_part.npy', diag_evals_fixed)
 np.save('param_coeff.npy', noc_diag)
-np.save('data.npy', eigvals_model)
+np.save('data_model.npy', eigvals_model)
 np.save('true_params.npy', true_params)
 np.save('cind_arr.npy', cind_arr)
+np.save('sind_arr.npy', sind_arr)
 
+sys.exit()
+################# generating the 2D pdfs #########################
 
-# generating the 2D pdfs
 true_params_flat = true_params.flatten(order='F')
 num_params = len(true_params_flat)
 noc_diag = np.asarray(noc_diag)
