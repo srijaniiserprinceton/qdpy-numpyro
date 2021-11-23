@@ -11,3 +11,4 @@ __pycache__
 qdpy_output
 *.out
 *.err
+*.png

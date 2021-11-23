@@ -50,16 +50,16 @@ def plot_chains(wnum):
         cmax = limits['cmax'][this_key]
         axs[ploti, 0].plot(samples1[this_key])
         axs[ploti, 0].axhline(y=GVARS.ctrl_arr_dpt_clipped[int((wnum-1)//2), idx],
-                              color='red')
+                              color='red', alpha=0.5)
         axs[ploti, 0].set_xlabel('Iteration number')
         axs[ploti, 0].set_ylabel(this_key)
         axs[ploti, 0].set_ylim([cmin, cmax])
 
         axs[ploti, 1].hist(samples1[this_key])
         axs[ploti, 1].set_ylabel('Count')
-        axs[ploti, 1].set_xlim([cmin, cmax])
+        # axs[ploti, 1].set_xlim([cmin, cmax])
         axs[ploti, 1].axvline(x=GVARS.ctrl_arr_dpt_clipped[int((wnum-1)//2), idx],
-                              color='red')
+                              color='red', alpha=0.5)
         ploti += 1
     fig.tight_layout()
     return fig
@@ -75,5 +75,5 @@ if __name__ == "__main__":
     sample_keys = samples1.keys()
     for ic in np.array([3, 5], dtype=np.int32):
         fig = plot_chains(ic)
-        fig.savefig(f"{dirnames[1]}/c{ic}.pdf")
+        fig.savefig(f"{dirnames[1]}/c{ic}.png")
         plt.close(fig)

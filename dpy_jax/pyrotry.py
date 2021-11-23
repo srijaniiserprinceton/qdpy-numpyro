@@ -1,3 +1,6 @@
+from jax.lib import xla_bridge
+print('JAX using:', xla_bridge.get_backend().platform)
+
 import argparse
 import jax
 from jax import random
@@ -12,7 +15,7 @@ import matplotlib.pyplot as plt
 import sys
 
 config.update("jax_log_compiles", 1)
-config.update('jax_platform_name', 'cpu')
+config.update('jax_platform_name', 'gpu')
 config.update('jax_enable_x64', True)
 
 parser = argparse.ArgumentParser()
@@ -52,9 +55,12 @@ from dpy_jax import build_hypermatrix_sparse as build_hm_sparse
 # importing pyro related packages
 import numpyro
 import numpyro.distributions as dist
-from numpyro.infer import NUTS, MCMC, SA
+from numpyro.infer import NUTS, MCMC, SA, BarkerMH
 from numpyro.infer import init_to_sample, init_to_value
-numpyro.set_platform('cpu')
+numpyro.set_platform('gpu')
+
+from jax.lib import xla_bridge
+print('JAX using:', xla_bridge.get_backend().platform)
 
 GVARS = gvar_jax.GlobalVars(lmin=ARGS.lmin,
                             lmax=ARGS.lmax,
@@ -85,6 +91,14 @@ nmults = len(GVARS.n0_arr)
 
 cmax = jnp.asarray(GVARS.ctrl_arr_up)
 cmin = jnp.asarray(GVARS.ctrl_arr_lo)
+
+# cmax = jnp.array(1.1 * GVARS.ctrl_arr_dpt_clipped)
+# cmin = jnp.array(0.9 * GVARS.ctrl_arr_dpt_clipped)
+
+# mean and sigma for Normal distribution
+cmean = (cmax + cmin)/2. # + 0.3 * (cmax-cmin)
+csigma = 0.25 * (cmax - cmin)
+
 ctrl_arr_dpt = jnp.asarray(GVARS.ctrl_arr_dpt_clipped)
 
 ctrl_limits = {}
@@ -109,11 +123,18 @@ def model():
     for i in range(cmax.shape[1]-4):
         # c1_list.append(numpyro.sample(f'c1_{i}', dist.Uniform(cmin[0, i], cmax[0, i])))
         c1_list.append(ctrl_arr_dpt[0, i])
-        if i == 16:
+        if (i == 10) or (i==11):
+            
             c3_list.append(numpyro.sample(f'c3_{i}',
                                           dist.Uniform(cmin[1, i], cmax[1, i])))
             c5_list.append(numpyro.sample(f'c5_{i}',
                                           dist.Uniform(cmin[2, i], cmax[2, i])))
+            '''
+            c3_list.append(numpyro.sample(f'c3_{i}',
+                                          dist.Normal(cmean[1, i], csigma[1, i])))
+            c5_list.append(numpyro.sample(f'c5_{i}',
+                                          dist.Normal(cmean[2, i], csigma[2, i])))
+            '''
         else:
             c3_list.append(ctrl_arr_dpt[1, i])
             c5_list.append(ctrl_arr_dpt[2, i])
@@ -165,7 +186,7 @@ def get_posterior_grid():
     def true_func(ic, misfits):
         misfit_mod_arr, misfit_obs_arr = misfits
         cdpt = GVARS.ctrl_arr_dpt_clipped*1.0
-        cdpt = jidx_update(cdpt, jidx[1, 2], GVARS.ctrl_arr_dpt_clipped[1, 2] * fac[ic])
+        cdpt = jidx_update(cdpt, jidx[1, 10], GVARS.ctrl_arr_dpt_clipped[1, 10] * fac[ic])
 
         diag_evals = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse,
                                                   fixed_hypmat_all_sparse,
@@ -196,11 +217,11 @@ print(f"seed = {seed}")
 rng_key = random.PRNGKey(seed)
 rng_key, rng_key_ = random.split(rng_key)
 
-"""
+'''
 # Run NUTS.
-#kernel = NUTS(model)
-kernel = SA(model)#, init_strategy=init_to_value(values=ctrl_arr_dpt))
-mcmc = MCMC(kernel, num_warmup=5500, num_samples=ARGS.maxiter)
+kernel = NUTS(model)
+# kernel = SA(model, adapt_state_size=100)#, init_strategy=init_to_value(values=ctrl_arr_dpt))
+mcmc = MCMC(kernel, num_warmup=1000, num_samples=ARGS.maxiter)
 mcmc.run(rng_key_, extra_fields=('potential_energy',))
 pe = mcmc.get_extra_fields()['potential_energy']
 
@@ -221,7 +242,9 @@ output_data['potential_energy'] = pe
 fname = f"output-{ARGS.n0}-{ARGS.lmin}-{ARGS.lmax}-{ARGS.maxiter}"
 jf.save_obj(output_data, f"{GVARS_PATHS.scratch_dir}/{fname}")
 
-"""
+
+'''
+
 _get_posterior_grid = jax.jit(get_posterior_grid)
 fac, misfits = get_posterior_grid()
 print(f"delta_omega = {get_delta_omega()}")
@@ -234,7 +257,7 @@ axs[0].legend()
 axs[1].plot(fac, np.exp(misfits[0]), 'k', label='model')
 #axs[1].plot(fac, np.exp(misfits[1]), '--r', label='observed')
 axs[1].legend()
-plt.savefig('model_vs_data_minfunc.pdf')
+plt.savefig('model_vs_data_minfunc.png')
 
 
 #--------- SECTION TO STORE MATRICES FOR COLLAB PROBLEM ------------#
@@ -249,16 +272,20 @@ c_fixed[2, 2] = 0.0
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse, omega0_arr =\
                                         precompute.build_hypmat_all_cenmults()
 
+fac_sig = 1./2./omega0_arr*GVARS.OM*1e6/eigvals_sigma
+
 # this is the fixed part of the diag
 diag_evals_fixed = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse,
                                                     fixed_hypmat_all_sparse,
                                                     c_fixed, nc, len_s).todense()
-diag_evals_fixed *= 1./2./omega0_arr*GVARS.OM*1e6
+diag_evals_fixed *= fac_sig
 
 # we just need to save the noc_diag corresponding to the two ctrl_pts set to zero
-noc_diag = [noc_hypmat_all_sparse[1][2].todense()/2./omega0_arr*GVARS.OM*1e6]
-noc_diag.append(noc_hypmat_all_sparse[2][2].todense()/2./omega0_arr*GVARS.OM*1e6)
+noc_diag = [noc_hypmat_all_sparse[1][2].todense() * fac_sig]
+noc_diag.append(noc_hypmat_all_sparse[2][2].todense() * fac_sig)
 
+# scaling the data
+eigvals_model *= 1./eigvals_sigma
 
 # checking if the forward problem works with the above components
 pred = diag_evals_fixed + GVARS.ctrl_arr_dpt_clipped[1, 2] * noc_diag[0]\
@@ -267,11 +294,10 @@ pred = diag_evals_fixed + GVARS.ctrl_arr_dpt_clipped[1, 2] * noc_diag[0]\
 true_params = np.array([GVARS.ctrl_arr_dpt_clipped[1,2],
                         GVARS.ctrl_arr_dpt_clipped[2,2]])
 
-print('Pred - Data:\n', pred - eigvals_model)
+print('Pred - Data:\n', np.max(np.abs(pred - eigvals_model)))
 
 np.save('fixed_part.npy', diag_evals_fixed)
 np.save('param_coeff.npy', noc_diag)
 np.save('data.npy', eigvals_model)
 np.save('true_params.npy', true_params)
-
 
