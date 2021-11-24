@@ -39,7 +39,7 @@ with open(".n0-lmin-lmax.dat", "w") as f:
 # importing local package 
 import jax_functions as jf
 import globalvars as gvar_jax
-import sparse_precompute as precompute
+import sparse_precompute_acoeff as precompute
 import build_hypermatrix_sparse as build_hm_sparse
 
 GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
@@ -48,6 +48,7 @@ GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
                             rth=ARGS.rth,
                             knot_num=ARGS.knot_num,
                             load_from_file=ARGS.load_mults)
+__, GVARS_TR, __ = GVARS.get_all_GVAR()
 nmults = len(GVARS.n0_arr)  # total number of central multiplets
 len_s = GVARS.wsr.shape[0]  # number of s
 
@@ -88,7 +89,7 @@ def compare_hypmat():
     import matplotlib.pyplot as plt
     import numpy as np
     # plotting difference with qdpt.py
-    supmat_qdpt = np.load("supmat_qdpt.npy").real
+    supmat_qdpt = np.load("supmat_qdpt_200.npy").real
 
     sm1 = diag
     sm2 = np.diag(supmat_qdpt)[:401]
@@ -105,3 +106,23 @@ if __name__ == "__main__":
     eigvals_true = model_()
     print(f"num elements = {len(eigvals_true)}")
     np.save("evals_model.npy", eigvals_true/2./omega0_arr*GVARS.OM*1e6)
+
+    # storing the eigvals sigmas
+    eigvals_sigma = np.ones_like(eigvals_true)
+
+    ellmax = np.max(GVARS.ell0_arr)
+    
+    start_ind_gvar = 0
+    start_ind = 0
+
+    for i, ell in enumerate(GVARS.ell0_arr):
+        end_ind = start_ind + 2 * ell + 1
+        end_ind_gvar = start_ind_gvar + 2 * ell + 1
+        
+        eigvals_sigma[start_ind:end_ind] *=\
+                        GVARS_TR.eigvals_sigma[start_ind_gvar:end_ind_gvar]
+        
+        start_ind +=  2 * ellmax + 1
+        start_ind_gvar += 2 * ell + 1
+
+    np.save('eigvals_sigma.npy', eigvals_sigma)

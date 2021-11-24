@@ -1,4 +1,4 @@
-from jax.lib import xla_bridge
+Bfrom jax.lib import xla_bridge
 print('JAX using:', xla_bridge.get_backend().platform)
 
 import argparse
@@ -45,7 +45,7 @@ with open(".n0-lmin-lmax.dat", "w") as f:
 # new package in jax.numpy
 from dpy_jax import globalvars as gvar_jax
 from dpy_jax import jax_functions as jf
-from dpy_jax import sparse_precompute as precompute
+from dpy_jax import sparse_precompute_acoeff as precompute
 from dpy_jax import build_hypermatrix_sparse as build_hm_sparse
 
 from jax.lib import xla_bridge
@@ -74,9 +74,10 @@ GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 eigvals_model = np.load("evals_model.npy")
 eigvals_model = jnp.asarray(eigvals_model)
 # eigvals_sigma = jnp.ones_like(GVARS_TR.eigvals_sigma)
-eigvals_sigma = jnp.asarray(GVARS_TR.eigvals_sigma)
+eigvals_sigma = jnp.asarray(np.load('eigvals_sigma.npy'))
 num_eigvals = len(eigvals_model)
 
+print(np.abs(eigvals_sigma).min())
 
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse, omega0_arr =\
                                         precompute.build_hypmat_all_cenmults()
@@ -195,6 +196,8 @@ for sind in range(smin_ind, smax_ind+1):
 
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse, omega0_arr =\
                                         precompute.build_hypmat_all_cenmults()
+
+
 
 fac_sig = 1./2./omega0_arr*GVARS.OM*1e6/eigvals_sigma
 

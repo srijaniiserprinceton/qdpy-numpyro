@@ -1,4 +1,4 @@
-"""Class to handle Ritzwoller-Lavely polynomials"""
+B"""Class to handle Ritzwoller-Lavely polynomials"""
 import logging
 import numpy as np
 import scipy.special as special
@@ -50,6 +50,7 @@ class ritzLavelyPoly():
             coeffs = np.zeros(j+1)
             coeffs[-1] = 1.0
             P2j = L * self.leg_poly[ell_ind, j]
+            print(Pjl.shape, P2j.shape)
             cj = Pjl[:j, :] @ P2j / (Pjl[:j, :]**2).sum(axis=1)
             P1j = P2j - (cj[:, NAX] * Pjl[:j, :]).sum(axis=0)
             Pjl[j, :] += ell * P1j/P1j[-1]

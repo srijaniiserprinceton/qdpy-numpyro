@@ -18,6 +18,21 @@ config.update('jax_enable_x64', True)
 jidx_update = jax.ops.index_update
 import arviz as az
 import sys
+from dpy_jax import ritzlavely as rl
+from dpy_jax import globalvars as gvar_jax
+
+ARGS = np.loadtxt(".n0-lmin-lmax.dat")
+GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
+                            lmin=int(ARGS[1]),
+                            lmax=int(ARGS[2]),
+                            rth=ARGS[3],
+                            knot_num=int(ARGS[4]),
+                            load_from_file=int(ARGS[5]))
+
+nmults = len(GVARS.ell0_arr)
+num_j = 3
+
+dim_hyper = 2 * np.max(GVARS.ell0_arr) + 1
 
 # loading the files forthe problem
 data = np.load('data_model.npy')
@@ -27,6 +42,14 @@ param_coeff = np.load('param_coeff.npy')
 fixed_part = np.load('fixed_part.npy')
 cind_arr = np.load('cind_arr.npy')
 smin_ind, smax_ind = np.load('sind_arr.npy')
+
+# generating the RL polynomials for making acoeffs
+make_RL_poly = rl.ritzLavelyPoly(GVARS)
+# shape (nmults x (smax+1) x 2*ellmax+1) 
+RL_poly = make_RL_poly.RL_poly
+# picnking out only the odd s
+smin, smax = 2*smin_ind+1, 2*smax_ind+1
+Pjl = RL_poly[:, smin:smax+1:2, :]
 
 # number of s to fit
 len_s = true_params.shape[0]
@@ -39,6 +62,21 @@ true_params = jnp.asarray(true_params)
 param_coeff = jnp.asarray(param_coeff)
 fixed_part = jnp.asarray(fixed_part)
 
+# making the data_acoeffs
+data_acoeffs = jnp.zeros(3 * nmults)
+
+def loop_in_mults(mult_ind, data_acoeff):
+    data_omega = data[mult_ind * dim_hyper: (mult_ind+1) * dim_hyper]
+    Pjl_mult = Pjl[mult_ind]
+    data_acoeff = jidx_update(data_acoeff,
+                              jidx[mult_ind * num_j: (mult_ind + 1) * num_j],
+                              (Pjl_mult @ data_omega)/jnp.diag(Pjl_mult @ Pjl.T))
+    
+    return data_acoeff
+
+data_acoeffs = foril(0, nmults, loop_in_mults, data_acoeffs)
+
+######################################################
 # checking that the loaded data are correct
 pred = fixed_part * 1.0
 
@@ -50,6 +88,34 @@ for sind in range(smin_ind, smax_ind+1):
 # these arrays should be very close
 np.testing.assert_array_almost_equal(pred, data)
 
+######################################################
+# checking that the loaded data are correct                                                   
+pred_acoeffs = jnp.zeros(num_j * nmults)
+
+pred = fixed_part * 1.0
+
+# adding the contribution from the fitting part                                               
+for sind in range(smin_ind, smax_ind+1):
+    for ci, cind in enumerate(cind_arr):
+        pred += true_params[sind-1, ci] * param_coeff[sind-1][ci]
+
+def loop_in_mults(mult_ind, pred_acoeff):
+    pred_omega = pred[mult_ind * dim_hyper: (mult_ind+1) * dim_hyper]
+    Pjl_mult = Pjl[mult_ind]
+    pred_acoeff = jidx_update(pred_acoeff,
+                              jidx[mult_ind * num_j: (mult_ind + 1) * num_j],
+                              (Pjl_mult @ pred_omega)/jnp.diag(Pjl_mult @ Pjl.T))
+    
+    return pred_acoeff
+
+pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
+
+# these arrays should be very close                                                           
+np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
+
+######################################################
+sys.exit()
+
 num_params = len(cind_arr)
 
 # setting the prior limits
@@ -58,6 +124,8 @@ cmax = 1.9 * true_params / 1e-3
 param_coeff *= 1e-3
 
 def model():
+    # predicted a-coefficients
+    pred_acoeffs = jnp.zeros(num_j * nmults)
     # sampling from a uniform prior
     # c1 = []
     c3 = []
@@ -76,9 +144,23 @@ def model():
     # c3 = c3*true_params[0, i]
     # c5 = c5*true_params[1, i]
     
-    pred = fixed_part - data + c3 @ param_coeff[0] + c5 @ param_coeff[1] # + c1 @ param_coeff[0]
+    pred = fixed_part + c3 @ param_coeff[0] + c5 @ param_coeff[1]
+    # + c1 @ param_coeff[0]
     
-    return numpyro.factor('obs', dist.Normal(0.0, 1.0).log_prob(pred))
+    def loop_in_mults(mult_ind, pred_acoeff):
+        pred_omega = pred[mult_ind * dim_hyper: (mult_ind+1) * dim_hyper]
+        Pjl_mult = Pjl[mult_ind]
+        pred_acoeff = jidx_update(pred_acoeff,
+                                  jidx[mult_ind * num_j: (mult_ind + 1) * num_j],
+                                  (Pjl_mult @ pred_omega)/jnp.diag(Pjl_mult @ Pjl.T))
+        
+        return pred_acoeff
+
+    pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
+    
+    misfit_acoeffs = pred_acoeffs - data_acoeffs
+
+    return numpyro.factor('obs', dist.Normal(0.0, 1.0).log_prob(misfit_acoeffs))
 
 
 def print_summary(samples, ctrl_arr):
