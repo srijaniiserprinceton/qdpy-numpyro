@@ -126,3 +126,4 @@ if __name__ == "__main__":
         start_ind_gvar += 2 * ell + 1
 
     np.save('eigvals_sigma.npy', eigvals_sigma)
+    np.save('acoeffs_sigma.npy', GVARS.acoeffs_sigma)

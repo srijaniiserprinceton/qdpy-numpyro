@@ -1,4 +1,4 @@
-Bfrom jax.lib import xla_bridge
+from jax.lib import xla_bridge
 print('JAX using:', xla_bridge.get_backend().platform)
 
 import argparse
@@ -73,8 +73,8 @@ GVARS = gvar_jax.GlobalVars(lmin=ARGS.lmin,
 GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 eigvals_model = np.load("evals_model.npy")
 eigvals_model = jnp.asarray(eigvals_model)
-# eigvals_sigma = jnp.ones_like(GVARS_TR.eigvals_sigma)
 eigvals_sigma = jnp.asarray(np.load('eigvals_sigma.npy'))
+acoeffs_sigma = jnp.asarray(np.load('acoeffs_sigma.npy'))
 num_eigvals = len(eigvals_model)
 
 print(np.abs(eigvals_sigma).min())
@@ -143,7 +143,7 @@ def get_posterior_grid(cind, sind, N):
         delta_omega = diag_evals.todense()/2./omega0_arr*GVARS.OM*1e6
         delta_omega_model = delta_omega - eigvals_model
 
-        delta_omega_model /= eigvals_sigma
+        # delta_omega_model /= eigvals_sigma
         misfit_mod = -0.5*np.sum(delta_omega_model**2)/len_data
         misfit_mod_arr = jidx_update(misfit_mod_arr, jidx[facind], misfit_mod)
 
@@ -171,7 +171,9 @@ print(f"delta_omega = {get_delta_omega()}")
 
 # 1D plot of the misfit as we scan across the terrain
 
-fig, axs = plt.subplots(smax_ind - smin_ind + 1, ind_max-ind_min+1, figsize=(12, 8), sharex = True)
+fig, axs = plt.subplots(smax_ind-smin_ind+1,
+                        ind_max-ind_min+1,
+                        figsize=(12, 8), sharex=True)
 axs = np.reshape(axs, (smax_ind - smin_ind + 1, ind_max-ind_min+1))
 
 for si in range(smin_ind, smax_ind+1):
@@ -199,7 +201,7 @@ noc_hypmat_all_sparse, fixed_hypmat_all_sparse, omega0_arr =\
 
 
 
-fac_sig = 1./2./omega0_arr*GVARS.OM*1e6/eigvals_sigma
+fac_sig = 1./2./omega0_arr*GVARS.OM*1e6#/eigvals_sigma
 
 # this is the fixed part of the diag
 diag_evals_fixed = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse,
@@ -217,7 +219,7 @@ for sind in range(smin_ind, smax_ind+1):
     noc_diag.append(noc_diag_s)
 
 # scaling the data
-eigvals_model *= 1./eigvals_sigma
+# eigvals_model *= 1./eigvals_sigma
 
 # checking if the forward problem works with the above components
 pred = diag_evals_fixed * 1.0
@@ -264,6 +266,7 @@ def get_posterior_grid2d(pc1, pc2):
     
     fac_params_nonpc = fac_nonpc * true_params_flat
 
+    # {{{ def true_func_i(i, misfits):
     def true_func_i(i, misfits):
         def true_func_j(j, misfits):
             pred = diag_evals_fixed +\
@@ -275,14 +278,13 @@ def get_posterior_grid2d(pc1, pc2):
                                 true_params_flat[pc2] * fac[j],
                                 lambda __: pred, 
                                 operand=None)
-            
             misfits = jidx_update(misfits, jidx[i, j], 
                     -0.5*np.sum((eigvals_model - pred)**2)/len_data)
-            
             return misfits
-            
+
         return foril(0, N, true_func_j, misfits)
-        
+    # }}} true_func_i(i, misfits)
+
     misfits = foril(0, N, true_func_i, misfit_arr)
     return fac, misfits
 

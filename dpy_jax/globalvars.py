@@ -146,6 +146,7 @@ class GlobalVars():
                                               qdPars.ell_bounds)
         self.n0_arr, self.ell0_arr = n_arr, ell_arr
         self.eigvals_true, self.eigvals_sigma = self.get_eigvals_true()
+        self.acoeffs_true, self.acoeffs_sigma = self.get_acoeffs_true()
 
         # the factor to be multiplied to make the upper and lower 
         # bounds of the model space to be explored
@@ -210,6 +211,19 @@ class GlobalVars():
             eigvals_sigma = np.append(eigvals_sigma, _esig)
         return eigvals_true, eigvals_sigma
 
+    def get_acoeffs_true(self):
+        n0arr = self.n0_arr
+        ell0arr = self.ell0_arr
+        nmults = len(n0arr)
+        acoeffs_true = np.array([])
+        acoeffs_sigma = np.array([])
+        for i in range(nmults):
+            _aval, _asig = self.find_acoeffs(ell0arr[i], n0arr[i])
+            acoeffs_true = np.append(acoeffs_true, _aval)
+            acoeffs_sigma = np.append(acoeffs_sigma, _asig)
+        return acoeffs_true*1e-3, acoeffs_sigma*1e-3
+
+
     # {{{ def findfreq(data, l, n, m):
     def findfreq(self, l, n, m):
         '''
@@ -256,6 +270,41 @@ class GlobalVars():
         amp[maskl] = 0
         return totsplit, totsigma, amp
     # }}} findfreq(data, l, n, m)
+
+    # {{{ def find_acoeffs(data, l, n):
+    def find_acoeffs(self, l, n, odd=True, smax=5):
+        '''Find the splitting coefficients for a given (l, n) 
+        in nHz
+
+        Inputs: (data, l, n)
+            data - array (hmi.6328.36)
+            l - harmonic degree
+            n - radial order
+
+        Outputs: (a_{nl}, asigma_{nl})
+            a_{nl}    - splitting coefficients in nHz
+            asigma_{nl} - uncertainity
+        '''
+        data = self.hmidata
+        L = np.sqrt(l*(l+1))
+        try:
+            modeindex = np.where((data[:, 0] == l) *
+                                (data[:, 1] == n))[0][0]
+        except IndexError:
+            print(f"MODE NOT FOUND : l = {l:03d}, n = {n:03d}")
+            modeindex = 0
+
+        splits = np.append([0.0], data[modeindex, 12:48])
+        split_sigmas = np.append([0.0], data[modeindex, 49:85])
+
+        splits = splits[:smax+1]
+        split_sigmas = split_sigmas[:smax+1]
+
+        if odd:
+            splits = splits[1::2]
+            split_sigmas = split_sigmas[1::2]
+        return splits, split_sigmas
+    # }}} find_acoeffs(data, l, n)
 
 
     def get_all_GVAR(self):

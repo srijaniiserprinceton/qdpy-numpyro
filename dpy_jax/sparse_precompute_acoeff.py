@@ -42,7 +42,6 @@ num_cnm = len(CNM.omega_cnm)
 ellmax = np.max(CNM.nl_cnm[:,1])
 
 
-
 lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
                                      nl_idx_pruned,
                                      omega_pruned)
