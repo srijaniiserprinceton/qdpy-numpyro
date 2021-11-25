@@ -126,7 +126,7 @@ np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
 
 # to check if all tests uptil here have passed with synthetic
 ######################################################
-
+sys.exit()
 # just replacing synthetic data with hmi data
 data_acoeffs = data_hmi
 
