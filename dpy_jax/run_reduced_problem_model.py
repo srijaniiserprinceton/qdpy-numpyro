@@ -1,5 +1,5 @@
-import os
-num_chains = 3
+Bimport os
+num_chains = 38
 os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
 import numpy as np
 import jax
@@ -31,7 +31,7 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             load_from_file=int(ARGS[5]))
 
 nmults = len(GVARS.ell0_arr)
-num_j = 3
+num_j = len(GVARS.s_arr)
 
 dim_hyper = 2 * np.max(GVARS.ell0_arr) + 1
 
@@ -54,6 +54,13 @@ smin = min(GVARS.s_arr)
 smax = max(GVARS.s_arr)
 Pjl = RL_poly[:, smin:smax+1:2, :]
 
+# calculating the denominator of a-coefficient converion apriori
+# shape (nmults, num_j)
+aconv_denom = np.zeros((nmults, Pjl.shape[1]))
+for mult_ind in range(nmults):
+    aconv_denom[mult_ind] = np.diag(Pjl[mult_ind] @ Pjl[mult_ind].T)
+
+
 # number of s to fit
 len_s = true_params.shape[0]
 # number of c's to fit
@@ -66,15 +73,15 @@ true_params = jnp.asarray(true_params)
 param_coeff = jnp.asarray(param_coeff)
 fixed_part = jnp.asarray(fixed_part)
 acoeffs_sigma = jnp.asarray(acoeffs_sigma)
+aconv_denom = jnp.asarray(aconv_denom)
 
 # making the data_acoeffs
 data_acoeffs = jnp.zeros(num_j*nmults)
 
 def loop_in_mults(mult_ind, data_acoeff):
     data_omega = jdc(data, (mult_ind*dim_hyper,), (dim_hyper,))
-    Pjl_mult = Pjl[mult_ind]
     data_acoeff = jdc_update(data_acoeff,
-                             (Pjl_mult @ data_omega)/jnp.diag(Pjl_mult @ Pjl_mult.T),
+                             (Pjl[mult_ind] @ data_omega)/aconv_denom[mult_ind],
                              (mult_ind * num_j,))
     
     return data_acoeff
@@ -106,9 +113,8 @@ for sind in range(smin_ind, smax_ind+1):
 
 def loop_in_mults(mult_ind, pred_acoeff):
     pred_omega = jdc(pred, (mult_ind*dim_hyper,), (dim_hyper,))
-    Pjl_mult = Pjl[mult_ind]
     pred_acoeff = jdc_update(pred_acoeff,
-                             (Pjl_mult @ pred_omega)/jnp.diag(Pjl_mult @ Pjl_mult.T),
+                             (Pjl[mult_ind] @ pred_omega)/aconv_denom[mult_ind],
                              (mult_ind * num_j,))
     return pred_acoeff
 
@@ -125,6 +131,7 @@ num_params = len(cind_arr)
 cmin = 0.5 * true_params / 1e-3
 cmax = 1.5 * true_params / 1e-3
 param_coeff *= 1e-3
+
 
 def model():
     # predicted a-coefficients
@@ -145,14 +152,13 @@ def model():
     
     def loop_in_mults(mult_ind, pred_acoeff):
         pred_omega = jdc(pred, (mult_ind*dim_hyper,), (dim_hyper,))
-        Pjl_mult = Pjl[mult_ind]
         pred_acoeff = jdc_update(pred_acoeff,
-                                (Pjl_mult @ pred_omega)/jnp.diag(Pjl_mult @ Pjl_mult.T),
+                                (Pjl[mult_ind] @ pred_omega)/aconv_denom[mult_ind],
                                 (mult_ind * num_j,))
         return pred_acoeff
 
     pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
-    misfit_acoeffs = 2*(pred_acoeffs - data_acoeffs)/acoeffs_sigma
+    misfit_acoeffs = (pred_acoeffs - data_acoeffs)/acoeffs_sigma
 
     return numpyro.factor('obs', dist.Normal(0.0, 1.0).log_prob(misfit_acoeffs))
 

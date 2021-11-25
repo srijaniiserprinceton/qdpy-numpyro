@@ -127,3 +127,4 @@ if __name__ == "__main__":
 
     np.save('eigvals_sigma.npy', eigvals_sigma)
     np.save('acoeffs_sigma.npy', GVARS.acoeffs_sigma)
+    np.save('acoeffs_true.npy', GVARS.acoeffs_true)

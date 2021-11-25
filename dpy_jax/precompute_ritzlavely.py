@@ -9,7 +9,8 @@ def gen_RL_poly():
 
     for ell_i, ell in enumerate(GVARS.ell0_arr):
         RLP = RLC.ritzLavelyPoly(ell, jmax)
-        RL_poly[ell_i, :, :2*ell+1] = RLP.get_Pjl()
+        RL_poly[ell_i, :, :2*ell+1] = RLP.Pjl
+
     return RL_poly
 
 
