@@ -18,6 +18,8 @@ from jax.ops import index_update as jidx_update
 from jax.ops import index as jidx
 config.update('jax_enable_x64', True)
 
+NAX = jnp.newaxis
+
 import numpyro
 import numpyro.distributions as dist
 from numpyro.infer import NUTS, MCMC, SA
@@ -49,71 +51,32 @@ omega0_arr = np.load('omega0_arr.npy')
 acoeffs_sigma = np.load('acoeffs_sigma.npy')
 acoeffs_true = np.load('acoeffs_true.npy')
 
-
-# making the data_acoeffs
-data_acoeffs = jnp.zeros(num_j*nmults)
-ell0_arr = jnp.array(GVARS.ell0_arr)
-
-def loop_in_mults(mult_ind, data_acoeff):
-    data_omega = jdc(eigvals_true, (mult_ind*dim_hyper,), (dim_hyper,))
-    Pjl_local = Pjl[mult_ind]
-    data_acoeff = jdc_update(data_acoeff,
-                             (Pjl_local @ data_omega)/Pjl_norm[mult_ind],
-                             (mult_ind * num_j,))
-    
-    return data_acoeff
-
-data_acoeffs = foril(0, nmults, loop_in_mults, data_acoeffs)
-
-
-
 cind_arr = np.load('cind_arr.npy')
 smin_ind, smax_ind = np.load('sind_arr.npy')
-
-def create_sparse_fixed(fixmat, fixmat_idx):
-    fixed_mat_list = []
-    for i in range(nmults):
-        sidx = i*9*dim_hyper
-        eidx = (i+1)*9*dim_hyper
-        _fs = sparse.BCOO((fixmat[sidx:eidx],
-                           fixmat_idx[sidx:eidx, :]),
-                          shape=(dim_hyper, dim_hyper))
-        fixed_mat_list.append(_fs)
-    return fixed_mat_list
-
-
-def create_sparse_noc(nocmat, nocmat_idx):
-    noc_mat_list = []
-    for i in range(nmults):
-        sidx = i*9*dim_hyper
-        eidx = (i+1)*9*dim_hyper
-        nocmat_s = []
-        for sind in range(smin_ind, smax_ind+1):
-            nocmat_c = []
-            for cind in cind_arr:
-                _spmat = sparse.BCOO((nocmat[sind, cind, sidx:eidx],
-                                      nocmat_idx[sind, cind, sidx:eidx, :]),
-                                     shape=(dim_hyper, dim_hyper))
-                nocmat_c.append(_spmat)
-            nocmat_s.append(nocmat_c)
-        noc_mat_list.append(nocmat_s)
-    return noc_mat_list
-
+param_coeff_idx = np.load('param_coeff_idx.npy')
+fixed_part_idx = np.load('fixed_part_idx.npy')
 
 param_coeff = np.load('param_coeff.npy')
-param_coeff_idx = np.load('param_coeff_idx.npy')
-param_coeff_sparse = create_sparse_noc(param_coeff, param_coeff_idx)
-
 fixed_part = np.load('fixed_part.npy')
-fixed_part_idx = np.load('fixed_part_idx.npy')
-fixed_part_sparse = create_sparse_fixed(fixed_part, fixed_part_idx)
+mask_p = param_coeff < -1.6375e27
+param_coeff[mask_p] = 0.0
+
+mask_f = fixed_part < -1.6375e27
+fixed_part[mask_f] = 0.0
+param_coeff = param_coeff[smin_ind:smax_ind+1, ...]
+
 
 # Reading RL poly from precomputed file
-# shape (nmults x (smax+1) x 2*ellmax+1) 
+# shape (nmults x (smax+1) x 2*ellmax+1)
+# reshaping to (nmults x (smax+1) x dim_hyper)
 RL_poly = np.load('RL_poly.npy')
 smin = min(GVARS.s_arr)
 smax = max(GVARS.s_arr)
-Pjl = RL_poly[:, smin:smax+1:2, :]
+Pjl_read = RL_poly[:, smin:smax+1:2, :]
+Pjl = np.zeros((Pjl_read.shape[0],
+                Pjl_read.shape[1],
+                dim_hyper))
+Pjl[:, :, :Pjl_read.shape[2]] = Pjl_read
 
 # calculating the normalization for Pjl apriori
 # shape (nmults, num_j)
@@ -142,6 +105,23 @@ num_params = len(cind_arr)
 cmin = 0.5 * true_params #/ 1e-3
 cmax = 1.5 * true_params #/ 1e-3
 
+
+# making the data_acoeffs
+data_acoeffs = jnp.zeros(num_j*nmults)
+ell0_arr = jnp.array(GVARS.ell0_arr)
+
+def loop_in_mults(mult_ind, data_acoeff):
+    data_omega = jdc(eigvals_true, (mult_ind*dim_hyper,), (dim_hyper,))
+    Pjl_local = Pjl[mult_ind]
+    data_acoeff = jdc_update(data_acoeff,
+                             (Pjl_local @ data_omega)/Pjl_norm[mult_ind],
+                             (mult_ind * num_j,))
+    
+    return data_acoeff
+
+data_acoeffs = foril(0, nmults, loop_in_mults, data_acoeffs)
+
+
 # this is actually done in the function create_sparse_noc
 # param_coeff *= 1e-3
 
@@ -149,14 +129,14 @@ def compare_model():
     # predicted a-coefficients
     eigvals_compute = jnp.array([])
     eigvals_acoeffs = jnp.array([])
+
+    pred = (true_params[..., NAX, NAX] * param_coeff).sum(axis=(0, 1)) + fixed_part
     for i in range(nmults):
-        pred = build_hm_sparse.build_hypmat_w_c(param_coeff_sparse[i],
-                                                fixed_part_sparse[i],
-                                                true_params, nc, len_s)
-        np.save(f'pred{i}.npy', pred.todense())
         ell0 = GVARS.ell0_arr[i]
         omegaref = omega0_arr[i]
-        _eigval_mult = jnp.diag(pred.todense())/2./omegaref*GVARS.OM*1e6
+        pred_sparse = sparse.bcoo_todense(pred[i], fixed_part_idx[i, ...],
+                                          shape=(dim_hyper, dim_hyper))
+        _eigval_mult = jnp.diag(pred_sparse)/2./omegaref*GVARS.OM*1e6
         eigvals_compute = jnp.append(eigvals_compute, _eigval_mult)
         Pjl_local = Pjl[i]
         pred_acoeff = (Pjl_local @ _eigval_mult)/Pjl_norm[i]

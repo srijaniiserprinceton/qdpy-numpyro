@@ -59,9 +59,8 @@ len_s = len(GVARS.s_arr)
 nmults = len(GVARS.n0_arr)
 
 dim_hyper = fixed_hypmat_all_sparse[0].shape[0]
-fixed_hypmat_sparse = np.zeros(9*nmults*dim_hyper)
-fixed_hypmat_idx = np.zeros((9*nmults*dim_hyper, 2), dtype=int)
-fac_sig = 1.
+fixed_hypmat_sparse = np.zeros((nmults, 9*dim_hyper))
+fixed_hypmat_idx = np.zeros((nmults, 9*dim_hyper, 2), dtype=int)
 
 cmax = jnp.array(1.1 * GVARS.ctrl_arr_dpt_clipped)
 cmin = jnp.array(0.9 * GVARS.ctrl_arr_dpt_clipped)
@@ -95,10 +94,8 @@ for i in range(nmults):
                                                c_fixed, nc, len_s)
     _fixmat = sparse.BCOO.fromdense(_fixmat.todense())
     _lendata = len(_fixmat.data)
-    start_idx = i*dim_hyper*9
-    end_idx = start_idx + _lendata
-    fixed_hypmat_sparse[start_idx:end_idx] = _fixmat.data
-    fixed_hypmat_idx[start_idx:end_idx, :] = _fixmat.indices
+    fixed_hypmat_sparse[i, :_lendata] = _fixmat.data
+    fixed_hypmat_idx[i, :_lendata, :] = _fixmat.indices
 
 np.save('fixed_part.npy', fixed_hypmat_sparse)
 np.save('fixed_part_idx.npy', fixed_hypmat_idx)
@@ -108,10 +105,12 @@ np.save('omega0_arr.npy', omega0_arr)
 # we just need to save the noc_diag corresponding to the two ctrl_pts set to zero
 noc_hypmat_sparse = np.zeros((len(GVARS.s_arr),
                               len(cind_arr),
-                              9*nmults*dim_hyper))
+                              nmults,
+                              9*dim_hyper))
 noc_hypmat_idx = np.zeros((len(GVARS.s_arr),
                            len(cind_arr),
-                           9*nmults*dim_hyper, 2),
+                           nmults,
+                           9*dim_hyper, 2),
                           dtype=int)
 
 for i in range(nmults):
@@ -122,10 +121,8 @@ for i in range(nmults):
             _data = _noc_hypmat_sp.data
             _idx = _noc_hypmat_sp.indices
             _lendata = len(_data)
-            start_idx = i*dim_hyper*9
-            end_idx = start_idx + _lendata
-            noc_hypmat_sparse[sind, cind, start_idx:end_idx] = _data
-            noc_hypmat_idx[sind, cind, start_idx:end_idx, :] = _idx
+            noc_hypmat_sparse[sind, cind, i, :_lendata] = _data
+            noc_hypmat_idx[sind, cind, i, :_lendata, :] = _idx
 
 np.save('param_coeff.npy', noc_hypmat_sparse)
 np.save('param_coeff_idx.npy', noc_hypmat_idx)

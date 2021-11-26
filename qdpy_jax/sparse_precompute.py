@@ -4,6 +4,8 @@ from scipy import integrate
 from scipy.interpolate import splev
 
 from jax.experimental import sparse
+from jax.ops import index_update as jidx_update
+from jax.ops import index as jidx
 import jax.numpy as jnp
 from jax import jit
 
@@ -234,17 +236,25 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
             startx, endx = startx_arr[i], endx_arr[i]
             starty, endy = startx_arr[j], endx_arr[j]
 
+            wigprod = wigvalm * wigval1
+            mask0 = wigprod == 0
+            mask0 = jidx_update(mask0, jidx[ellmin], 0)
+
             for c_ind in range(GVARS.nc):
                 # non-ctrl points submat
                 # avoiding  newaxis multiplication
+                c_integral = integrated_part[c_ind] * wigprod
+                c_integral = jidx_update(c_integral, mask0, -1.6375e30)
                 np.fill_diagonal(non_c_hypmat_arr[c_ind, startx+dellx:endx-dellx,
                                                   starty+delly:endy-delly],
-                                 integrated_part[c_ind] * wigvalm * wigval1)
+                                 c_integral)
     
             # the fixed hypermatrix
+            f_integral = fixed_integral * wigvalm * wigval1
+            f_integral = jidx_update(f_integral, mask0, -1.6375e30)
             np.fill_diagonal(fixed_hypmat[startx+dellx:endx-dellx,
                                           starty+delly:endy-delly],
-                            fixed_integral * wigvalm * wigval1)
+                             f_integral)
 
     # deleting wigvalm 
     del wigvalm
