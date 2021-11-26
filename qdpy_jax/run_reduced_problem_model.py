@@ -44,6 +44,8 @@ dim_hyper = int(np.loadtxt('.dimhyper'))
 
 # true params from Antia wsr
 true_params = np.load('true_params.npy')
+eigvals_true = np.load('evals_model.npy')
+omega0_arr = np.load('omega0_arr.npy')
 acoeffs_sigma = np.load('acoeffs_sigma.npy')
 acoeffs_true = np.load('acoeffs_true.npy')
 
@@ -53,8 +55,8 @@ smin_ind, smax_ind = np.load('sind_arr.npy')
 def create_sparse_fixed(fixmat, fixmat_idx):
     fixed_mat_list = []
     for i in range(nmults):
-        sidx = i*nmults
-        eidx = (i+1)*nmults
+        sidx = i*nmults*dim_hyper
+        eidx = (i+1)*nmults*dim_hyper
         _fs = sparse.BCOO((fixmat[sidx:eidx],
                            fixmat_idx[sidx:eidx, :]),
                           shape=(dim_hyper, dim_hyper))
@@ -65,8 +67,8 @@ def create_sparse_fixed(fixmat, fixmat_idx):
 def create_sparse_noc(nocmat, nocmat_idx):
     noc_mat_list = []
     for i in range(nmults):
-        sidx = i*nmults
-        eidx = (i+1)*nmults
+        sidx = i*nmults*dim_hyper
+        eidx = (i+1)*nmults*dim_hyper
         nocmat_s = []
         for sind in range(smin_ind, smax_ind+1):
             nocmat_c = []
@@ -119,9 +121,27 @@ Pjl_norm = jnp.asarray(Pjl_norm)
 num_params = len(cind_arr)
 
 # setting the prior limits
-cmin = 0.5 * true_params / 1e-3
-cmax = 1.5 * true_params / 1e-3
-param_coeff *= 1e-3
+cmin = 0.5 * true_params #/ 1e-3
+cmax = 1.5 * true_params #/ 1e-3
+
+# this is actually done in the function create_sparse_noc
+# param_coeff *= 1e-3
+
+def compare_model():
+    # predicted a-coefficients
+    eigvals_compute = jnp.array([])
+    for i in range(nmults):
+        pred = build_hm_sparse.build_hypmat_w_c(param_coeff_sparse[i],
+                                                fixed_part_sparse[i],
+                                                true_params, nc, len_s)
+        ell0 = GVARS.ell0_arr[i]
+        omegaref = omega0_arr[i]
+        _eigval_mult = jnp.diag(pred.todense())[:2*ell0+1]/2./omegaref*GVARS.OM*1e6
+        eigvals_compute = jnp.append(eigvals_compute, _eigval_mult)
+
+    diff = eigvals_compute - eigvals_true
+    print(f"Max(Pred - True): {abs(diff).max():.5e}")
+    return diff
 
 
 def model():
@@ -145,7 +165,7 @@ def model():
                                                 fixed_part_sparse[i],
                                                 c_arr, nc, len_s)
         ell0 = GVARS.ell0_arr[i]
-        omegaref = GVARS.omega0_arr[i]
+        omegaref = omega0_arr[i]
         _eigval_mult = get_eigs(pred.todense())[:2*ell0+1]/2./omegaref*GVARS.OM*1e6
         Pjl_local = Pjl[i][:, :2*ell0+1]
         pred_acoeff = jdc_update(pred_acoeff,
@@ -184,45 +204,46 @@ def print_summary(samples, ctrl_arr):
     return None
 
 
-# Start from this source of randomness. We will split keys for subsequent operations.    
-seed = int(123 + 100*np.random.rand())
-rng_key = random.PRNGKey(seed)
-rng_key, rng_key_ = random.split(rng_key)
+if __name__ == "__main__":
+    diff = compare_model()
+    # Start from this source of randomness. We will split keys for subsequent operations.    
+    seed = int(123 + 100*np.random.rand())
+    rng_key = random.PRNGKey(seed)
+    rng_key, rng_key_ = random.split(rng_key)
 
-#kernel = SA(model, adapt_state_size=200)    
-kernel = NUTS(model,
-              max_tree_depth=(20, 5))
-mcmc = MCMC(kernel,
-            num_warmup=1500,
-            num_samples=6000,
-            num_chains=num_chains)  
-mcmc.run(rng_key_, extra_fields=('potential_energy',))
-pe = mcmc.get_extra_fields()['potential_energy']
+    #kernel = SA(model, adapt_state_size=200)
+    kernel = NUTS(model, max_tree_depth=(20, 5))
+    mcmc = MCMC(kernel,
+                num_warmup=1500,
+                num_samples=6000,
+                num_chains=num_chains)  
+    mcmc.run(rng_key_, extra_fields=('potential_energy',))
+    pe = mcmc.get_extra_fields()['potential_energy']
 
-# extracting necessary fields for plotting
-mcmc_sample = mcmc.get_samples()
-keys = mcmc_sample.keys()
+    # extracting necessary fields for plotting
+    mcmc_sample = mcmc.get_samples()
+    keys = mcmc_sample.keys()
 
-# putting the true params
-refs = {}
-# initializing the keys
-for sind in range(smin_ind, smax_ind+1):
-    s = 2*sind + 1
-    for ci in range(num_params):
-        refs[f"c{s}_{ci}"] = true_params[sind-1, ci] / 1e-3
+    # putting the true params
+    refs = {}
+    # initializing the keys
+    for sind in range(smin_ind, smax_ind+1):
+        s = 2*sind + 1
+        for ci in range(num_params):
+            refs[f"c{s}_{ci}"] = true_params[sind-1, ci] / 1e-3
 
-ax = az.plot_pair(
-    mcmc_sample,
-    var_names=[key for key in mcmc_sample.keys()],
-    kde_kwargs={"fill_last": False},
-    kind=["scatter", "kde"],
-    marginals=True,
-    point_estimate="median",
-    figsize=(10, 8),
-    reference_values=refs,
-    reference_values_kwargs={'color':"red", "marker":"o", "markersize":6}
-)
-plt.tight_layout()
-plt.savefig('corner_reduced_prob.png')
+    ax = az.plot_pair(
+        mcmc_sample,
+        var_names=[key for key in mcmc_sample.keys()],
+        kde_kwargs={"fill_last": False},
+        kind=["scatter", "kde"],
+        marginals=True,
+        point_estimate="median",
+        figsize=(10, 8),
+        reference_values=refs,
+        reference_values_kwargs={'color':"red", "marker":"o", "markersize":6}
+    )
+    plt.tight_layout()
+    plt.savefig('corner_reduced_prob.png')
 
-print_summary(mcmc_sample, true_params)
+    print_summary(mcmc_sample, true_params)

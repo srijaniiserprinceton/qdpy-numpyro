@@ -1,32 +1,30 @@
-from jax.lib import xla_bridge
-print('JAX using:', xla_bridge.get_backend().platform)
-
+import sys
 import argparse
+import numpy as np
+from tqdm import tqdm
+import matplotlib.pyplot as plt
+
 import jax
 from jax import random
-from tqdm import tqdm
-import numpy as np
 import jax.numpy as jnp
 from jax.config import config
 from jax.ops import index as jidx
-from jax.ops import index_update as jidx_update
 from jax.lax import fori_loop as foril
-import matplotlib.pyplot as plt
-import sys
+from jax.ops import index_update as jidx_update
+from jax.experimental import sparse
 
 config.update("jax_log_compiles", 1)
-config.update('jax_platform_name', 'gpu')
+config.update('jax_platform_name', 'cpu')
 config.update('jax_enable_x64', True)
 
 # new package in jax.numpy
-from qdpy_jax import globalvars as gvar_jax
 from qdpy_jax import jax_functions as jf
+from qdpy_jax import globalvars as gvar_jax
 from qdpy_jax import sparse_precompute as precompute
 from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
 
 from jax.lib import xla_bridge
 print('JAX using:', xla_bridge.get_backend().platform)
-
 
 # the indices of ctrl points that we want to investigate
 ind_min, ind_max = 0, 3
@@ -35,8 +33,6 @@ cind_arr = np.arange(ind_min, ind_max + 1)
 smin, smax = 3, 5
 smin_ind, smax_ind = (smin-1)//2, (smax-1)//2
 sind_arr = np.array([smin_ind, smax_ind])
- 
-#########################################################
 
 ARGS = np.loadtxt(".n0-lmin-lmax.dat")
 GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
@@ -46,7 +42,7 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             knot_num=int(ARGS[4]),
                             load_from_file=int(ARGS[5]))
 
-GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
+GVARS_PATHS, GVARS_TR, __ = GVARS.get_all_GVAR()
 eigvals_model = np.load("evals_model.npy")
 eigvals_model = jnp.asarray(eigvals_model)
 eigvals_sigma = jnp.asarray(np.load('eigvals_sigma.npy'))
@@ -97,8 +93,9 @@ for i in range(nmults):
     _fixmat = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
                                                fixed_hypmat_all_sparse[i],
                                                c_fixed, nc, len_s)
+    _fixmat = sparse.BCOO.fromdense(_fixmat.todense())
     _lendata = len(_fixmat.data)
-    start_idx = i*nmults
+    start_idx = i*dim_hyper*9
     end_idx = start_idx + _lendata
     fixed_hypmat_sparse[start_idx:end_idx] = _fixmat.data
     fixed_hypmat_idx[start_idx:end_idx, :] = _fixmat.indices
@@ -106,20 +103,26 @@ for i in range(nmults):
 np.save('fixed_part.npy', fixed_hypmat_sparse)
 np.save('fixed_part_idx.npy', fixed_hypmat_idx)
 np.savetxt('.dimhyper', np.array([dim_hyper]), fmt='%d')
-
+np.save('omega0_arr.npy', omega0_arr)
 
 # we just need to save the noc_diag corresponding to the two ctrl_pts set to zero
-noc_hypmat_sparse = np.zeros((len(GVARS.s_arr), len(cind_arr), 9*nmults*dim_hyper))
-noc_hypmat_idx = np.zeros((len(GVARS.s_arr), len(cind_arr), 9*nmults*dim_hyper, 2),
+noc_hypmat_sparse = np.zeros((len(GVARS.s_arr),
+                              len(cind_arr),
+                              9*nmults*dim_hyper))
+noc_hypmat_idx = np.zeros((len(GVARS.s_arr),
+                           len(cind_arr),
+                           9*nmults*dim_hyper, 2),
                           dtype=int)
+
 for i in range(nmults):
     for sind in range(smin_ind, smax_ind+1):
         for cind in cind_arr:
-            _noc_hypmat_sp = noc_hypmat_all_sparse[i][sind][cind]
+            _noc_sp = noc_hypmat_all_sparse[i][sind][cind]
+            _noc_hypmat_sp = sparse.BCOO.fromdense(_noc_sp.todense())
             _data = _noc_hypmat_sp.data
             _idx = _noc_hypmat_sp.indices
             _lendata = len(_data)
-            start_idx = i*nmults
+            start_idx = i*dim_hyper*9
             end_idx = start_idx + _lendata
             noc_hypmat_sparse[sind, cind, start_idx:end_idx] = _data
             noc_hypmat_idx[sind, cind, start_idx:end_idx, :] = _idx
@@ -130,7 +133,8 @@ np.save('data_model.npy', eigvals_model)
 np.save('cind_arr.npy', cind_arr)
 np.save('sind_arr.npy', sind_arr)
 
-true_params = np.zeros((smax_ind - smin_ind + 1, ind_max - ind_min + 1))
+true_params = np.zeros((smax_ind - smin_ind + 1,
+                        ind_max - ind_min + 1))
 
 for sind in range(smin_ind, smax_ind+1):
     for ci, cind in enumerate(cind_arr):
@@ -140,32 +144,27 @@ np.save('true_params.npy', true_params)
 sys.exit()
 
 
-
 # checks if the forward problem is working fine
 def get_delta_omega():
-    cdpt = GVARS.ctrl_arr_dpt_clipped
-    diag_evals = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse,
-                                                fixed_hypmat_all_sparse,
-                                                cdpt, nc, len_s)
+    eigval_all = np.array([])
+    for i in range(nmults):
+        diag_evals = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
+                                                    fixed_hypmat_all_sparse[i],
+                                                    GVARS.ctrl_arr_dpt_clipped, nc, len_s)
+                                                    # true_params, nc, len_s)
+        ell0 = GVARS.ell0_arr[i]
+        eigval_compute = np.diag(diag_evals.todense())/2./omega0_arr[0]*GVARS.OM*1e6
+        eigval_compute = eigval_compute[:2*ell0+1]
+        eigval_all = np.append(eigval_all, eigval_compute)
+    return eigval_all
 
-    delta_omega = diag_evals.todense()/2./omega0_arr*GVARS.OM*1e6
-    delta_omega -= eigvals_model
-    return delta_omega
-
+pred = get_delta_omega()
 # checking if the forward problem works with the above components
-pred = diag_evals_fixed * 1.0
-
-# adding the contribution from the fitting part
-for sind in range(smin_ind, smax_ind+1):
-    for ci, cind in enumerate(cind_arr):
-        pred += GVARS.ctrl_arr_dpt_clipped[sind, cind] *\
-                noc_diag[sind-1][ci]
-
-print('Pred - Data:\n', np.max(np.abs(pred - eigvals_model)))
+print(f"Pred - Data: {abs(pred - eigvals_model).max():.6e}")
 
 
-sys.exit()
 ############################################################################################
+"""
 def get_posterior_grid(cind, sind, N):
     # array containing the factors for the param space
     fac = jnp.linspace(0.01, 2.0, N)
@@ -298,3 +297,5 @@ for i in range(num_params):
 
 fig.tight_layout()
 plt.savefig('2D_pdf.png')
+
+"""

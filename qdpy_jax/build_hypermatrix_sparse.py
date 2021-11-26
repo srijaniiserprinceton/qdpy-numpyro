@@ -34,5 +34,4 @@ def build_hypmat_w_c(noc_hypmat, fixed_hypmat, c_arr, nc, len_s):
             hypmat_cs_summed += c_arr[s_ind][c_ind] * noc_hypmat[s_ind][c_ind]
 
     hypmat_cs_summed += fixed_hypmat
-    # return fixed_hypmat.todense()
     return hypmat_cs_summed

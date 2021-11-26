@@ -38,10 +38,10 @@ with open(".n0-lmin-lmax.dat", "w") as f:
             f"{ARGS.load_mults}")
 
 # importing local package 
-import jax_functions as jf
-import globalvars as gvar_jax
-import sparse_precompute as precompute
-import build_hypermatrix_sparse as build_hm_sparse
+from qdpy_jax import jax_functions as jf
+from qdpy_jax import globalvars as gvar_jax
+from qdpy_jax import sparse_precompute as precompute
+from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
 
 GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
                             lmin=ARGS.lmin,
@@ -55,23 +55,27 @@ len_s = GVARS.wsr.shape[0]  # number of s
 np.save('acoeffs_sigma.npy', GVARS.acoeffs_sigma)
 np.save('acoeffs_true.npy', GVARS.acoeffs_true)
 
-sys.exit()
 
-noc_hypmat_all_sparse, fixed_hypmat_all_sparse, omega0_arr =\
+noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr =\
                                 precompute.build_hypmat_all_cenmults()
 
 def model():
     # building the entire hypermatrix
-    diag_evals = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse,
-                                                  fixed_hypmat_all_sparse,
-                                                  GVARS.ctrl_arr_dpt_clipped,
-                                                  GVARS.nc, len_s)
-    
-    # finding the eigenvalues of hypermatrix
-    diag_dense = diag_evals.todense()
-    return diag_dense
+    eigval_model = jnp.array([])
+    for i in range(nmults):
+        diag_evals = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
+                                                    fixed_hypmat_all_sparse[i],
+                                                    GVARS.ctrl_arr_dpt_clipped,
+                                                    GVARS.nc, len_s)
 
+        ell0 = GVARS.ell0_arr[i]
+        eigval_dpt_mult = jnp.diag(diag_evals.todense())/2./omega0_arr[0]*GVARS.OM*1e6
+        eigval_dpt_mult = eigval_dpt_mult[:2*ell0+1]
+        eigval_model = jnp.append(eigval_model, eigval_dpt_mult)
 
+    return eigval_model
+
+'''
 def eigval_sort_slice(eigval, eigvec):
     """Sorts eigenvalues using the eigenvectors"""
     def body_func(i, ebs):
@@ -104,32 +108,13 @@ def compare_hypmat():
     print(f"Max diff = {abs(sm1 - sm2).max():.3e}")
     plt.savefig('supmat_diff.pdf')
     return diag
+'''
 
 if __name__ == "__main__":
     model_ = jit(model)
     # eigvals_true = compare_hypmat()
     eigvals_true = model_()
     print(f"num elements = {len(eigvals_true)}")
-    np.save("evals_model.npy", eigvals_true/2./omega0_arr*GVARS.OM*1e6)
-
-    # storing the eigvals sigmas
-    eigvals_sigma = np.ones_like(eigvals_true)
-
-    ellmax = np.max(GVARS.ell0_arr)
-    
-    start_ind_gvar = 0
-    start_ind = 0
-
-    for i, ell in enumerate(GVARS.ell0_arr):
-        end_ind = start_ind + 2 * ell + 1
-        end_ind_gvar = start_ind_gvar + 2 * ell + 1
-        
-        eigvals_sigma[start_ind:end_ind] *=\
-                        GVARS_TR.eigvals_sigma[start_ind_gvar:end_ind_gvar]
-        
-        start_ind +=  2 * ellmax + 1
-        start_ind_gvar += 2 * ell + 1
-
-    np.save('eigvals_sigma.npy', eigvals_sigma)
+    np.save("evals_model.npy", eigvals_true) 
     np.save('acoeffs_sigma.npy', GVARS.acoeffs_sigma)
     np.save('acoeffs_true.npy', GVARS.acoeffs_true)
