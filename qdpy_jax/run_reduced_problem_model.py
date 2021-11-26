@@ -55,8 +55,8 @@ smin_ind, smax_ind = np.load('sind_arr.npy')
 def create_sparse_fixed(fixmat, fixmat_idx):
     fixed_mat_list = []
     for i in range(nmults):
-        sidx = i*nmults*dim_hyper
-        eidx = (i+1)*nmults*dim_hyper
+        sidx = i*9*dim_hyper
+        eidx = (i+1)*9*dim_hyper
         _fs = sparse.BCOO((fixmat[sidx:eidx],
                            fixmat_idx[sidx:eidx, :]),
                           shape=(dim_hyper, dim_hyper))
@@ -67,8 +67,8 @@ def create_sparse_fixed(fixmat, fixmat_idx):
 def create_sparse_noc(nocmat, nocmat_idx):
     noc_mat_list = []
     for i in range(nmults):
-        sidx = i*nmults*dim_hyper
-        eidx = (i+1)*nmults*dim_hyper
+        sidx = i*9*dim_hyper
+        eidx = (i+1)*9*dim_hyper
         nocmat_s = []
         for sind in range(smin_ind, smax_ind+1):
             nocmat_c = []
@@ -136,12 +136,31 @@ def compare_model():
                                                 true_params, nc, len_s)
         ell0 = GVARS.ell0_arr[i]
         omegaref = omega0_arr[i]
-        _eigval_mult = jnp.diag(pred.todense())[:2*ell0+1]/2./omegaref*GVARS.OM*1e6
-        eigvals_compute = jnp.append(eigvals_compute, _eigval_mult)
+        _eigval_mult = jnp.diag(pred.todense())/2./omegaref*GVARS.OM*1e6
+        eigvals_compute = jnp.append(eigvals_compute, _eigval_mult[:2*ell0+1])
 
     diff = eigvals_compute - eigvals_true
     print(f"Max(Pred - True): {abs(diff).max():.5e}")
     return diff
+
+
+def true_model():
+    # predicted a-coefficients
+    pred_acoeff = jnp.zeros(num_j*nmults)
+
+    for i in range(nmults):
+        pred = build_hm_sparse.build_hypmat_w_c(param_coeff_sparse[i],
+                                                fixed_part_sparse[i],
+                                                true_params, nc, len_s)
+        ell0 = GVARS.ell0_arr[i]
+        omegaref = omega0_arr[i]
+        _eigval_mult = get_eigs(pred.todense())[:2*ell0+1]/2./omegaref*GVARS.OM*1e6
+        Pjl_local = Pjl[i][:, :2*ell0+1]
+        pred_acoeff = jdc_update(pred_acoeff,
+                                (Pjl_local @ _eigval_mult)/Pjl_norm[i],
+                                (i * num_j,))
+
+    return pred_acoeff
 
 
 def model():
