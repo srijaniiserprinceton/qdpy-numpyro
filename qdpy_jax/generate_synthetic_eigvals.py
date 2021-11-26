@@ -59,9 +59,10 @@ np.save('acoeffs_true.npy', GVARS.acoeffs_true)
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr =\
                                 precompute.build_hypmat_all_cenmults()
 
+
 def model():
-    # building the entire hypermatrix
     eigval_model = jnp.array([])
+
     for i in range(nmults):
         diag_evals = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
                                                     fixed_hypmat_all_sparse[i],
@@ -69,51 +70,17 @@ def model():
                                                     GVARS.nc, len_s)
 
         ell0 = GVARS.ell0_arr[i]
-        eigval_dpt_mult = jnp.diag(diag_evals.todense())/2./omega0_arr[0]*GVARS.OM*1e6
-        eigval_dpt_mult = eigval_dpt_mult[:2*ell0+1]
+        eigval_dpt_mult = jnp.diag(diag_evals.todense())
+        eigval_dpt_mult *= 1.0/2./omega0_arr[i]*GVARS.OM*1e6
+        eigval_dpt_mult = eigval_dpt_mult
         eigval_model = jnp.append(eigval_model, eigval_dpt_mult)
 
     return eigval_model
 
-'''
-def eigval_sort_slice(eigval, eigvec):
-    """Sorts eigenvalues using the eigenvectors"""
-    def body_func(i, ebs):
-        return jidx_update(ebs, jidx[i], jnp.argmax(jnp.abs(eigvec[i])))
-
-    eigbasis_sort = jnp.zeros(len(eigval), dtype=int)
-    eigbasis_sort = foril(0, len(eigval), body_func, eigbasis_sort)
-    return eigval[eigbasis_sort]
-
-
-def get_eigs(mat):
-    """Returns the sorted eigenvalues of a real symmetric matrix"""
-    eigvals, eigvecs = jnp.linalg.eigh(mat)
-    eigvals = eigval_sort_slice(eigvals, eigvecs)
-    return eigvals
-
-def compare_hypmat():
-    diag = model_().block_until_ready()
-    # return diag
-    import matplotlib.pyplot as plt
-    import numpy as np
-    # plotting difference with qdpt.py
-    supmat_qdpt = np.load("supmat_qdpt_200.npy").real
-
-    sm1 = diag
-    sm2 = np.diag(supmat_qdpt)[:401]
-
-    plt.figure(figsize=(10, 5))
-    plt.plot(sm1 - sm2)
-    print(f"Max diff = {abs(sm1 - sm2).max():.3e}")
-    plt.savefig('supmat_diff.pdf')
-    return diag
-'''
-
 if __name__ == "__main__":
-    model_ = jit(model)
+    # model_ = jit(model)
     # eigvals_true = compare_hypmat()
-    eigvals_true = model_()
+    eigvals_true = model()
     print(f"num elements = {len(eigvals_true)}")
     np.save("evals_model.npy", eigvals_true) 
     np.save('acoeffs_sigma.npy', GVARS.acoeffs_sigma)

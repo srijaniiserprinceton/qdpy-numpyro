@@ -49,6 +49,24 @@ omega0_arr = np.load('omega0_arr.npy')
 acoeffs_sigma = np.load('acoeffs_sigma.npy')
 acoeffs_true = np.load('acoeffs_true.npy')
 
+
+# making the data_acoeffs
+data_acoeffs = jnp.zeros(num_j*nmults)
+ell0_arr = jnp.array(GVARS.ell0_arr)
+
+def loop_in_mults(mult_ind, data_acoeff):
+    data_omega = jdc(eigvals_true, (mult_ind*dim_hyper,), (dim_hyper,))
+    Pjl_local = Pjl[mult_ind]
+    data_acoeff = jdc_update(data_acoeff,
+                             (Pjl_local @ data_omega)/Pjl_norm[mult_ind],
+                             (mult_ind * num_j,))
+    
+    return data_acoeff
+
+data_acoeffs = foril(0, nmults, loop_in_mults, data_acoeffs)
+
+
+
 cind_arr = np.load('cind_arr.npy')
 smin_ind, smax_ind = np.load('sind_arr.npy')
 
@@ -130,37 +148,23 @@ cmax = 1.5 * true_params #/ 1e-3
 def compare_model():
     # predicted a-coefficients
     eigvals_compute = jnp.array([])
+    eigvals_acoeffs = jnp.array([])
     for i in range(nmults):
         pred = build_hm_sparse.build_hypmat_w_c(param_coeff_sparse[i],
                                                 fixed_part_sparse[i],
                                                 true_params, nc, len_s)
+        np.save(f'pred{i}.npy', pred.todense())
         ell0 = GVARS.ell0_arr[i]
         omegaref = omega0_arr[i]
         _eigval_mult = jnp.diag(pred.todense())/2./omegaref*GVARS.OM*1e6
-        eigvals_compute = jnp.append(eigvals_compute, _eigval_mult[:2*ell0+1])
+        eigvals_compute = jnp.append(eigvals_compute, _eigval_mult)
+        Pjl_local = Pjl[i]
+        pred_acoeff = (Pjl_local @ _eigval_mult)/Pjl_norm[i]
+        eigvals_acoeffs = jnp.append(eigvals_acoeffs, pred_acoeff)
 
     diff = eigvals_compute - eigvals_true
     print(f"Max(Pred - True): {abs(diff).max():.5e}")
-    return diff
-
-
-def true_model():
-    # predicted a-coefficients
-    pred_acoeff = jnp.zeros(num_j*nmults)
-
-    for i in range(nmults):
-        pred = build_hm_sparse.build_hypmat_w_c(param_coeff_sparse[i],
-                                                fixed_part_sparse[i],
-                                                true_params, nc, len_s)
-        ell0 = GVARS.ell0_arr[i]
-        omegaref = omega0_arr[i]
-        _eigval_mult = get_eigs(pred.todense())[:2*ell0+1]/2./omegaref*GVARS.OM*1e6
-        Pjl_local = Pjl[i][:, :2*ell0+1]
-        pred_acoeff = jdc_update(pred_acoeff,
-                                (Pjl_local @ _eigval_mult)/Pjl_norm[i],
-                                (i * num_j,))
-
-    return pred_acoeff
+    return eigvals_acoeffs
 
 
 def model():
@@ -185,13 +189,15 @@ def model():
                                                 c_arr, nc, len_s)
         ell0 = GVARS.ell0_arr[i]
         omegaref = omega0_arr[i]
-        _eigval_mult = get_eigs(pred.todense())[:2*ell0+1]/2./omegaref*GVARS.OM*1e6
-        Pjl_local = Pjl[i][:, :2*ell0+1]
+        # _eigval_mult = get_eigs(pred.todense())[:2*ell0+1]/2./omegaref*GVARS.OM*1e6
+        _eigval_mult = jnp.diag(pred.todense())/2./omegaref*GVARS.OM*1e6
+        Pjl_local = Pjl[i]
         pred_acoeff = jdc_update(pred_acoeff,
                                 (Pjl_local @ _eigval_mult)/Pjl_norm[i],
                                 (i * num_j,))
 
-    misfit_acoeffs = (pred_acoeffs - acoeffs_true)/acoeffs_sigma
+    # misfit_acoeffs = (pred_acoeffs - acoeffs_true)/acoeffs_sigma
+    misfit_acoeffs = (pred_acoeffs - data_acoeffs)/acoeffs_sigma
     return numpyro.factor('obs', dist.Normal(0.0, 1.0).log_prob(misfit_acoeffs))
 
 
@@ -230,6 +236,7 @@ if __name__ == "__main__":
     rng_key = random.PRNGKey(seed)
     rng_key, rng_key_ = random.split(rng_key)
 
+    """
     #kernel = SA(model, adapt_state_size=200)
     kernel = NUTS(model, max_tree_depth=(20, 5))
     mcmc = MCMC(kernel,
@@ -266,3 +273,5 @@ if __name__ == "__main__":
     plt.savefig('corner_reduced_prob.png')
 
     print_summary(mcmc_sample, true_params)
+
+    """

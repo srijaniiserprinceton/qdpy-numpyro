@@ -153,7 +153,7 @@ def get_delta_omega():
                                                     GVARS.ctrl_arr_dpt_clipped, nc, len_s)
                                                     # true_params, nc, len_s)
         ell0 = GVARS.ell0_arr[i]
-        eigval_compute = np.diag(diag_evals.todense())/2./omega0_arr[0]*GVARS.OM*1e6
+        eigval_compute = np.diag(diag_evals.todense())/2./omega0_arr[i]*GVARS.OM*1e6
         eigval_compute = eigval_compute[:2*ell0+1]
         eigval_all = np.append(eigval_all, eigval_compute)
     return eigval_all
