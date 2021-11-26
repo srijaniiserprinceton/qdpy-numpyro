@@ -16,8 +16,8 @@ from qdpy_jax import build_cenmult_and_nbs as build_cnm
 
 # defining functions used in multiplet functions in the script
 getnt4cenmult = build_cnm.getnt4cenmult
-_find_idx = wigmap.find_idx
 jax_minus1pow_vec = jf.jax_minus1pow_vec
+_find_idx = wigmap.find_idx
 
 # jitting the jax_gamma and jax_Omega functions
 jax_Omega_ = jit(jf.jax_Omega)
@@ -30,6 +30,7 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             rth=ARGS[3],
                             knot_num=int(ARGS[4]),
                             load_from_file=int(ARGS[5]))
+
 GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx =\
                     prune_multiplets.get_pruned_attributes(GVARS,
