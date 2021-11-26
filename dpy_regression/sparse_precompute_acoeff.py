@@ -4,6 +4,7 @@ from tqdm import tqdm
 from scipy.interpolate import splev
 
 from jax.experimental import sparse
+import jax.numpy as jnp
 from jax import jit
 
 from dpy_jax import load_multiplets
@@ -27,13 +28,19 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             lmin=int(ARGS[1]),
                             lmax=int(ARGS[2]),
                             rth=ARGS[3],
-                            load_from_file=int(ARGS[4]))
+                            knot_num=int(ARGS[4]),
+                            load_from_file=int(ARGS[5]))
 GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx =\
                     prune_multiplets.get_pruned_attributes(GVARS,
                                                            GVARS_ST)
 
 CNM = build_cnm.getnt4cenmult(GVARS)
+
+# extracting attributes from CNM_AND_NBS
+num_cnm = len(CNM.omega_cnm)
+ellmax = np.max(CNM.nl_cnm[:,1])
+
 
 lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
                                      nl_idx_pruned,
@@ -105,63 +112,11 @@ def integrate_fixed_wsr(eig_idx, ell, s):
     return post_integral
 
 
-def get_dim_hyper():
-    """Returns the dimension of the hypermatrix
-    dim_hyper = max(dim_super)
-    """
-    dim_hyper = 0
-    nmults = len(GVARS.n0_arr)
-
-    for i in range(nmults):
-        n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
-        CENMULT_AND_NBS = getnt4cenmult(n0, ell0, GVARS_ST)
-        dim_super_local = np.sum(2*CENMULT_AND_NBS.nl_nbs[:, 1] + 1)
-        if (dim_super_local > dim_hyper): dim_hyper = dim_super_local
-    return dim_hyper
-
-
-def build_SUBMAT_INDICES(CNM_AND_NBS):
-    # supermatix can be tiled with submatrices corresponding to
-    # (l, n) - (l', n') coupling. The dimensions of the submatrix
-    # is (2l+1, 2l'+1)
-
-    dim_blocks = len(CNM_AND_NBS.omega_nbs) # number of submatrix blocks along axis
-    nl_nbs = np.asarray(CNM_AND_NBS.nl_nbs)
-    dimX_submat = 2 * nl_nbs[:, 1] + 1
-
-    # creating the startx, endx for submatrices
-    submat_tile_ind = np.zeros((dim_blocks, 2), dtype='int32')
-
-    for ix in range(0, dim_blocks):
-        for iy in range(0, dim_blocks):
-            submat_tile_ind[ix, 0] = np.sum(dimX_submat[:ix])
-            submat_tile_ind[ix, 1] = np.sum(dimX_submat[:ix+1])
-
-    # creating the submat-dictionary namedtuple
-    SUBMAT_DICT = jf.create_namedtuple('SUBMAT_DICT',
-                                       ['startx_arr',
-                                        'endx_arr'],
-                                       (submat_tile_ind[:, 0],
-                                        submat_tile_ind[:, 1]))
-    return SUBMAT_DICT
-
-
-def build_hypmat_freqdiag(CNM_AND_NBS, SUBMAT_DICT, dim_hyper):
-    freqdiag = np.zeros(dim_hyper)
-    omegaref = CNM_AND_NBS.omega_nbs[0]
-    for i in range(len(CNM_AND_NBS.omega_nbs)):
-        omega_nl = CNM_AND_NBS.omega_nbs[i]
-        startx = SUBMAT_DICT.startx_arr[i]
-        endx = SUBMAT_DICT.endx_arr[i]
-        freqdiag[startx:endx] += omega_nl**2 - omegaref**2
-    return sparse.BCOO.fromdense(np.diag(freqdiag))
-
-
 def build_hm_nonint_n_fxd_1cnm(s):
     """Computes elements in the hypermatrix excluding the
     integral part.
     """
-    two_ellp1_sum_all = np.sum(2 * CNM.nl_cnm[:, 1] + 1) 
+    two_ellp1_sum_all = num_cnm * (2 * ellmax + 1)
     # the non-m part of the hypermatrix
     non_c_diag_arr = np.zeros((GVARS.nc, two_ellp1_sum_all))
     non_c_diag_list = []
@@ -169,15 +124,13 @@ def build_hm_nonint_n_fxd_1cnm(s):
     # the fixed hypermatrix (contribution below rth)
     fixed_diag_arr = np.zeros(two_ellp1_sum_all)
 
-    # extracting attributes from CNM_AND_NBS
-    num_cnm = len(CNM.omega_cnm)
-
     start_cnm_ind = 0
 
     # filling in the non-m part using the masks
     for i in tqdm(range(num_cnm), desc=f"Precomputing for s={s}"):
         # updating the start and end indices
-        end_cnm_ind = np.sum(2 * CNM.nl_cnm[:i+1, 1] + 1)
+        omega0 = CNM.omega_cnm[i]
+        end_cnm_ind = start_cnm_ind + 2 * CNM.nl_cnm[i, 1] + 1
 
         # self coupling for isolated multiplets
         ell = CNM.nl_cnm[i, 1]
@@ -221,10 +174,10 @@ def build_hm_nonint_n_fxd_1cnm(s):
                                     integrated_part[c_ind] * wigvalm * wigval1
 
         # the fixed hypermatrix
-        fixed_diag_arr[start_cnm_ind: end_cnm_ind] = fixed_integral * wigvalm * wigval1
+        fixed_diag_arr[start_cnm_ind: end_cnm_ind] = fixed_integral * wigvalm * wigval1 
 
         # updating the start index
-        start_cnm_ind = end_cnm_ind 
+        start_cnm_ind = (i+1) * (2 * ellmax + 1)
 
     # deleting wigvalm 
     del wigvalm
@@ -244,6 +197,18 @@ def build_hm_nonint_n_fxd_1cnm(s):
 
 
 def build_hypmat_all_cenmults():
+    # to store the cnm frequencies
+    omega0_arr = np.ones(num_cnm * (2 * ellmax + 1))
+    start_cnm_ind = 0
+    for i, omega_cnm in enumerate(CNM.omega_cnm):
+        # updating the start and end indices
+        end_cnm_ind = start_cnm_ind + 2*CNM.nl_cnm[i,1] + 1 
+        omega0_arr[start_cnm_ind:end_cnm_ind] *= CNM.omega_cnm[i]
+
+        # updating the start index
+        start_cnm_ind = (i+1) * (2 * ellmax + 1)
+
+
     # stores the diags as a function of s and c. Shape (s x c) 
     non_c_diag_cs = []
 
@@ -260,16 +225,5 @@ def build_hypmat_all_cenmults():
             fixed_diag = fixed_diag_s
         else:
             fixed_diag += fixed_diag_s
-    # to store the cnm frequencies
-    omega0_arr = np.zeros(np.sum(2 * CNM.nl_cnm[:,1] + 1))
-    start_cnm_ind = 0
-    for i, omega_cnm in enumerate(CNM.omega_cnm):
-        # updating the start and end indices
-        end_cnm_ind = np.sum(2 * CNM.nl_cnm[:i+1, 1] + 1)
-        omega0_arr[start_cnm_ind:end_cnm_ind] = CNM.omega_cnm[i]
-
-        # updating the start index
-        start_cnm_ind = end_cnm_ind
-
     # non_c_diag_s = (s x 2ellp1_sum_all), fixed_diag = (2ellp1_sum_all,)
     return non_c_diag_cs, fixed_diag, omega0_arr

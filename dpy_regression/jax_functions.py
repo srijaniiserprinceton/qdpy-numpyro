@@ -85,3 +85,4 @@ def jax_minus1pow_vec(num):
 def jax_gamma(ell):
     """Computes gamma_ell"""
     return jnp.sqrt((2*ell + 1)/4/jnp.pi)
+
