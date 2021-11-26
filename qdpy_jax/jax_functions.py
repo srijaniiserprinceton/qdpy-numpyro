@@ -40,14 +40,6 @@ def create_namedtuple(tname, keys, values):
     nt = NT(*values)
     return nt
 
-"""
-def jax_print(*args):
-    str = ""
-    for arg in args:
-        str += f"{hcall.id_print(arg)}" + " "
-    return str
-"""
-
 def tree_map_CNM_AND_NBS(CNM_AND_NBS):
     # converting to tuples and nestes tuples for easy of passing
     nl_nbs = tuple(map(tuple, CNM_AND_NBS.nl_nbs))

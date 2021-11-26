@@ -1,6 +1,6 @@
 import numpy as np
-from scipy import integrate
 from tqdm import tqdm
+from scipy import integrate
 from scipy.interpolate import splev
 
 from jax.experimental import sparse

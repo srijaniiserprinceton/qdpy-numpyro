@@ -2,6 +2,7 @@ import numpy as np
 from qdpy_jax import globalvars as gvar_jax
 from qdpy_jax import build_cenmult_and_nbs as CNBS
 
+
 class load_multiplets:
     '''Picks out the multiplets and creates a  
     the list of multiplets and their original
