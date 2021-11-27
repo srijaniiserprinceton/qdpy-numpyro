@@ -77,11 +77,37 @@ def model():
 
     return eigval_model
 
+def get_eigvals_sigma(len_evals_true):
+    '''Function to get the sigma from data
+    for the frequency splittings.
+    '''
+    # storing the eigvals sigmas                                                                                                                                            
+    eigvals_sigma = np.ones(len_evals_true)
+
+    ellmax = np.max(GVARS.ell0_arr)
+
+    start_ind_gvar = 0
+    start_ind = 0
+
+    for i, ell in enumerate(GVARS.ell0_arr):
+        end_ind = start_ind + 2 * ell + 1
+        end_ind_gvar = start_ind_gvar + 2 * ell + 1
+
+        eigvals_sigma[start_ind:end_ind] *=\
+                        GVARS_TR.eigvals_sigma[start_ind_gvar:end_ind_gvar]
+
+        start_ind +=  2 * ellmax + 1
+        start_ind_gvar += 2 * ell + 1
+
+    return eigvals_sigma
+
 if __name__ == "__main__":
     # model_ = jit(model)
     # eigvals_true = compare_hypmat()
     eigvals_true = model()
+    eigvals_sigma = get_eigvals_sigma(len(eigvals_true))
     print(f"num elements = {len(eigvals_true)}")
     np.save("evals_model.npy", eigvals_true) 
+    np.save('eigvals_sigma.npy', eigvals_sigma)
     np.save('acoeffs_sigma.npy', GVARS.acoeffs_sigma)
     np.save('acoeffs_true.npy', GVARS.acoeffs_true)

@@ -52,6 +52,9 @@ num_eigvals = len(eigvals_model)
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr =\
     precompute.build_hypmat_all_cenmults()
 
+mask_f = fixed_hypmat_all_sparse[0].todense() < -1e27
+mask_p = noc_hypmat_all_sparse[0][1][1].todense() < -1e27
+
 # length of data
 nc = GVARS.nc
 len_data = len(omega0_arr)

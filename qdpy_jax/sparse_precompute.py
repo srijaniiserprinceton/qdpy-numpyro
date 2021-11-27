@@ -237,7 +237,13 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
             starty, endy = startx_arr[j], endx_arr[j]
 
             wigprod = wigvalm * wigval1
-            mask0 = wigprod == 0
+
+            # creating the larger mask (from smax)
+            wig_idx_i, fac = _find_idx(ell1, GVARS.smax, ell2, m_arr)
+            wigidx_for_smax = np.searchsorted(wig_idx, wig_idx_i)
+            wigval_smax = fac * wig_list[wigidx_for_smax]
+            
+            mask0 = wigval_smax == 0
             mask0 = jidx_update(mask0, jidx[ellmin], 0)
 
             for c_ind in range(GVARS.nc):
@@ -250,14 +256,14 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
                                  c_integral)
     
             # the fixed hypermatrix
-            f_integral = fixed_integral * wigvalm * wigval1
+            f_integral = fixed_integral * wigprod
             f_integral = jidx_update(f_integral, mask0, -1.6375e30)
             np.fill_diagonal(fixed_hypmat[startx+dellx:endx-dellx,
                                           starty+delly:endy-delly],
                              f_integral)
 
     # deleting wigvalm 
-    del wigvalm
+    del wigvalm, wigval_smax
 
     # making it a list to allow easy c * hypermat later
     for c_ind in range(GVARS.nc):

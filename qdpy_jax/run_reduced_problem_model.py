@@ -66,6 +66,17 @@ fixed_part[mask_f] = 0.0
 param_coeff = param_coeff[smin_ind:smax_ind+1, ...]
 
 
+# comparing the matrices with the true values
+supmat_jax = np.sum((true_params[:,:,NAX,NAX] * param_coeff), axis=(0,1)) + fixed_part
+supmat_jax_dense = sparse.bcoo_todense(supmat_jax[0], fixed_part_idx[0], shape=(dim_hyper, dim_hyper))
+supmat_qdpt_200 = np.load('supmat_qdpt.npy').real
+# supmat_qdpt_201 = np.load('supmat_qdpt_201.npy').real
+
+max_diff = np.diag(supmat_jax_dense)[:2005] - np.diag(supmat_qdpt_200)
+plt.plot(max_diff)
+plt.savefig('supmat_diff.pdf')
+# sys.exit()
+
 # Reading RL poly from precomputed file
 # shape (nmults x (smax+1) x 2*ellmax+1)
 # reshaping to (nmults x (smax+1) x dim_hyper)
