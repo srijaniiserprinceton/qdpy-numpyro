@@ -49,11 +49,41 @@ eigvals_sigma = jnp.asarray(np.load('eigvals_sigma.npy'))
 acoeffs_sigma = jnp.asarray(np.load('acoeffs_sigma.npy'))
 num_eigvals = len(eigvals_model)
 
+# generating the true parameters
+true_params = np.zeros((smax_ind - smin_ind + 1,
+                        ind_max - ind_min + 1))
+
+for sind in range(smin_ind, smax_ind+1):
+    for ci, cind in enumerate(cind_arr):
+        true_params[sind-1, ci] = GVARS.ctrl_arr_dpt_clipped[sind, cind]
+
+
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr =\
     precompute.build_hypmat_all_cenmults()
 
-mask_f = fixed_hypmat_all_sparse[0].todense() < -1e27
-mask_p = noc_hypmat_all_sparse[0][1][1].todense() < -1e27
+############ COMPARING AGAINST THE eigvals_model ########################
+# generating the synthetic data and comparing with eigval_model
+nmults = len(GVARS.n0_arr)
+len_s = GVARS.wsr.shape[0]
+
+for i in range(nmults):
+    synth_data_sparse = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
+                                                        fixed_hypmat_all_sparse[i],
+                                                         GVARS.ctrl_arr_dpt_clipped,
+                                                         GVARS.nc, len_s)
+    synth_data = synth_data_sparse.todense()
+    synth_data *= 1.0/2./omega0_arr[i]*GVARS.OM*1e6
+    
+# testing the difference with eigvals_model
+np.testing.assert_array_almost_equal(jnp.diag(synth_data), eigvals_model, decimal=12)
+
+############ COMPARING AGAINST supmat_qdpt.npy ########################
+
+supmat_qdpt = np.load('supmat_qdpt.npy') / 2. / omega0_arr[0] * GVARS.OM * 1e6
+np.testing.assert_array_almost_equal(synth_data, supmat_qdpt, decimal=12)
+
+sys.exit()
+
 
 # length of data
 nc = GVARS.nc
@@ -132,14 +162,6 @@ np.save('param_coeff_idx.npy', noc_hypmat_idx)
 np.save('data_model.npy', eigvals_model)
 np.save('cind_arr.npy', cind_arr)
 np.save('sind_arr.npy', sind_arr)
-
-true_params = np.zeros((smax_ind - smin_ind + 1,
-                        ind_max - ind_min + 1))
-
-for sind in range(smin_ind, smax_ind+1):
-    for ci, cind in enumerate(cind_arr):
-        true_params[sind-1, ci] = GVARS.ctrl_arr_dpt_clipped[sind, cind]
-
 np.save('true_params.npy', true_params)
 sys.exit()
 
