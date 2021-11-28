@@ -101,6 +101,8 @@ class GlobalVars():
         B_0 = 10e5             # in Gauss (base of convection zone)
         self.OM = np.sqrt(4*np.pi*R_sol*B_0**2/M_sol) 
 
+        self.absurd_num = -1.657e-27
+
         # self.rho = np.loadtxt(f"{self.datadir}/rho.dat")
         self.r = np.loadtxt(f"{datadir}/r.dat").astype('float')
         self.nl_all = np.loadtxt(f"{datadir}/nl.dat").astype('int')

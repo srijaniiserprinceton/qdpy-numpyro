@@ -5,7 +5,8 @@ import time
 from tqdm import tqdm
 from jax import jit
 from jax.lax import cond as cond
-import jax.numpy as jnp
+# import jax.numpy as jnp
+import numpy as np
 import pickle
 
 def save_obj(obj, name):
@@ -62,12 +63,11 @@ def tree_map_SUBMAT_DICT(SUBMAT_DICT):
 
     return SUBMAT_DICT
 
+
 def jax_Omega(ell, N):
     """Computes Omega_N^\ell"""
-    return cond(abs(N) > ell,
-                lambda __: 0.0,
-                lambda __: jnp.sqrt(0.5 * (ell+N) * (ell-N+1)),
-                operand=None)
+    if(abs(N) > ell): return 0.0
+    else: return np.sqrt(0.5 * (ell+N) * (ell-N+1))
     
 def jax_minus1pow_vec(num):
     """Computes (-1)^n"""
@@ -76,4 +76,4 @@ def jax_minus1pow_vec(num):
 
 def jax_gamma(ell):
     """Computes gamma_ell"""
-    return jnp.sqrt((2*ell + 1)/4/jnp.pi)
+    return np.sqrt((2*ell + 1)/4/np.pi)

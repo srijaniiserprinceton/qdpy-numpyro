@@ -3,6 +3,7 @@ import argparse
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+from scipy import sparse
 
 import jax
 from jax import random
@@ -11,7 +12,7 @@ from jax.config import config
 from jax.ops import index as jidx
 from jax.lax import fori_loop as foril
 from jax.ops import index_update as jidx_update
-from jax.experimental import sparse
+
 
 config.update("jax_log_compiles", 1)
 config.update('jax_platform_name', 'cpu')
@@ -58,42 +59,80 @@ for sind in range(smin_ind, smax_ind+1):
         true_params[sind-1, ci] = GVARS.ctrl_arr_dpt_clipped[sind, cind]
 
 
-noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr =\
+noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr, sp_indices_all =\
     precompute.build_hypmat_all_cenmults()
 
-############ COMPARING AGAINST THE eigvals_model ########################
-# generating the synthetic data and comparing with eigval_model
-nmults = len(GVARS.n0_arr)
-len_s = GVARS.wsr.shape[0]
-
-for i in range(nmults):
-    synth_data_sparse = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
-                                                        fixed_hypmat_all_sparse[i],
-                                                         GVARS.ctrl_arr_dpt_clipped,
-                                                         GVARS.nc, len_s)
-    synth_data = synth_data_sparse.todense()
-    synth_data *= 1.0/2./omega0_arr[i]*GVARS.OM*1e6
-    
-# testing the difference with eigvals_model
-np.testing.assert_array_almost_equal(jnp.diag(synth_data), eigvals_model, decimal=12)
-
-############ COMPARING AGAINST supmat_qdpt.npy ########################
-
-supmat_qdpt = np.load('supmat_qdpt.npy') / 2. / omega0_arr[0] * GVARS.OM * 1e6
-np.testing.assert_array_almost_equal(synth_data, supmat_qdpt, decimal=12)
-
-sys.exit()
-
+# densifying fixed_hypmat to get dim_hyper
+fixed_hypmat_dense = sparse.coo_matrix((fixed_hypmat_all_sparse[0], sp_indices_all[0])).toarray()
 
 # length of data
 nc = GVARS.nc
 len_data = len(omega0_arr)
 len_s = len(GVARS.s_arr)
 nmults = len(GVARS.n0_arr)
+dim_hyper = fixed_hypmat_dense.shape[0]
 
-dim_hyper = fixed_hypmat_all_sparse[0].shape[0]
+# functions to compute and correctly map the eigenvalues
+
+def eigval_sort_slice(eigval, eigvec):
+    def body_func(i, ebs):
+        return jidx_update(ebs, jidx[i], jnp.argmax(jnp.abs(eigvec[i])))
+
+    eigbasis_sort = jnp.zeros(len(eigval), dtype=int)
+    eigbasis_sort = foril(0, len(eigval), body_func, eigbasis_sort)
+    return eigval[eigbasis_sort]
+
+
+def get_eigs(mat):
+    eigvals, eigvecs = jnp.linalg.eigh(mat)
+    eigvals = eigval_sort_slice(eigvals, eigvecs)
+    return eigvals
+
+############ COMPARING AGAINST THE eigvals_model ########################
+# generating the synthetic data and comparing with eigval_model
+nmults = len(GVARS.n0_arr)
+len_s = GVARS.wsr.shape[0]
+
+synth_supmat = np.zeros((nmults, dim_hyper, dim_hyper))
+synth_eigvals = jnp.array([])
+
+for i in range(nmults-1, -1, -1):
+    synth_supmat_sparse = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
+                                                           fixed_hypmat_all_sparse[i],
+                                                           GVARS.ctrl_arr_dpt_clipped,
+                                                           GVARS.nc, len_s)
+    
+    # densifying
+    synth_supmat[i] = sparse.coo_matrix((synth_supmat_sparse, sp_indices_all[0])).toarray()
+    # supmat in muHz
+    synth_supmat[i] *= 1.0/2./omega0_arr[i]*GVARS.OM*1e6
+    
+    # extracting eigenvalues
+    ell0 = ell0_arr[i]
+    omegaref = omega0_arr[i]
+    eigval_qdpt_mult = get_eigs(synth_supmat[i])[:2*ell0+1]/2./omegaref
+    eigval_qdpt_mult *= GVARS.OM*1e6
+    
+    # storing in the correct order of nmult
+    synth_eigvals = jnp.append(synth_eigvals, eigval_qdpt_mult)
+
+    
+# testing the difference with eigvals_model
+np.testing.assert_array_almost_equal(synth_eigvals, eigvals_model, decimal=12)
+
+############ COMPARING AGAINST supmat_qdpt.npy ########################
+
+supmat_qdpt = np.load('supmat_qdpt.npy') / 2. / omega0_arr[1] * GVARS.OM * 1e6
+np.testing.assert_array_almost_equal(synth_data[1], supmat_qdpt, decimal=12)
+
+sys.exit()
+
+############ COMPARING AGAINST supmat_qdpt.npy ######################## 
+
+
 fixed_hypmat_sparse = np.zeros((nmults, 9*dim_hyper))
 fixed_hypmat_idx = np.zeros((nmults, 9*dim_hyper, 2), dtype=int)
+
 
 cmax = jnp.array(1.1 * GVARS.ctrl_arr_dpt_clipped)
 cmin = jnp.array(0.9 * GVARS.ctrl_arr_dpt_clipped)

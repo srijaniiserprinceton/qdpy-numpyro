@@ -1,5 +1,6 @@
 import argparse
 import numpy as np
+from scipy import sparse
 
 from jax import jit
 import jax.numpy as jnp
@@ -56,33 +57,53 @@ np.save('acoeffs_sigma.npy', GVARS.acoeffs_sigma)
 np.save('acoeffs_true.npy', GVARS.acoeffs_true)
 
 
-noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr =\
+noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr, sp_indices_all =\
                                 precompute.build_hypmat_all_cenmults()
 
 
 def model():
     eigval_model = jnp.array([])
+    
+    for i in range(nmults-1, -1, -1):
+        hypmat_sparse = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
+                                                         fixed_hypmat_all_sparse[i],
+                                                         GVARS.ctrl_arr_dpt_clipped,
+                                                         GVARS.nc, len_s)
 
-    for i in range(nmults):
-        diag_evals = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
-                                                    fixed_hypmat_all_sparse[i],
-                                                    GVARS.ctrl_arr_dpt_clipped,
-                                                    GVARS.nc, len_s)
+        # converting to dense
+        hypmat = sparse.coo_matrix((hypmat_sparse, sp_indices_all[0])).toarray()
 
-        ell0 = GVARS.ell0_arr[i]
-        eigval_dpt_mult = jnp.diag(diag_evals.todense())
-        eigval_dpt_mult *= 1.0/2./omega0_arr[i]*GVARS.OM*1e6
-        eigval_dpt_mult = eigval_dpt_mult
-        eigval_model = jnp.append(eigval_model, eigval_dpt_mult)
+        # solving the eigenvalue problem and mapping eigenvalues
+        ell0 = ell0_arr[i]
+        omegaref = omega0_arr[i]
+        eigval_qdpt_mult = get_eigs(hypmat)[:2*ell0+1]/2./omegaref
+        eigval_qdpt_mult *= GVARS.OM*1e6
+
+        # storing the correct order of nmult
+        eigval_model = jnp.append(eigval_qdpt_mult, eigval_model)
 
     return eigval_model
+
+def eigval_sort_slice(eigval, eigvec):
+    def body_func(i, ebs):
+        return jidx_update(ebs, jidx[i], jnp.argmax(jnp.abs(eigvec[i])))
+
+    eigbasis_sort = jnp.zeros(len(eigval), dtype=int)
+    eigbasis_sort = foril(0, len(eigval), body_func, eigbasis_sort)
+    return eigval[eigbasis_sort]
+
+
+def get_eigs(mat):
+    eigvals, eigvecs = jnp.linalg.eigh(mat)
+    eigvals = eigval_sort_slice(eigvals, eigvecs)
+    return eigvals
 
 def get_eigvals_sigma(len_evals_true):
     '''Function to get the sigma from data
     for the frequency splittings.
     '''
-    # storing the eigvals sigmas                                                                                                                                            
-    eigvals_sigma = np.ones(len_evals_true)
+    # storing the eigvals sigmas                                                                                                                             
+    eigvals_sigma = jnp.array([])
 
     ellmax = np.max(GVARS.ell0_arr)
 
@@ -90,13 +111,12 @@ def get_eigvals_sigma(len_evals_true):
     start_ind = 0
 
     for i, ell in enumerate(GVARS.ell0_arr):
-        end_ind = start_ind + 2 * ell + 1
         end_ind_gvar = start_ind_gvar + 2 * ell + 1
 
-        eigvals_sigma[start_ind:end_ind] *=\
-                        GVARS_TR.eigvals_sigma[start_ind_gvar:end_ind_gvar]
+        # storing in the correct order of nmult
+        eigvals_sigma = jnp.append(eigvals_sigma,
+                                   GVARS_TR.eigvals_sigma[start_ind_gvar:end_ind_gvar])
 
-        start_ind +=  2 * ellmax + 1
         start_ind_gvar += 2 * ell + 1
 
     return eigvals_sigma
