@@ -45,7 +45,6 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
 
 GVARS_PATHS, GVARS_TR, __ = GVARS.get_all_GVAR()
 
-print(f"ell0arr = {GVARS.ell0_arr}")
 eigvals_model = np.load("evals_model.npy")
 eigvals_model = jnp.asarray(eigvals_model)
 eigvals_sigma = jnp.asarray(np.load('eigvals_sigma.npy'))

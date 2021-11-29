@@ -143,23 +143,26 @@ def compare_model():
     # predicted a-coefficients
     eigvals_compute = jnp.array([])
     eigvals_acoeffs = jnp.array([])
+    pred_acoeffs = jnp.zeros(num_j * nmults)
 
     pred = (true_params[..., NAX, NAX]/1e-3 * param_coeff).sum(axis=(0, 1)) + fixed_part
     for i in range(nmults):
-        _eigval_mult = np.zeros(dim_hyper)
         ell0 = GVARS.ell0_arr[i]
         omegaref = omega0_arr[i]
         pred_dense = sparse.bcoo_todense(pred[i], sparse_idx[i],
                                          shape=(dim_hyper, dim_hyper))
-        _eigval_mult[:2*ell0+1] = np.diag(pred_dense)[:2*ell0+1]/2./omegaref*GVARS.OM*1e6
-        eigvals_compute = jnp.append(eigvals_compute, _eigval_mult)
-        Pjl_local = Pjl[i]
-        pred_acoeff = (Pjl_local @ _eigval_mult)/Pjl_norm[i]
-        eigvals_acoeffs = jnp.append(eigvals_acoeffs, pred_acoeff)
+        _eigval_mult = get_eigs(pred_dense)/2./omegaref*GVARS.OM*1e6
+        Pjl_local = Pjl[i][:, :2*ell0+1]
+        # pred_acoeff = (Pjl_local @ _eigval_mult[:2*ell0+1])/Pjl_norm[i]
+        # eigvals_acoeffs = jnp.append(eigvals_acoeffs, pred_acoeff)
+        # eigvals_compute = jnp.append(eigvals_compute, _eigval_mult)
+        pred_acoeffs = jdc_update(pred_acoeffs,
+                                (Pjl_local @ _eigval_mult[:2*ell0+1])/Pjl_norm[i],
+                                (i * num_j,))
 
-    diff = eigvals_compute - eigvals_true
-    print(f"Max(Pred - True): {abs(diff).max():.5e}")
-    return eigvals_acoeffs
+    # diff = eigvals_compute - eigvals_true
+    # print(f"Max(Pred - True): {abs(diff).max():.5e}")
+    return pred_acoeffs
 
 
 def model():
@@ -229,12 +232,13 @@ if __name__ == "__main__":
     seed = int(123 + 100*np.random.rand())
     rng_key = random.PRNGKey(seed)
     rng_key, rng_key_ = random.split(rng_key)
+    sys.exit()
 
     # kernel = SA(model, adapt_state_size=200)
     kernel = NUTS(model)#, max_tree_depth=(20, 5))
     mcmc = MCMC(kernel,
-                num_warmup=100,
-                num_samples=500,
+                num_warmup=15,
+                num_samples=150,
                 num_chains=num_chains)  
     mcmc.run(rng_key_, extra_fields=('potential_energy',))
     pe = mcmc.get_extra_fields()['potential_energy']
