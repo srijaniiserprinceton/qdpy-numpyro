@@ -1,4 +1,4 @@
-import numpy as np
+Bimport numpy as np
 from tqdm import tqdm
 from scipy import integrate
 from scipy.interpolate import splev
@@ -157,7 +157,7 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
 
 def build_hypmat_freqdiag(CNM_AND_NBS, SUBMAT_DICT, dim_hyper):
     # initializing with an absurd value that will define the shape of the matrix
-    freqdiag = np.ones(dim_hyper) * GVARS.absurd_num
+    freqdiag = np.zeros(dim_hyper)
     omegaref = CNM_AND_NBS.omega_nbs[0]
     for i in range(len(CNM_AND_NBS.omega_nbs)):
         omega_nl = CNM_AND_NBS.omega_nbs[i]
@@ -169,13 +169,12 @@ def build_hypmat_freqdiag(CNM_AND_NBS, SUBMAT_DICT, dim_hyper):
 
 
 
-def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s, len_sp_maxmult):
+def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
     """Computes elements in the hypermatrix excluding the
     integral part.
     """
     # the non-m part of the hypermatrix
     non_c_hypmat_arr = np.zeros((GVARS.nc, dim_hyper, dim_hyper))
-    non_c_hypmat_list = []
 
     # the fixed hypermatrix (contribution below rth)
     fixed_hypmat = np.zeros((dim_hyper, dim_hyper))
@@ -183,7 +182,7 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s, len_sp_ma
     # the hyper mask-matrix. This matrix will be used
     # to find the row and col information for non-zero elements
     # of the resultant hyper matrix
-    mask_hypmat = np.zeros((dim_hyper, dim_hyper))
+    mask_hypmat = np.zeros((dim_hyper, dim_hyper), dtype='bool')
 
     # extracting attributes from CNM_AND_NBS
     num_nbs = len(CNM_AND_NBS.omega_nbs)
@@ -225,14 +224,16 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s, len_sp_ma
             wigidx_for_s = np.searchsorted(wig_idx, wig_idx_i)
             wigvalm = fac * wig_list[wigidx_for_s]
             
-            # the mask matrix. Setting the elements in the relevant diagonal to 1                                                                          
+            # the mask matrix. Setting the elements in the relevant diagonal to 1                
             # this happens for all s where selection rule doesn't set it to zero
             # only using the odd-even selection rule here since the triangle rule has been 
             # taken care of in the creation of CNM and NBS
-            mask_vals = np.ones_like(m_arr) * (1 - jax_minus1pow_vec(ell1 + ell2 + s))
+            mask_val = np.ones_like(m_arr) * (1 - jax_minus1pow_vec(ell1 + ell2 + s))
+            mask_val = mask_val.astype('bool')
+            
             np.fill_diagonal(mask_hypmat[startx+dellx:endx-dellx,
                                          starty+delly:endy-delly],
-                             mask_vals)
+                             mask_val)
 
             #-------------------------------------------------------
             # computing the ell1, ell2 dependent factors such as
@@ -259,67 +260,23 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s, len_sp_ma
             wigvalm *= (jax_minus1pow_vec(m_arr) * ell1_ell2_fac)
 
             wigprod = wigvalm * wigval1
-
-            # injecting absurd number where wigprod is zero
-            # this is to re-convert it back to zero later
-            # these are the locations where is goes to zero either by
-            # selection rule of because m = 0
-            wigprod_zero_mask = np.abs(wigprod) == 0.0
-
+            
             for c_ind in range(GVARS.nc):
                 # non-ctrl points submat
                 # avoiding  newaxis multiplication
                 c_integral = integrated_part[c_ind] * wigprod
-                c_integral[wigprod_zero_mask] = GVARS.absurd_num
                 np.fill_diagonal(non_c_hypmat_arr[c_ind, startx+dellx:endx-dellx,
                                                   starty+delly:endy-delly],
                                  c_integral)
     
             # the fixed hypermatrix
             f_integral = fixed_integral * wigprod
-            f_integral[wigprod_zero_mask] = GVARS.absurd_num
             np.fill_diagonal(fixed_hypmat[startx+dellx:endx-dellx,
                                           starty+delly:endy-delly],
                              f_integral)
+    
 
-            # the mask matrix
-
-    # deleting wigvalm 
-    del wigvalm
-
-    # putting this in for the first case (the maxmult)
-    if(len_sp_maxmult == -1):
-        print(len_sp_maxmult)
-        len_sp_maxmult = len(sparse.csr_matrix(non_c_hypmat_arr[0]).data)
-        print(len_sp_maxmult)
-
-    # making it a list to allow easy c * hypermat later
-    for c_ind in range(GVARS.nc):
-        # non_c_hypmat_arr_sparse = sparse.BCOO.fromdense(non_c_hypmat_arr[c_ind])
-        non_c_hypmat_arr_sparse = sparse.csr_matrix(non_c_hypmat_arr[c_ind]).data
-        non_c_hypmat_maxmult_shaped = np.zeros(len_sp_maxmult)
-        non_c_hypmat_maxmult_shaped[:len(non_c_hypmat_arr_sparse)] =\
-                                                    non_c_hypmat_arr_sparse
-        non_c_hypmat_list.append(non_c_hypmat_maxmult_shaped)
-
-    del non_c_hypmat_arr # deleting for ensuring no extra memory
-
-    # making the freqdiag here
-    freqdiag = build_hypmat_freqdiag(CNM_AND_NBS,
-                                     SUBMAT_DICT,
-                                     dim_hyper)
-
-    # sparsifying the fixed hypmat
-    # fixed_hypmat_sparse = sparse.BCOO.fromdense(fixed_hypmat)
-    fixed_hypmat_sparse = sparse.csr_matrix(fixed_hypmat + np.diag(freqdiag)).data
-
-    del fixed_hypmat#, fixed_hypmat_UT
-
-    # sparsifying the mask_hypmat and retaining the indices only
-    mask_hypmat_sp = sparse.coo_matrix(mask_hypmat + np.diag(freqdiag))
-    sp_indices_cenmult = (mask_hypmat_sp.row, mask_hypmat_sp.col)
-
-    return non_c_hypmat_list, fixed_hypmat_sparse, sp_indices_cenmult
+    return non_c_hypmat_arr, fixed_hypmat, mask_hypmat
 
 
 def get_sp_indices_maxshaped(sp_indices_cenmult, sp_indices_maxmult):
@@ -396,9 +353,14 @@ def build_hypmat_all_cenmults():
     # getting the sparse-element size for largest ell cenmult
     MAXMULT_AND_NBS = getnt4cenmult(GVARS.n0_arr[-1], GVARS.ell0_arr[-1], GVARS_ST)
     SUBMAT_DICT_MAX = build_SUBMAT_INDICES(MAXMULT_AND_NBS)
-    __, __, sp_indices_maxmult = build_hm_nonint_n_fxd_1cnm(MAXMULT_AND_NBS,
-                                                            SUBMAT_DICT_MAX,
-                                                            dim_hyper, GVARS.smax, -1)
+    __, __, maskmat_maxmult = build_hm_nonint_n_fxd_1cnm(MAXMULT_AND_NBS,
+                                                         SUBMAT_DICT_MAX,
+                                                         dim_hyper, GVARS.smax)
+    
+    # finding the sp_indices_maxmult
+    maskmat_maxmult_sp = sparse.coo_matrix(maskmat_maxmult)
+    sp_indices_maxmult = (maskmat_maxmult_sp.row, maskmat_maxmult_sp.col)
+    
     # the shape of all the cenmult data and indices
     len_sp_indices_maxmult = len(sp_indices_maxmult[0])
     
@@ -417,22 +379,31 @@ def build_hypmat_all_cenmults():
         SUBMAT_DICT = build_SUBMAT_INDICES(CENMULT_AND_NBS)
         omegaref_nmults.append(CENMULT_AND_NBS.omega_nbs[0])
 
-        freqdiag_sparse = build_hypmat_freqdiag(CENMULT_AND_NBS,
-                                                SUBMAT_DICT,
-                                                dim_hyper)
+        freqdiag = build_hypmat_freqdiag(CENMULT_AND_NBS,
+                                         SUBMAT_DICT,
+                                         dim_hyper)
         
         noc_hypmat_this_s = []
         
         for s_ind, s in enumerate(GVARS.s_arr):
             # shape (dim_hyper x dim_hyper) but sparse form
-            non_c_hypmat, fixed_hypmat_s, sp_indices_cenmult =\
+            non_c_hypmat, fixed_hypmat_s, maskmat_cenmult =\
                     build_hm_nonint_n_fxd_1cnm(CENMULT_AND_NBS,
                                                SUBMAT_DICT,
-                                               dim_hyper, s,
-                                               len_sp_indices_maxmult)
-            
+                                               dim_hyper, s)
+
+            noc_hypmat_sparse_c_maxshaped = np.zeros((GVARS.nc,
+                                                      len_sp_indices_maxmult))
+            for c_ind in range(GVARS.nc):
+                # the sparse data for the mask locations
+                noc_hypmat_sparse_c = non_c_hypmat[c_ind, maskmat_cenmult]
+                # enhancing the shape to maxmult
+                noc_hypmat_sparse_c_maxshaped[c_ind, :len(noc_hypmat_sparse_c)] =\
+                                                                noc_hypmat_sparse_c
+
+                
             # appending the different m part in the list
-            noc_hypmat_this_s.append(non_c_hypmat)
+            noc_hypmat_this_s.append(noc_hypmat_sparse_c_maxshaped)
             
             # adding up the different s for the fixed part
             if s_ind == 0:
@@ -440,25 +411,33 @@ def build_hypmat_all_cenmults():
             else:
                 fixed_hypmat_this_mult += fixed_hypmat_s
 
+        # getting the mask indices
+        maskmat_cenmult_sp = sparse.coo_matrix(maskmat_cenmult)
+        sp_indices_cenmult = (maskmat_cenmult_sp.row, maskmat_cenmult_sp.col)
+
+        # adding the freqdiag to the fixed_hypmat
+        fixed_hypmat_this_mult += np.diag(freqdiag)
+        fixed_hypmat_this_mult_sparse = fixed_hypmat_this_mult[maskmat_cenmult]
+        
+
         # making the shape compatible to the maxmult sparse form
-        fixed_plus_freqdiag_maxshaped = np.ones(len_sp_indices_maxmult) * GVARS.absurd_num
-        fixed_plus_freqdiag_maxshaped[:len(fixed_hypmat_s)] = fixed_hypmat_s
-        fixed_hypmat_all_sparse.append(fixed_plus_freqdiag_maxshaped)
+        fixed_plus_freqdiag_maxshaped = np.zeros(len_sp_indices_maxmult)
+        fixed_plus_freqdiag_maxshaped[:len(fixed_hypmat_this_mult_sparse)] =\
+                                                        fixed_hypmat_this_mult_sparse
         # appending the sparse form of the fixed hypmat
-        # fixed_hypmat_all_sparse.append(fixed_hypmat_s)
+        fixed_hypmat_all_sparse.append(fixed_plus_freqdiag_maxshaped)
 
         # appending the list of sparse matrices in s to the list in cenmults
         noc_hypmat_all_sparse.append(noc_hypmat_this_s)
 
         # storing the sparse indices for the particular central multiplet
         if(i == nmults-1): continue
+        
         # adjusting the indices to the largest hypermatrix case (for no static slicing later)
-        print(len(sp_indices_cenmult[0]), len(sp_indices_maxmult[0]))
         sp_indices_all.append(get_sp_indices_maxshaped(sp_indices_cenmult,
                                                        sp_indices_maxmult))
-        #sp_indices_all.append(sp_indices_cenmult, sp_indices_maxmult))
-        print(len(sp_indices_all[-1][-1]), len(sp_indices_maxmult[0]))
         
+    
     # list of shape (nmults x s x (nc x dim_hyper, dim_hyper))
     # the last bracket denotes matrices of that shape but in sparse form
     return noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_nmults, omegaref_nmults, sp_indices_all

@@ -1,4 +1,4 @@
-import sys
+BBimport sys
 import argparse
 import numpy as np
 from tqdm import tqdm
@@ -61,19 +61,6 @@ for sind in range(smin_ind, smax_ind+1):
 
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr, sp_indices_all =\
     precompute.build_hypmat_all_cenmults()
-'''
-# checking for repetitions in sp_indices_all[1]
-for i in range(len(sp_indices_all[1][0])):
-    x, y = sp_indices_all[1][0][i], sp_indices_all[1][1][i]
-    count = 0
-    for j in range(len(sp_indices_all[1][0])):
-        if((sp_indices_all[1][0][j] == x) * (sp_indices_all[1][1][j] == y)):
-            # print(sp_indices_all[1][0][j], x , sp_indices_all[1][1][j], y)
-            count += 1
-    if(count > 1):
-        print(i, count)
-    print(i)
-'''
 
 # densifying fixed_hypmat to get dim_hyper
 fixed_hypmat_dense = sparse.coo_matrix((fixed_hypmat_all_sparse[0], sp_indices_all[0])).toarray()
@@ -113,9 +100,6 @@ synth_eigvals = jnp.array([])
 noc_hypmat_all_sparse = np.asarray(noc_hypmat_all_sparse)
 fixed_hypmat_all_sparse = np.asarray(fixed_hypmat_all_sparse)
 
-# removing the absurd number
-noc_hypmat_all_sparse[noc_hypmat_all_sparse == GVARS.absurd_num] = 0.0
-fixed_hypmat_all_sparse[fixed_hypmat_all_sparse == GVARS.absurd_num] = 0.0
 
 for i in range(nmults-1, -1, -1):
     synth_supmat_sparse = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
@@ -124,7 +108,8 @@ for i in range(nmults-1, -1, -1):
                                                            GVARS.nc, len_s)
     
     # densifying
-    synth_supmat[i] = sparse.coo_matrix((synth_supmat_sparse, sp_indices_all[i])).toarray()
+    synth_supmat[i] = sparse.coo_matrix((synth_supmat_sparse, sp_indices_all[i]),
+                                        shape = (dim_hyper, dim_hyper)).toarray()
     # supmat in muHz
     synth_supmat[i] *= 1.0/2./omega0_arr[i]*GVARS.OM*1e6
     
@@ -139,8 +124,7 @@ for i in range(nmults-1, -1, -1):
     synth_eigvals = jnp.append(synth_eigvals, eigval_qdpt_mult)
     '''
 
-sys.exit()
-    
+sys.exit()     
 # testing the difference with eigvals_model
 np.testing.assert_array_almost_equal(synth_eigvals, eigvals_model, decimal=12)
 
