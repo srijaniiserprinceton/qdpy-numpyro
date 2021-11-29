@@ -116,8 +116,8 @@ Pjl_norm = jnp.asarray(Pjl_norm)
 num_params = len(cind_arr)
 
 # setting the prior limits
-cmin = 0.5 * true_params #/ 1e-3
-cmax = 1.5 * true_params #/ 1e-3
+cmin = 0.5 * true_params / 1e-3
+cmax = 1.5 * true_params / 1e-3
 
 
 # making the data_acoeffs
@@ -125,6 +125,7 @@ data_acoeffs = jnp.zeros(num_j*nmults)
 ell0_arr = jnp.array(GVARS.ell0_arr)
 
 def loop_in_mults(mult_ind, data_acoeff):
+    ell0 = ell0_arr[mult_ind]
     data_omega = jdc(eigvals_true, (mult_ind*dim_hyper,), (dim_hyper,))
     Pjl_local = Pjl[mult_ind]
     data_acoeff = jdc_update(data_acoeff,
@@ -135,16 +136,15 @@ def loop_in_mults(mult_ind, data_acoeff):
 
 data_acoeffs = foril(0, nmults, loop_in_mults, data_acoeffs)
 
-
 # this is actually done in the function create_sparse_noc
-# param_coeff *= 1e-3
+param_coeff *= 1e-3
 
 def compare_model():
     # predicted a-coefficients
     eigvals_compute = jnp.array([])
     eigvals_acoeffs = jnp.array([])
 
-    pred = (true_params[..., NAX, NAX] * param_coeff).sum(axis=(0, 1)) + fixed_part
+    pred = (true_params[..., NAX, NAX]/1e-3 * param_coeff).sum(axis=(0, 1)) + fixed_part
     for i in range(nmults):
         _eigval_mult = np.zeros(dim_hyper)
         ell0 = GVARS.ell0_arr[i]
@@ -164,7 +164,6 @@ def compare_model():
 
 def model():
     # predicted a-coefficients
-    pred_acoeffs = jnp.zeros(num_j * nmults)
     c3 = []
     c5 = []
 
@@ -176,8 +175,8 @@ def model():
     c5 = jnp.asarray(c5)
     c_arr = jnp.vstack((c3, c5))
 
-    pred_acoeff = jnp.zeros(num_j*nmults)
 
+    pred_acoeffs = jnp.zeros(num_j * nmults)
     pred = (c_arr[..., NAX, NAX] * param_coeff).sum(axis=(0, 1)) + fixed_part
 
     for i in range(nmults):
@@ -188,11 +187,10 @@ def model():
         # _eigval_mult = get_eigs(pred.todense())[:2*ell0+1]/2./omegaref*GVARS.OM*1e6
         _eigval_mult = jnp.diag(pred_dense)/2./omegaref*GVARS.OM*1e6
         Pjl_local = Pjl[i][:, :2*ell0+1]
-        pred_acoeff = jdc_update(pred_acoeff,
+        pred_acoeffs = jdc_update(pred_acoeffs,
                                 (Pjl_local @ _eigval_mult[:2*ell0+1])/Pjl_norm[i],
                                 (i * num_j,))
 
-    # misfit_acoeffs = (pred_acoeffs - acoeffs_true)/acoeffs_sigma
     misfit_acoeffs = (pred_acoeffs - data_acoeffs)/acoeffs_sigma
     return numpyro.factor('obs', dist.Normal(0.0, 1.0).log_prob(misfit_acoeffs))
 
@@ -232,11 +230,11 @@ if __name__ == "__main__":
     rng_key = random.PRNGKey(seed)
     rng_key, rng_key_ = random.split(rng_key)
 
-    #kernel = SA(model, adapt_state_size=200)
-    kernel = NUTS(model, max_tree_depth=(20, 5))
+    # kernel = SA(model, adapt_state_size=200)
+    kernel = NUTS(model)#, max_tree_depth=(20, 5))
     mcmc = MCMC(kernel,
-                num_warmup=1500,
-                num_samples=6000,
+                num_warmup=100,
+                num_samples=500,
                 num_chains=num_chains)  
     mcmc.run(rng_key_, extra_fields=('potential_energy',))
     pe = mcmc.get_extra_fields()['potential_energy']
