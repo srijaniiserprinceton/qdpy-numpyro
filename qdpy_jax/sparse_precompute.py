@@ -351,7 +351,8 @@ def build_hypmat_all_cenmults():
 
 
     # getting the sparse-element size for largest ell cenmult
-    MAXMULT_AND_NBS = getnt4cenmult(GVARS.n0_arr[-1], GVARS.ell0_arr[-1], GVARS_ST)
+    # MAXMULT_AND_NBS = getnt4cenmult(GVARS.n0_arr[-1], GVARS.ell0_arr[-1], GVARS_ST)
+    MAXMULT_AND_NBS = getnt4cenmult(GVARS.n0_arr[0], GVARS.ell0_arr[0], GVARS_ST)
     SUBMAT_DICT_MAX = build_SUBMAT_INDICES(MAXMULT_AND_NBS)
     __, __, maskmat_maxmult = build_hm_nonint_n_fxd_1cnm(MAXMULT_AND_NBS,
                                                          SUBMAT_DICT_MAX,
@@ -369,7 +370,7 @@ def build_hypmat_all_cenmults():
     # going over the cenmults in a reverse order
     # this is to ensure that the largest is fileld first
     # to fill the rest in the same max shape
-    for i in range(nmults-1, -1, -1):
+    for i in range(nmults):#-1, -1, -1):
         # looping over all the central multiplets                                      
         n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
         ell0_nmults.append(ell0)
@@ -418,7 +419,6 @@ def build_hypmat_all_cenmults():
         # adding the freqdiag to the fixed_hypmat
         fixed_hypmat_this_mult += np.diag(freqdiag)
         fixed_hypmat_this_mult_sparse = fixed_hypmat_this_mult[maskmat_cenmult]
-        
 
         # making the shape compatible to the maxmult sparse form
         fixed_plus_freqdiag_maxshaped = np.zeros(len_sp_indices_maxmult)
@@ -431,12 +431,12 @@ def build_hypmat_all_cenmults():
         noc_hypmat_all_sparse.append(noc_hypmat_this_s)
 
         # storing the sparse indices for the particular central multiplet
-        if(i == nmults-1): continue
-        
+        # if(i == nmults-1): continue
+        if(i == 0): continue
+
         # adjusting the indices to the largest hypermatrix case (for no static slicing later)
         sp_indices_all.append(get_sp_indices_maxshaped(sp_indices_cenmult,
                                                        sp_indices_maxmult))
-        
     
     # list of shape (nmults x s x (nc x dim_hyper, dim_hyper))
     # the last bracket denotes matrices of that shape but in sparse form

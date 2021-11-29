@@ -101,7 +101,7 @@ noc_hypmat_all_sparse = np.asarray(noc_hypmat_all_sparse)
 fixed_hypmat_all_sparse = np.asarray(fixed_hypmat_all_sparse)
 
 
-for i in range(nmults-1, -1, -1):
+for i in range(nmults):#-1, -1, -1):
     synth_supmat_sparse = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
                                                            fixed_hypmat_all_sparse[i],
                                                            GVARS.ctrl_arr_dpt_clipped,

@@ -137,8 +137,15 @@ class GlobalVars():
         n_arr, ell_arr, omega0_arr = self.get_mult_arrays(load_from_file,
                                                           qdPars.radial_orders,
                                                           qdPars.ell_bounds)
-        self.n0_arr, self.ell0_arr = n_arr, ell_arr
-        self.omega0_arr = omega0_arr
+
+        # sorting the ells form largest to smallest
+        # irrespective of the n0 of the cenmult
+        # This determines the dimension of the hypermatrix
+        sorted_idx_ell = np.argsort(ell_arr)[::-1]
+        self.n0_arr = n_arr[sorted_idx_ell]
+        self.ell0_arr = ell_arr[sorted_idx_ell]
+        self.omega0_arr = omega0_arr[sorted_idx_ell]
+
         self.eigvals_true, self.eigvals_sigma = self.get_eigvals_true()
         self.acoeffs_true, self.acoeffs_sigma = self.get_acoeffs_true()
 
