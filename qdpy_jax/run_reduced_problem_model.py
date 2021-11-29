@@ -48,32 +48,35 @@ dim_hyper = int(np.loadtxt('.dimhyper'))
 true_params = np.load('true_params.npy')
 eigvals_true = np.load('evals_model.npy')
 omega0_arr = np.load('omega0_arr.npy')
+ell0_arr = np.load('ell0_arr.npy')
 acoeffs_sigma = np.load('acoeffs_sigma.npy')
 acoeffs_true = np.load('acoeffs_true.npy')
 
 cind_arr = np.load('cind_arr.npy')
 smin_ind, smax_ind = np.load('sind_arr.npy')
-param_coeff_idx = np.load('param_coeff_idx.npy')
-fixed_part_idx = np.load('fixed_part_idx.npy')
 
 param_coeff = np.load('param_coeff.npy')
+sparse_idx = np.load('sparse_idx.npy')
 fixed_part = np.load('fixed_part.npy')
-mask_p = param_coeff < -1.6375e27
-param_coeff[mask_p] = 0.0
-
-mask_f = fixed_part < -1.6375e27
-fixed_part[mask_f] = 0.0
 param_coeff = param_coeff[smin_ind:smax_ind+1, ...]
 
 
 # comparing the matrices with the true values
-supmat_jax = np.sum((true_params[:,:,NAX,NAX] * param_coeff), axis=(0,1)) + fixed_part
-supmat_jax_dense = sparse.bcoo_todense(supmat_jax[0], fixed_part_idx[0], shape=(dim_hyper, dim_hyper))
-supmat_qdpt_200 = np.load('supmat_qdpt.npy').real
-# supmat_qdpt_201 = np.load('supmat_qdpt_201.npy').real
+supmat_jax = np.sum((true_params[:, :, NAX, NAX] * param_coeff),
+                    axis=(0,1)) + fixed_part
 
-max_diff = np.diag(supmat_jax_dense)[:2005] - np.diag(supmat_qdpt_200)
-plt.plot(max_diff)
+for i in range(nmults):
+    supmat_jax_dense = sparse.bcoo_todense(supmat_jax[i], sparse_idx[i],
+                                        shape=(dim_hyper, dim_hyper))
+    supmat_jax_dense *= 1./2./omega0_arr[i] * GVARS.OM * 1e6
+    ell0 = ell0_arr[i]
+    supmat_qdpt = np.load(f'supmat_qdpt_{ell0}.npy').real
+    supmat_qdpt *= 1./2./omega0_arr[i]*GVARS.OM*1e6
+    spsize = supmat_qdpt.shape[0]
+    diff = supmat_qdpt - supmat_jax_dense[:spsize, :spsize]
+    print(f"cenmult l0 = {ell0}: maxdiff = {abs(diff).max()}")
+    # max_diff = np.diag(supmat_jax_dense)[:2005] - np.diag(supmat_qdpt_200)
+plt.plot(diff)
 plt.savefig('supmat_diff.pdf')
 # sys.exit()
 
@@ -143,11 +146,12 @@ def compare_model():
 
     pred = (true_params[..., NAX, NAX] * param_coeff).sum(axis=(0, 1)) + fixed_part
     for i in range(nmults):
+        _eigval_mult = np.zeros(dim_hyper)
         ell0 = GVARS.ell0_arr[i]
         omegaref = omega0_arr[i]
-        pred_sparse = sparse.bcoo_todense(pred[i], fixed_part_idx[i, ...],
-                                          shape=(dim_hyper, dim_hyper))
-        _eigval_mult = jnp.diag(pred_sparse)/2./omegaref*GVARS.OM*1e6
+        pred_dense = sparse.bcoo_todense(pred[i], sparse_idx[i],
+                                         shape=(dim_hyper, dim_hyper))
+        _eigval_mult[:2*ell0+1] = np.diag(pred_dense)[:2*ell0+1]/2./omegaref*GVARS.OM*1e6
         eigvals_compute = jnp.append(eigvals_compute, _eigval_mult)
         Pjl_local = Pjl[i]
         pred_acoeff = (Pjl_local @ _eigval_mult)/Pjl_norm[i]
@@ -174,17 +178,18 @@ def model():
 
     pred_acoeff = jnp.zeros(num_j*nmults)
 
+    pred = (c_arr[..., NAX, NAX] * param_coeff).sum(axis=(0, 1)) + fixed_part
+
     for i in range(nmults):
-        pred = build_hm_sparse.build_hypmat_w_c(param_coeff_sparse[i],
-                                                fixed_part_sparse[i],
-                                                c_arr, nc, len_s)
         ell0 = GVARS.ell0_arr[i]
         omegaref = omega0_arr[i]
+        pred_dense = sparse.bcoo_todense(pred[i], sparse_idx[i],
+                                          shape=(dim_hyper, dim_hyper))
         # _eigval_mult = get_eigs(pred.todense())[:2*ell0+1]/2./omegaref*GVARS.OM*1e6
-        _eigval_mult = jnp.diag(pred.todense())/2./omegaref*GVARS.OM*1e6
-        Pjl_local = Pjl[i]
+        _eigval_mult = jnp.diag(pred_dense)/2./omegaref*GVARS.OM*1e6
+        Pjl_local = Pjl[i][:, :2*ell0+1]
         pred_acoeff = jdc_update(pred_acoeff,
-                                (Pjl_local @ _eigval_mult)/Pjl_norm[i],
+                                (Pjl_local @ _eigval_mult[:2*ell0+1])/Pjl_norm[i],
                                 (i * num_j,))
 
     # misfit_acoeffs = (pred_acoeffs - acoeffs_true)/acoeffs_sigma
@@ -227,7 +232,6 @@ if __name__ == "__main__":
     rng_key = random.PRNGKey(seed)
     rng_key, rng_key_ = random.split(rng_key)
 
-    """
     #kernel = SA(model, adapt_state_size=200)
     kernel = NUTS(model, max_tree_depth=(20, 5))
     mcmc = MCMC(kernel,
@@ -265,4 +269,3 @@ if __name__ == "__main__":
 
     print_summary(mcmc_sample, true_params)
 
-    """

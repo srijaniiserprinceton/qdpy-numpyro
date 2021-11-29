@@ -59,15 +59,20 @@ np.save('acoeffs_true.npy', GVARS.acoeffs_true)
 
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr, sp_indices_all =\
                                 precompute.build_hypmat_all_cenmults()
+fixed_hypmat_dense = sparse.coo_matrix((fixed_hypmat_all_sparse[0], sp_indices_all[0])).toarray()
+
+dim_hyper = fixed_hypmat_dense.shape[0]
 
 # converting to numpy ndarrays from lists
 noc_hypmat_all_sparse = np.asarray(noc_hypmat_all_sparse)
 fixed_hypmat_all_sparse = np.asarray(fixed_hypmat_all_sparse)
 
+
 def model():
     eigval_model = jnp.array([])
     
-    for i in range(nmults-1, -1, -1):
+    for i in range(nmults):
+        eigval_mult = np.zeros(dim_hyper)
         hypmat_sparse = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
                                                          fixed_hypmat_all_sparse[i],
                                                          GVARS.ctrl_arr_dpt_clipped,
@@ -79,11 +84,13 @@ def model():
         # solving the eigenvalue problem and mapping eigenvalues
         ell0 = ell0_arr[i]
         omegaref = omega0_arr[i]
-        eigval_qdpt_mult = get_eigs(hypmat)[:2*ell0+1]/2./omegaref
+        # eigval_qdpt_mult = get_eigs(hypmat)[:2*ell0+1]/2./omegaref
+        eigval_qdpt_mult = np.diag(hypmat)[:2*ell0+1]/2./omegaref
         eigval_qdpt_mult *= GVARS.OM*1e6
+        eigval_mult[:len(eigval_qdpt_mult)] = eigval_qdpt_mult
 
         # storing the correct order of nmult
-        eigval_model = jnp.append(eigval_qdpt_mult, eigval_model)
+        eigval_model = jnp.append(eigval_model, eigval_mult)
 
     return eigval_model
 

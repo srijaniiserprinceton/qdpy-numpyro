@@ -101,7 +101,7 @@ noc_hypmat_all_sparse = np.asarray(noc_hypmat_all_sparse)
 fixed_hypmat_all_sparse = np.asarray(fixed_hypmat_all_sparse)
 
 
-for i in range(nmults):#-1, -1, -1):
+for i in range(nmults):
     synth_supmat_sparse = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
                                                            fixed_hypmat_all_sparse[i],
                                                            GVARS.ctrl_arr_dpt_clipped,
@@ -124,23 +124,27 @@ for i in range(nmults):#-1, -1, -1):
     synth_eigvals = jnp.append(synth_eigvals, eigval_qdpt_mult)
     '''
 
-sys.exit()     
 # testing the difference with eigvals_model
-np.testing.assert_array_almost_equal(synth_eigvals, eigvals_model, decimal=12)
+# np.testing.assert_array_almost_equal(synth_eigvals, eigvals_model, decimal=12)
 
 ############ COMPARING AGAINST supmat_qdpt.npy ########################
 
-supmat_qdpt = np.load('supmat_qdpt.npy') / 2. / omega0_arr[1] * GVARS.OM * 1e6
-np.testing.assert_array_almost_equal(synth_data[1], supmat_qdpt, decimal=12)
+for il, ell in enumerate(ell0_arr):
+    print(f'{il}: {ell}')
+    supmat_qdpt = np.load(f'supmat_qdpt_{ell}.npy') / 2. / omega0_arr[il] * GVARS.OM * 1e6
+    spsize = supmat_qdpt.shape[0]
+    np.testing.assert_array_almost_equal(synth_supmat[il][:spsize, :spsize],
+                                         supmat_qdpt, decimal=12, verbose=True)
 
-sys.exit()
 
 ############ COMPARING AGAINST supmat_qdpt.npy ######################## 
+len_hyper_arr = fixed_hypmat_all_sparse.shape[-1]
 
+# converting to array and changing the axes to nmult X element_idx X xy-identifier
+hypmat_idx = np.array(sp_indices_all, dtype=int)
+hypmat_idx = np.moveaxis(hypmat_idx, 1, -1)
 
-fixed_hypmat_sparse = np.zeros((nmults, 9*dim_hyper))
-fixed_hypmat_idx = np.zeros((nmults, 9*dim_hyper, 2), dtype=int)
-
+fixed_hypmat_sparse = np.zeros((nmults, len_hyper_arr))
 
 cmax = jnp.array(1.1 * GVARS.ctrl_arr_dpt_clipped)
 cmin = jnp.array(0.9 * GVARS.ctrl_arr_dpt_clipped)
@@ -172,15 +176,26 @@ for i in range(nmults):
     _fixmat = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
                                                fixed_hypmat_all_sparse[i],
                                                c_fixed, nc, len_s)
-    _fixmat = sparse.BCOO.fromdense(_fixmat.todense())
-    _lendata = len(_fixmat.data)
-    fixed_hypmat_sparse[i, :_lendata] = _fixmat.data
-    fixed_hypmat_idx[i, :_lendata, :] = _fixmat.indices
+
+    fixed_hypmat_sparse[i, :] = _fixmat
+
+param_coeff = np.zeros((len_s,
+                        len(cind_arr),
+                        nmults,
+                        len_hyper_arr))
+
+for i in range(nmults):
+    for si in range(len_s):
+        for ci, cind in enumerate(cind_arr):
+            param_coeff[si, ci, i, :] = noc_hypmat_all_sparse[i, si, cind, :]
 
 np.save('fixed_part.npy', fixed_hypmat_sparse)
-np.save('fixed_part_idx.npy', fixed_hypmat_idx)
+np.save('param_coeff.npy', param_coeff)
+np.save('sparse_idx.npy', hypmat_idx)
 np.savetxt('.dimhyper', np.array([dim_hyper]), fmt='%d')
 np.save('omega0_arr.npy', omega0_arr)
+np.save('ell0_arr.npy', ell0_arr)
+sys.exit()
 
 # we just need to save the noc_diag corresponding to the two ctrl_pts set to zero
 noc_hypmat_sparse = np.zeros((len(GVARS.s_arr),

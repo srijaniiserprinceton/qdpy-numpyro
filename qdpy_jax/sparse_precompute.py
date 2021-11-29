@@ -327,8 +327,10 @@ def get_sp_indices_maxshaped(sp_indices_cenmult, sp_indices_maxmult):
     
     # filling the extra indices with unused index values (these correspond to 
     # a bunch of zeros in the sparse data matrix
-    sp_indices_cenmult_maxshaped[0][len_cenmult_spind:] = absent_indices[0][:len_unused_indices]
-    sp_indices_cenmult_maxshaped[1][len_cenmult_spind:] = absent_indices[1][:len_unused_indices]
+    sp_indices_cenmult_maxshaped[0][len_cenmult_spind:] = \
+        absent_indices[0][:len_unused_indices]
+    sp_indices_cenmult_maxshaped[1][len_cenmult_spind:] = \
+        absent_indices[1][:len_unused_indices]
     
     return sp_indices_cenmult_maxshaped
 
@@ -351,7 +353,6 @@ def build_hypmat_all_cenmults():
 
 
     # getting the sparse-element size for largest ell cenmult
-    # MAXMULT_AND_NBS = getnt4cenmult(GVARS.n0_arr[-1], GVARS.ell0_arr[-1], GVARS_ST)
     MAXMULT_AND_NBS = getnt4cenmult(GVARS.n0_arr[0], GVARS.ell0_arr[0], GVARS_ST)
     SUBMAT_DICT_MAX = build_SUBMAT_INDICES(MAXMULT_AND_NBS)
     __, __, maskmat_maxmult = build_hm_nonint_n_fxd_1cnm(MAXMULT_AND_NBS,
@@ -402,7 +403,6 @@ def build_hypmat_all_cenmults():
                 noc_hypmat_sparse_c_maxshaped[c_ind, :len(noc_hypmat_sparse_c)] =\
                                                                 noc_hypmat_sparse_c
 
-                
             # appending the different m part in the list
             noc_hypmat_this_s.append(noc_hypmat_sparse_c_maxshaped)
             
@@ -440,4 +440,5 @@ def build_hypmat_all_cenmults():
     
     # list of shape (nmults x s x (nc x dim_hyper, dim_hyper))
     # the last bracket denotes matrices of that shape but in sparse form
-    return noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_nmults, omegaref_nmults, sp_indices_all
+    return noc_hypmat_all_sparse, fixed_hypmat_all_sparse, \
+        ell0_nmults, omegaref_nmults, sp_indices_all
