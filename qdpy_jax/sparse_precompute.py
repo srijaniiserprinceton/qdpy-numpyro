@@ -1,4 +1,4 @@
-Bimport numpy as np
+import numpy as np
 from tqdm import tqdm
 from scipy import integrate
 from scipy.interpolate import splev
