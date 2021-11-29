@@ -3,6 +3,7 @@ from tqdm import tqdm
 from scipy import integrate
 from scipy.interpolate import splev
 from scipy import sparse
+import sys
 
 '''
 from jax.experimental import sparse
@@ -155,15 +156,16 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
 
 
 def build_hypmat_freqdiag(CNM_AND_NBS, SUBMAT_DICT, dim_hyper):
-    freqdiag = np.zeros(dim_hyper)
+    # initializing with an absurd value that will define the shape of the matrix
+    freqdiag = np.ones(dim_hyper) * GVARS.absurd_num
     omegaref = CNM_AND_NBS.omega_nbs[0]
     for i in range(len(CNM_AND_NBS.omega_nbs)):
         omega_nl = CNM_AND_NBS.omega_nbs[i]
         startx = SUBMAT_DICT.startx_arr[i]
         endx = SUBMAT_DICT.endx_arr[i]
-        freqdiag[startx:endx] += omega_nl**2 - omegaref**2
+        freqdiag[startx:endx] = omega_nl**2 - omegaref**2
     #return sparse.BCOO.fromdense(np.diag(freqdiag))
-    return sparse.csr_matrix(np.diag(freqdiag))
+    return freqdiag
 
 
 
@@ -302,13 +304,19 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s, len_sp_ma
 
     del non_c_hypmat_arr # deleting for ensuring no extra memory
 
+    # making the freqdiag here
+    freqdiag = build_hypmat_freqdiag(CNM_AND_NBS,
+                                     SUBMAT_DICT,
+                                     dim_hyper)
+
     # sparsifying the fixed hypmat
     # fixed_hypmat_sparse = sparse.BCOO.fromdense(fixed_hypmat)
-    fixed_hypmat_sparse = sparse.csr_matrix(fixed_hypmat)
+    fixed_hypmat_sparse = sparse.csr_matrix(fixed_hypmat + np.diag(freqdiag)).data
+
     del fixed_hypmat#, fixed_hypmat_UT
 
     # sparsifying the mask_hypmat and retaining the indices only
-    mask_hypmat_sp = sparse.coo_matrix(mask_hypmat)
+    mask_hypmat_sp = sparse.coo_matrix(mask_hypmat + np.diag(freqdiag))
     sp_indices_cenmult = (mask_hypmat_sp.row, mask_hypmat_sp.col)
 
     return non_c_hypmat_list, fixed_hypmat_sparse, sp_indices_cenmult
@@ -320,27 +328,46 @@ def get_sp_indices_maxshaped(sp_indices_cenmult, sp_indices_maxmult):
 
     len_unused_indices = len_maxmult_spind - len_cenmult_spind
     
-    # finding which indices in cenmult are already in maxmulT
+    # finding which indices in cenmult are already in maxmult
     mask_common_ind = np.ones(len_maxmult_spind, dtype='bool')
     
     for i in range(len_cenmult_spind):
-        common_ind = np.where((sp_indices_maxmult[0] - sp_indices_cenmult[0][i]) *\
-                              (sp_indices_maxmult[1] - sp_indices_cenmult[1][i]) == 0)
-        if(len(common_ind[0] > 0)):
-            mask_common_ind[common_ind[0][0]] = False
+        common_ind = np.where(np.abs(sp_indices_maxmult[0] - sp_indices_cenmult[0][i]) +\
+                              np.abs(sp_indices_maxmult[1] - sp_indices_cenmult[1][i]) == 0)
 
+        if(len(common_ind[0]) > 0):
+            mask_common_ind[common_ind[0][0]] = False
+            '''
+            print('A',common_ind, common_ind[0], common_ind[0][0])
+            print('B',sp_indices_maxmult[0][common_ind[0]], sp_indices_maxmult[1][common_ind[0]])
+            print('C',sp_indices_cenmult[0][i], sp_indices_cenmult[1][i])
+
+            sys.exit()
+            '''
+        
     # the tuple of uncommon indices
     absent_indices = (sp_indices_maxmult[0][mask_common_ind],
                       sp_indices_maxmult[1][mask_common_ind])
     
     # choosing the required number of uncommon indices to fill the shape
-    sp_indices_cenmult_maxshaped = (np.zeros(len_maxmult_spind),
-                                    np.zeros(len_maxmult_spind))
+    sp_indices_cenmult_maxshaped = (np.zeros(len_maxmult_spind, dtype='int'),
+                                    np.zeros(len_maxmult_spind, dtype='int'))
     
     # filling the indices with actual sparse values for the cenmult
     sp_indices_cenmult_maxshaped[0][:len_cenmult_spind] = sp_indices_cenmult[0]
     sp_indices_cenmult_maxshaped[1][:len_cenmult_spind] = sp_indices_cenmult[1]
 
+    '''
+    print(absent_indices[0][:len_unused_indices])
+    print(absent_indices[1][:len_unused_indices])
+    
+    # double check
+    print('Double checking.')
+    for i in range(len(absent_indices[0][:len_unused_indices])):
+        print(np.where(np.abs(absent_indices[0][i] - sp_indices_cenmult[0]) +\
+                       np.abs(absent_indices[1][i] - sp_indices_cenmult[1]) == 0))
+    '''
+    
     # filling the extra indices with unused index values (these correspond to 
     # a bunch of zeros in the sparse data matrix
     sp_indices_cenmult_maxshaped[0][len_cenmult_spind:] = absent_indices[0][:len_unused_indices]
@@ -413,12 +440,12 @@ def build_hypmat_all_cenmults():
             else:
                 fixed_hypmat_this_mult += fixed_hypmat_s
 
-        # appending the sparse form of the fixed hypmat
-        fixed_plus_freqdiag = (fixed_hypmat_this_mult + freqdiag_sparse).data
-        fixed_plus_freqdiag_maxshaped = np.zeros(len_sp_indices_maxmult)
-        fixed_plus_freqdiag_maxshaped[:len(fixed_plus_freqdiag)] = fixed_plus_freqdiag
+        # making the shape compatible to the maxmult sparse form
+        fixed_plus_freqdiag_maxshaped = np.ones(len_sp_indices_maxmult) * GVARS.absurd_num
+        fixed_plus_freqdiag_maxshaped[:len(fixed_hypmat_s)] = fixed_hypmat_s
         fixed_hypmat_all_sparse.append(fixed_plus_freqdiag_maxshaped)
-        
+        # appending the sparse form of the fixed hypmat
+        # fixed_hypmat_all_sparse.append(fixed_hypmat_s)
 
         # appending the list of sparse matrices in s to the list in cenmults
         noc_hypmat_all_sparse.append(noc_hypmat_this_s)
@@ -426,9 +453,12 @@ def build_hypmat_all_cenmults():
         # storing the sparse indices for the particular central multiplet
         if(i == nmults-1): continue
         # adjusting the indices to the largest hypermatrix case (for no static slicing later)
+        print(len(sp_indices_cenmult[0]), len(sp_indices_maxmult[0]))
         sp_indices_all.append(get_sp_indices_maxshaped(sp_indices_cenmult,
                                                        sp_indices_maxmult))
-
+        #sp_indices_all.append(sp_indices_cenmult, sp_indices_maxmult))
+        print(len(sp_indices_all[-1][-1]), len(sp_indices_maxmult[0]))
+        
     # list of shape (nmults x s x (nc x dim_hyper, dim_hyper))
     # the last bracket denotes matrices of that shape but in sparse form
     return noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_nmults, omegaref_nmults, sp_indices_all

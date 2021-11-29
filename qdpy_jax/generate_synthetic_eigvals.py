@@ -60,6 +60,13 @@ np.save('acoeffs_true.npy', GVARS.acoeffs_true)
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr, sp_indices_all =\
                                 precompute.build_hypmat_all_cenmults()
 
+# converting to numpy ndarrays from lists
+noc_hypmat_all_sparse = np.asarray(noc_hypmat_all_sparse)
+fixed_hypmat_all_sparse = np.asarray(fixed_hypmat_all_sparse)
+
+# removing the absurd number
+noc_hypmat_all_sparse[noc_hypmat_all_sparse == GVARS.absurd_num] = 0.0
+fixed_hypmat_all_sparse[fixed_hypmat_all_sparse == GVARS.absurd_num] = 0.0
 
 def model():
     eigval_model = jnp.array([])
@@ -71,7 +78,7 @@ def model():
                                                          GVARS.nc, len_s)
 
         # converting to dense
-        hypmat = sparse.coo_matrix((hypmat_sparse, sp_indices_all[0])).toarray()
+        hypmat = sparse.coo_matrix((hypmat_sparse, sp_indices_all[i])).toarray()
 
         # solving the eigenvalue problem and mapping eigenvalues
         ell0 = ell0_arr[i]
