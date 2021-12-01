@@ -1,2 +1,0 @@
-qdpy_jax
-tests

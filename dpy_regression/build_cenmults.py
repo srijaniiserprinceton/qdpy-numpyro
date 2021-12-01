@@ -1,7 +1,7 @@
 import numpy as np   
 from qdpy_jax import jax_functions as jf
 
-def getnt4cenmult(n0, ell0, GVARS):
+def getnt4cenmult(GVARS):
     """Function that returns the name tuple for the
     attributes of the central mode and the neighbours for 
     that central mode. n0 and ell0 are static since everything
@@ -55,43 +55,20 @@ def getnt4cenmult(n0, ell0, GVARS):
     omega_list = np.asarray(GVARS.omega_list)
     nl_arr = np.asarray(GVARS.nl_all)
     nl_list = list(map(list, GVARS.nl_all))
-
-    # unperturbed frequency of central multiplet (n0, ell0)
-    mult_idx = np.in1d(nl_arr[:, 0], n0) * np.in1d(nl_arr[:, 1], ell0)
-    omega0 = omega_list[mult_idx]
-    
-    # frequency distances from central multiplet
-    omega_diff = (omega_list - omega0) * GVARS.OM * 1e6
-
-    # defining various masks to minimize the multiplet-couplings
-    # rejecting modes far in frequency
-    mask_omega = abs(omega_diff) <= GVARS.fwindow 
-    
-    # rejecting modes that don't satisfy triangle inequality
-    smax = GVARS.s_arr[-1]
-    mask_ell = abs(nl_arr[:, 1] - ell0) <= smax
-
-    # only even l1-l2 is coupled for odd-s rotation perturbation
-    # this is specific to the fact that dr is considered for odd s only
-    mask_odd = ((nl_arr[:, 1] - ell0)%2) == 0
-    
-    # creating the final mask accounting for all of the masks above
-    mask_nb = mask_omega * mask_ell * mask_odd
-
-    # sorting the multiplets in ascending order of distance from (n0, ell0)
-    sort_idx = np.argsort(abs(omega_diff[mask_nb]))
     
     # the final attributes that will be stored
-    nl_neighbours = nl_arr[mask_nb][sort_idx]
-    nl_neighbours_idx = nl_idx_vec(nl_neighbours)
-    omega_neighbours = get_omega_neighbors(nl_neighbours_idx)
+    nl_cnm = np.zeros((len(GVARS.n0_arr), 2), dtype='int')
+    nl_cnm[:, 0] = GVARS.n0_arr
+    nl_cnm[:, 1] = GVARS.ell0_arr
+    nl_cnm_idx = nl_idx_vec(nl_cnm)
+    omega_cnm = omega_list[nl_cnm_idx]
 
-    CENMULT_AND_NBS = jf.create_namedtuple('CENMULT_AND_NBS',
-                                           ['nl_nbs',
-                                            'nl_nbs_idx',
-                                            'omega_nbs'],
-                                           (nl_neighbours,
-                                            nl_neighbours_idx,
-                                            omega_neighbours))
+    CENMULTS = jf.create_namedtuple('CENMULT',
+                                    ['nl_cnm',
+                                     'nl_cnm_idx',
+                                     'omega_cnm'],
+                                    (nl_cnm,
+                                     nl_cnm_idx,
+                                     omega_cnm))
 
-    return CENMULT_AND_NBS
+    return CENMULTS

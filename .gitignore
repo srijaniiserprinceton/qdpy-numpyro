@@ -1,6 +1,15 @@
 *.npy
+*.txt
+*.dat
+.*
 *~
 .ipynb_checkpoints
+*.egg-info/*
 *.pdf
 __pycache__
 .config
+.datadump
+qdpy_output
+*.out
+*.err
+*.png

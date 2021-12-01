@@ -1,24 +1,23 @@
-import os
-import numpy as np
+from collections import namedtuple
 import jax.numpy as jnp
-import matplotlib.pyplot as plt
+import numpy as np
+from scipy.interpolate import splrep, splev, interp1d
 from numpy.polynomial.legendre import legval
-from scipy.interpolate import splrep, splev
+import os
+import matplotlib.pyplot as plt
 
-# loading local libraries/classes
+# loading custom libraries/classes
+from qdpy_jax import load_multiplets
 from qdpy_jax import jax_functions as jf
 from qdpy_jax import bsplines as bsp
-import sys
-current_dir = os.path.dirname(os.path.realpath(__file__))
-package_dir = os.path.dirname(current_dir)
-sys.path.append(f"{package_dir}/plotter")
-import preplotter as preplotter
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
 data_dir = f"{package_dir}/qdpy_jax"
-with open(f"{package_dir}/.config", "r") as f:
-    dirnames = f.read().splitlines()
+import sys
+sys.path.append(f"{package_dir}/plotter")
+import preplotter as preplotter
+
 #----------------------------------------------------------------------
 #                       All qts in CGS
 #----------------------------------------------------------------------
@@ -32,6 +31,11 @@ with open(f"{package_dir}/.config", "r") as f:
 # taking [:-2] since we are ignoring the file name and current dirname
 # this is specific to the way the directory structure is constructed
 
+filenamepath = os.path.realpath(__file__)
+filepath = '/'.join(filenamepath.split('/')[:-2])   
+configpath = filepath
+with open(f"{configpath}/.config", "r") as f:
+    dirnames = f.read().splitlines()
 
 class qdParams():
     # Reading global variables
@@ -121,6 +125,9 @@ class GlobalVars():
 
         self.fwindow = qdPars.fwindow
         self.wsr = -1.0*np.loadtxt(f'{self.datadir}/w_s/w.dat')
+
+        # self.wsr = np.ones_like(self.wsr) #!!
+        # self.wsr = np.load(f'wsr-spline.npy')
         self.wsr_extend()
 
         # rth = r threshold beyond which the profiles are updated. 
@@ -134,18 +141,10 @@ class GlobalVars():
         self.r_spline = self.r[self.rth_ind:]
 
         # generating the multiplets which we will use
-        n_arr, ell_arr, omega0_arr = self.get_mult_arrays(load_from_file,
-                                                          qdPars.radial_orders,
-                                                          qdPars.ell_bounds)
-
-        # sorting the ells form largest to smallest
-        # irrespective of the n0 of the cenmult
-        # This determines the dimension of the hypermatrix
-        sorted_idx_ell = np.argsort(ell_arr)[::-1]
-        self.n0_arr = n_arr[sorted_idx_ell]
-        self.ell0_arr = ell_arr[sorted_idx_ell]
-        self.omega0_arr = omega0_arr[sorted_idx_ell]
-
+        n_arr, ell_arr = self.get_mult_arrays(load_from_file,
+                                              qdPars.radial_orders,
+                                              qdPars.ell_bounds)
+        self.n0_arr, self.ell0_arr = n_arr, ell_arr
         self.eigvals_true, self.eigvals_sigma = self.get_eigvals_true()
         self.acoeffs_true, self.acoeffs_sigma = self.get_acoeffs_true()
 
@@ -226,7 +225,7 @@ class GlobalVars():
 
 
     # {{{ def findfreq(data, l, n, m):
-    def findfreq(self, l, n, m, fullfreq=False):
+    def findfreq(self, l, n, m):
         '''
         Find the eigenfrequency for a given (l, n, m)
         using the splitting coefficients
@@ -269,10 +268,7 @@ class GlobalVars():
         totsplit = legval(1.0*m/L, splits)*L*0.001
         totsplit[mask0] = 0
         amp[maskl] = 0
-        if fullfreq:
-            return nu+totsplit, totsigma, amp
-        else:
-            return totsplit, totsigma, amp
+        return totsplit, totsigma, amp
     # }}} findfreq(data, l, n, m)
 
     # {{{ def find_acoeffs(data, l, n):
@@ -301,17 +297,13 @@ class GlobalVars():
         splits = np.append([0.0], data[modeindex, 12:48])
         split_sigmas = np.append([0.0], data[modeindex, 49:85])
 
-        assert smax < len(splits), "smax > number of splitting coefficients"
-
         splits = splits[:smax+1]
         split_sigmas = split_sigmas[:smax+1]
 
         if odd:
             splits = splits[1::2]
             split_sigmas = split_sigmas[1::2]
-            return splits, split_sigmas
-        else:
-            return splits, split_sigmas
+        return splits, split_sigmas
     # }}} find_acoeffs(data, l, n)
 
 
@@ -342,17 +334,11 @@ class GlobalVars():
         '''
         n_arr = np.array([], dtype='int32')
         ell_arr = np.array([], dtype='int32')
-        omega0_arr = []
 
         # loading from a file. Must be saved in the (nmults, 2) shape
         if(load_from_file):
             mults = np.load('qdpy_multiplets.npy').astype('int')
             n_arr, ell_arr = mults[:, 0], mults[:, 1]
-            for i in range(len(n_arr)):
-                omega0_arr.append(self.findfreq(ell_arr[i],
-                                                n_arr[i],
-                                                np.array([0]),
-                                                fullfreq=True)[0])
 
         # creating the arrays when the ells are continuous in each radial orders
         else:
@@ -361,10 +347,8 @@ class GlobalVars():
                 for ell in range(ell_min, ell_max+1):
                     n_arr = np.append(n_arr, n)
                     ell_arr = np.append(ell_arr, ell)
-                    omega0_arr.append(self.findfreq(ell, n, np.array([0]),
-                                                    fullfreq=True)[0])
 
-        return n_arr, ell_arr, np.array(omega0_arr)
+        return n_arr, ell_arr
 
     def get_namedtuple_gvar_paths(self):
         """Function to create the namedtuple containing the 
