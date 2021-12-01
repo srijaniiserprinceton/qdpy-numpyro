@@ -1,5 +1,5 @@
 import os
-num_chains = 3
+num_chains = 1
 os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
 import matplotlib.pyplot as plt
 import numpy as np
@@ -112,12 +112,11 @@ param_coeff = jnp.asarray(param_coeff)
 fixed_part = jnp.asarray(fixed_part)
 acoeffs_sigma = jnp.asarray(acoeffs_sigma)
 Pjl_norm = jnp.asarray(Pjl_norm)
+sparse_idx = jnp.asarray(sparse_idx)
+
+
 
 num_params = len(cind_arr)
-
-# setting the prior limits
-cmin = 0.5 * true_params / 1e-3
-cmax = 1.5 * true_params / 1e-3
 
 
 # making the data_acoeffs
@@ -139,60 +138,76 @@ data_acoeffs = foril(0, nmults, loop_in_mults, data_acoeffs)
 # this is actually done in the function create_sparse_noc
 param_coeff *= 1e-3
 
+ell0_arr_jax = jnp.asarray(GVARS.ell0_arr)
+omega0_arr_jax = jnp.asarray(omega0_arr)
+
+# reshaping true_params and param_coeff
+
+true_params = jnp.reshape(true_params, (nc * len_s,), 'F')
+param_coeff = jnp.reshape(param_coeff, (nc * len_s, nmults, -1), 'F')
+
+# moving axis to allow seamless jnp.dot
+param_coeff = jnp.moveaxis(param_coeff, 0, 1)
+
+
+# setting the prior limits
+cmin = 0.5 * true_params / 1e-3
+cmax = 1.5 * true_params / 1e-3
+
 def compare_model():
-    # predicted a-coefficients
+    # predicted a-coeficients                                                             
     eigvals_compute = jnp.array([])
     eigvals_acoeffs = jnp.array([])
     pred_acoeffs = jnp.zeros(num_j * nmults)
 
-    pred = (true_params[..., NAX, NAX]/1e-3 * param_coeff).sum(axis=(0, 1)) + fixed_part
-    for i in range(nmults):
-        ell0 = GVARS.ell0_arr[i]
-        omegaref = omega0_arr[i]
-        pred_dense = sparse.bcoo_todense(pred[i], sparse_idx[i],
+    pred = true_params/1e-3 @ param_coeff + fixed_part
+    
+    def loop_in_mults(mult_ind, pred_acoeff):
+        ell0 = ell0_arr_jax[mult_ind]
+        omegaref = omega0_arr_jax[mult_ind]
+        pred_dense = sparse.bcoo_todense(pred[mult_ind], sparse_idx[mult_ind],
                                          shape=(dim_hyper, dim_hyper))
         _eigval_mult = get_eigs(pred_dense)/2./omegaref*GVARS.OM*1e6
-        Pjl_local = Pjl[i][:, :2*ell0+1]
-        # pred_acoeff = (Pjl_local @ _eigval_mult[:2*ell0+1])/Pjl_norm[i]
-        # eigvals_acoeffs = jnp.append(eigvals_acoeffs, pred_acoeff)
-        # eigvals_compute = jnp.append(eigvals_compute, _eigval_mult)
-        pred_acoeffs = jdc_update(pred_acoeffs,
-                                (Pjl_local @ _eigval_mult[:2*ell0+1])/Pjl_norm[i],
-                                (i * num_j,))
+        Pjl_local = Pjl[mult_ind]
+        # pred_acoeff = (Pjl_local @ _eigval_mult[:2*ell0+1])/Pjl_norm[i]                  
+        # eigvals_acoeffs = jnp.append(eigvals_acoeffs, pred_acoeff)                    
+        # eigvals_compute = jnp.append(eigvals_compute, _eigval_mult)                     
+        pred_acoeff = jdc_update(pred_acoeff,
+                                 (Pjl_local @ _eigval_mult)/Pjl_norm[mult_ind],
+                                 (mult_ind * num_j,))
+        return pred_acoeff
 
-    # diff = eigvals_compute - eigvals_true
-    # print(f"Max(Pred - True): {abs(diff).max():.5e}")
+
+    pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
+    # diff = eigvals_compute - eigvals_true                                              
+    # print(f"Max(Pred - True): {abs(diff).max():.5e}")                                   
     return pred_acoeffs
 
+compare_model_ = jax.jit(compare_model)
 
 def model():
-    # predicted a-coefficients
-    c3 = []
-    c5 = []
-
-    for i in range(num_params):
-        c3.append(numpyro.sample(f'c3_{i}', dist.Uniform(cmin[0,i], cmax[0,i])))
-        c5.append(numpyro.sample(f'c5_{i}', dist.Uniform(cmin[1,i], cmax[1,i])))
-
-    c3 = jnp.asarray(c3)
-    c5 = jnp.asarray(c5)
-    c_arr = jnp.vstack((c3, c5))
-
+    c_arr = numpyro.sample(f'c_arr', dist.Uniform(cmin, cmax))
 
     pred_acoeffs = jnp.zeros(num_j * nmults)
-    pred = (c_arr[..., NAX, NAX] * param_coeff).sum(axis=(0, 1)) + fixed_part
+    pred = c_arr @ param_coeff + fixed_part
 
-    for i in range(nmults):
-        ell0 = GVARS.ell0_arr[i]
-        omegaref = omega0_arr[i]
-        pred_dense = sparse.bcoo_todense(pred[i], sparse_idx[i],
-                                          shape=(dim_hyper, dim_hyper))
-        # _eigval_mult = get_eigs(pred.todense())[:2*ell0+1]/2./omegaref*GVARS.OM*1e6
-        _eigval_mult = jnp.diag(pred_dense)/2./omegaref*GVARS.OM*1e6
-        Pjl_local = Pjl[i][:, :2*ell0+1]
-        pred_acoeffs = jdc_update(pred_acoeffs,
-                                (Pjl_local @ _eigval_mult[:2*ell0+1])/Pjl_norm[i],
-                                (i * num_j,))
+    def loop_in_mults(mult_ind, pred_acoeff):
+        ell0 = ell0_arr_jax[mult_ind]
+        omegaref = omega0_arr_jax[mult_ind]
+        pred_dense = sparse.bcoo_todense(pred[mult_ind], sparse_idx[mult_ind],
+                                         shape=(dim_hyper, dim_hyper))
+        _eigval_mult = get_eigs(pred_dense)/2./omegaref*GVARS.OM*1e6
+        Pjl_local = Pjl[mult_ind]
+        # pred_acoeff = (Pjl_local @ _eigval_mult[:2*ell0+1])/Pjl_norm[i]                 
+        # eigvals_acoeffs = jnp.append(eigvals_acoeffs, pred_acoeff)                      
+        # eigvals_compute = jnp.append(eigvals_compute, _eigval_mult)                     
+        
+        pred_acoeff = jdc_update(pred_acoeff,
+                                 (Pjl_local @ _eigval_mult)/Pjl_norm[mult_ind],
+                                 (mult_ind * num_j,))
+        return pred_acoeff
+
+    pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
 
     misfit_acoeffs = (pred_acoeffs - data_acoeffs)/acoeffs_sigma
     return numpyro.factor('obs', dist.Normal(0.0, 1.0).log_prob(misfit_acoeffs))
@@ -227,18 +242,19 @@ def print_summary(samples, ctrl_arr):
 
 
 if __name__ == "__main__":
-    diff = compare_model()
+    diff = compare_model_()
     # Start from this source of randomness. We will split keys for subsequent operations.    
     seed = int(123 + 100*np.random.rand())
     rng_key = random.PRNGKey(seed)
     rng_key, rng_key_ = random.split(rng_key)
-    sys.exit()
+    # sys.exit()
 
     # kernel = SA(model, adapt_state_size=200)
-    kernel = NUTS(model)#, max_tree_depth=(20, 5))
+    kernel = NUTS(model, max_tree_depth=(20, 5),
+                  find_heuristic_step_size=True)
     mcmc = MCMC(kernel,
-                num_warmup=15,
-                num_samples=150,
+                num_warmup=10,
+                num_samples=20,
                 num_chains=num_chains)  
     mcmc.run(rng_key_, extra_fields=('potential_energy',))
     pe = mcmc.get_extra_fields()['potential_energy']
@@ -247,6 +263,8 @@ if __name__ == "__main__":
     mcmc_sample = mcmc.get_samples()
     keys = mcmc_sample.keys()
 
+    sys.exit()
+    
     # putting the true params
     refs = {}
     # initializing the keys
@@ -271,3 +289,4 @@ if __name__ == "__main__":
 
     print_summary(mcmc_sample, true_params)
 
+    
