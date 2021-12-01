@@ -1,4 +1,4 @@
-Bimport os
+BBimport os
 num_chains = 38
 os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
 import numpy as np

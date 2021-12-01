@@ -84,8 +84,8 @@ def model():
         # solving the eigenvalue problem and mapping eigenvalues
         ell0 = ell0_arr[i]
         omegaref = omega0_arr[i]
-        # eigval_qdpt_mult = get_eigs(hypmat)[:2*ell0+1]/2./omegaref
-        eigval_qdpt_mult = np.diag(hypmat)[:2*ell0+1]/2./omegaref
+        eigval_qdpt_mult = get_eigs(hypmat)[:2*ell0+1]/2./omegaref
+        # eigval_qdpt_mult = np.diag(hypmat)[:2*ell0+1]/2./omegaref
         eigval_qdpt_mult *= GVARS.OM*1e6
         eigval_mult[:len(eigval_qdpt_mult)] = eigval_qdpt_mult
 
