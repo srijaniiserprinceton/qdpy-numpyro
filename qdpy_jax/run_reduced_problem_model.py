@@ -4,6 +4,7 @@ os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
 import matplotlib.pyplot as plt
 import numpy as np
 import arviz as az
+import argparse
 import sys
 
 import jax
@@ -27,16 +28,32 @@ from numpyro.infer import NUTS, MCMC, SA
 print(jax.devices()) # printing JAX devices
 
 from qdpy_jax import globalvars as gvar_jax
+from qdpy_jax import jax_functions as jf
 from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--maxiter", help="max MCMC iterations",
+                    type=int, default=100)
+parser.add_argument("--chain_num", help="chain number",
+                    type=int, default=1)
+PARSED_ARGS = parser.parse_args()
 
-ARGS = np.loadtxt(".n0-lmin-lmax.dat")
-GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
-                            lmin=int(ARGS[1]),
-                            lmax=int(ARGS[2]),
-                            rth=ARGS[3],
-                            knot_num=int(ARGS[4]),
-                            load_from_file=int(ARGS[5]))
+
+read_params = np.loadtxt(".n0-lmin-lmax.dat")
+ARGS = {}
+ARGS['n0'] = int(read_params[0])
+ARGS['lmin'] = int(read_params[1])
+ARGS['lmax'] = int(read_params[2])
+ARGS['rth'] = read_params[3]
+ARGS['knot_num'] = int(read_params[4])
+ARGS['load_from_file'] = int(read_params[5])
+
+GVARS = gvar_jax.GlobalVars(n0=ARGS['n0'],
+                            lmin=ARGS['lmin'],
+                            lmax=ARGS['lmax'],
+                            rth=ARGS['rth'],
+                            knot_num=ARGS['knot_num'],
+                            load_from_file=ARGS['load_from_file'])
 
 nmults = len(GVARS.ell0_arr)
 num_j = len(GVARS.s_arr)
@@ -153,6 +170,11 @@ param_coeff = jnp.moveaxis(param_coeff, 0, 1)
 # setting the prior limits
 cmin = 0.5 * true_params / 1e-3
 cmax = 1.5 * true_params / 1e-3
+
+ctrl_limits = {}
+ctrl_limits['cmin'] = cmin
+ctrl_limits['cmax'] = cmax
+
 
 def compare_model():
     # predicted a-coeficients                                                             
@@ -282,11 +304,32 @@ if __name__ == "__main__":
         point_estimate="median",
         figsize=(10, 8),
         reference_values=refs,
-        reference_values_kwargs={'color':"red", "marker":"o", "markersize":6}
+        reference_values_kwargs={'color':"red",
+                                 "marker":"o",
+                                 "markersize":6}
     )
     plt.tight_layout()
-    plt.savefig('corner_reduced_prob.png')
+    plt.savefig(f'{GVARS.scratch_dir}/corner-reduced-{PARSED_ARGS.chain_num:03d}.png')
 
     print_summary(mcmc_sample, true_params)
 
+
     
+    '''
+    metadata = {}
+    metadata['n0'] = ARGS['n0']
+    metadata['lmin'] = ARGS['lmin']
+    metadata['lmax'] = ARGS['lmax']
+    metadata['rth'] = GVARS.rth
+    metadata['knot_num'] = GVARS.knot_num
+    metadata['maxiter'] = PARSED_ARGS.maxiter
+
+    output_data = {}
+    output_data['samples'] = mcmc.get_samples()
+    output_data['metadata'] = metadata
+    output_data['ctrl_limits'] = ctrl_limits
+
+    fname = f"output-{PARSED_ARGS.maxiter}-{PARSED_ARGS.chain_num:03d}"
+    jf.save_obj(output_data, f"{GVARS.scratch_dir}/{fname}")
+
+    '''
