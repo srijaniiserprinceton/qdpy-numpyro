@@ -4,6 +4,7 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from scipy import sparse
+from jax.experimental import sparse as jsparse
 
 import jax
 from jax import random
@@ -129,6 +130,7 @@ for i in range(nmults):
 # np.testing.assert_array_almost_equal(synth_eigvals, eigvals_model, decimal=12)
 
 ############ COMPARING AGAINST supmat_qdpt.npy ########################
+"""
 
 for il, ell in enumerate(ell0_arr):
     print(f'{il}: {ell}')
@@ -138,6 +140,7 @@ for il, ell in enumerate(ell0_arr):
                                          supmat_qdpt, decimal=12, verbose=True)
 
 
+"""
 ############ COMPARING AGAINST supmat_qdpt.npy ######################## 
 len_hyper_arr = fixed_hypmat_all_sparse.shape[-1]
 
@@ -196,7 +199,12 @@ np.save('sparse_idx.npy', hypmat_idx)
 np.savetxt('.dimhyper', np.array([dim_hyper]), fmt='%d')
 np.save('omega0_arr.npy', omega0_arr)
 np.save('ell0_arr.npy', ell0_arr)
+np.save('data_model.npy', eigvals_model)
+np.save('cind_arr.npy', cind_arr)
+np.save('sind_arr.npy', sind_arr)
+np.save('true_params.npy', true_params)
 sys.exit()
+# sys.exit()
 
 # we just need to save the noc_diag corresponding to the two ctrl_pts set to zero
 noc_hypmat_sparse = np.zeros((len(GVARS.s_arr),
@@ -213,7 +221,7 @@ for i in range(nmults):
     for sind in range(smin_ind, smax_ind+1):
         for cind in cind_arr:
             _noc_sp = noc_hypmat_all_sparse[i][sind][cind]
-            _noc_hypmat_sp = sparse.BCOO.fromdense(_noc_sp.todense())
+            _noc_hypmat_sp = jsparse.BCOO.fromdense(_noc_sp.todense())
             _data = _noc_hypmat_sp.data
             _idx = _noc_hypmat_sp.indices
             _lendata = len(_data)

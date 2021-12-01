@@ -2,7 +2,9 @@
 #PBS -N mcmc.10
 #PBS -o mcout.n00.log
 #PBS -e mcerr.n00.log
-#PBS -l select=1:ncpus=112
+#PBS -l select=1:ncpus=32:mem=60gb
+#PBS -l walltime=45:00:00
+#PBS -q small
 cd $PBS_O_WORKDIR
 cd ..
-/homes/hanasoge/miniconda3/envs/jaxpyro/bin/python /homes/hanasoge/samarth/qdpy-numpyro/qdpy_jax/pyrotry2.py
+/home/g.samarth/.conda/envs/jaxpyro/bin/python /home/g.samarth/qdpy-numpyro/qdpy_jax/run_reduced_problem_model.py --maxiter 750 --chain_num 1

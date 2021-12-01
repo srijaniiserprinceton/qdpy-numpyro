@@ -371,7 +371,7 @@ def build_hypmat_all_cenmults():
     # going over the cenmults in a reverse order
     # this is to ensure that the largest is fileld first
     # to fill the rest in the same max shape
-    for i in range(nmults):#-1, -1, -1):
+    for i in tqdm(range(nmults), desc='nmult'):#-1, -1, -1):
         # looping over all the central multiplets                                      
         n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
         ell0_nmults.append(ell0)

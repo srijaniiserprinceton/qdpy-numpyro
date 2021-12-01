@@ -77,11 +77,11 @@ sparse_idx = np.load('sparse_idx.npy')
 fixed_part = np.load('fixed_part.npy')
 param_coeff = param_coeff[smin_ind:smax_ind+1, ...]
 
-
 # comparing the matrices with the true values
 supmat_jax = np.sum((true_params[:, :, NAX, NAX] * param_coeff),
                     axis=(0,1)) + fixed_part
 
+"""
 for i in range(nmults):
     supmat_jax_dense = sparse.bcoo_todense(supmat_jax[i], sparse_idx[i],
                                         shape=(dim_hyper, dim_hyper))
@@ -96,6 +96,7 @@ for i in range(nmults):
 plt.plot(diff)
 plt.savefig('supmat_diff.pdf')
 # sys.exit()
+"""
 
 # Reading RL poly from precomputed file
 # shape (nmults x (smax+1) x 2*ellmax+1)
@@ -264,7 +265,7 @@ def print_summary(samples, ctrl_arr):
 
 
 if __name__ == "__main__":
-    diff = compare_model_()
+    # diff = compare_model_()
     # Start from this source of randomness. We will split keys for subsequent operations.    
     seed = int(123 + 100*np.random.rand())
     rng_key = random.PRNGKey(seed)

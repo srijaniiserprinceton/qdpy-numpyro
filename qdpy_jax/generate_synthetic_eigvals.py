@@ -11,7 +11,7 @@ from jax.ops import index_update as jidx_update
 import sys
 
 # enabling 64 bits and logging compilatino
-config.update("jax_log_compiles", 1)
+config.update("jax_log_compiles", 0)
 config.update('jax_platform_name', 'cpu')
 config.update('jax_enable_x64', True)
 
@@ -79,7 +79,10 @@ def model():
                                                          GVARS.nc, len_s)
 
         # converting to dense
-        hypmat = sparse.coo_matrix((hypmat_sparse, sp_indices_all[i])).toarray()
+        hypmat = sparse.coo_matrix((hypmat_sparse, sp_indices_all[i]),
+                                   shape=(dim_hyper, dim_hyper)).toarray()
+
+        print(i, hypmat.shape)
 
         # solving the eigenvalue problem and mapping eigenvalues
         ell0 = ell0_arr[i]

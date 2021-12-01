@@ -142,6 +142,8 @@ class GlobalVars():
         # irrespective of the n0 of the cenmult
         # This determines the dimension of the hypermatrix
         sorted_idx_ell = np.argsort(ell_arr)[::-1]
+        # ell_arr, sorted_idx = np.unique(ell_arr, return_index=True)
+        # sorted_idx_ell = sorted_idx[::-1]
         self.n0_arr = n_arr[sorted_idx_ell]
         self.ell0_arr = ell_arr[sorted_idx_ell]
         self.omega0_arr = omega0_arr[sorted_idx_ell]
