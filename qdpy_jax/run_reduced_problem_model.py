@@ -276,7 +276,7 @@ if __name__ == "__main__":
     kernel = NUTS(model, max_tree_depth=(20, 5),
                   find_heuristic_step_size=True)
     mcmc = MCMC(kernel,
-                num_warmup=10,
+                num_warmup=20,
                 num_samples=PARSED_ARGS.maxiter,
                 num_chains=num_chains)  
     mcmc.run(rng_key_, extra_fields=('potential_energy',))

@@ -1,10 +1,14 @@
 #!/bin/bash
-#PBS -N mcmc.4
-#PBS -o mcout.04.log
-#PBS -e mcerr.04.log
+#PBS -N qdpt.4 
+#PBS -o qdout.04.log
+#PBS -e qderr.04.log
 #PBS -l select=1:ncpus=32:mem=60gb
 #PBS -l walltime=45:00:00
-#PBS -q large
+#PBS -q small
 cd $PBS_O_WORKDIR
 cd ..
-/home/g.samarth/.conda/envs/jaxpyro/bin/python /home/g.samarth/qdpy-numpyro/qdpy_jax/run_reduced_problem_model.py --maxiter 750 --chain_num 4
+PYTHON=/home/g.samarth/.conda/envs/jaxpyro/bin/python
+SCRIPT=/home/g.samarth/qdpy-numpyro/qdpy_jax/run_reduced_problem_model.py
+OUTFILE=/home/g.samarth/qdpy-numpyro/jobscripts/qd4out.log
+ERRFILE=/home/g.samarth/qdpy-numpyro/jobscripts/qd4err.log
+$PYTHON $SCRIPT  --maxiter 150 --chain_num 4 >$OUTFILE  2>$ERRFILE
