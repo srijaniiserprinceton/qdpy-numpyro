@@ -13,3 +13,4 @@ qdpy_output
 *.out
 *.err
 *.png
+*.log

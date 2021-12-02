@@ -277,7 +277,7 @@ if __name__ == "__main__":
                   find_heuristic_step_size=True)
     mcmc = MCMC(kernel,
                 num_warmup=10,
-                num_samples=20,
+                num_samples=PARSED_ARGS.maxiter,
                 num_chains=num_chains)  
     mcmc.run(rng_key_, extra_fields=('potential_energy',))
     pe = mcmc.get_extra_fields()['potential_energy']
@@ -286,8 +286,6 @@ if __name__ == "__main__":
     mcmc_sample = mcmc.get_samples()
     keys = mcmc_sample.keys()
 
-    sys.exit()
-    
     # putting the true params
     refs = {}
     # initializing the keys
@@ -316,7 +314,6 @@ if __name__ == "__main__":
 
 
     
-    '''
     metadata = {}
     metadata['n0'] = ARGS['n0']
     metadata['lmin'] = ARGS['lmin']
@@ -332,5 +329,3 @@ if __name__ == "__main__":
 
     fname = f"output-{PARSED_ARGS.maxiter}-{PARSED_ARGS.chain_num:03d}"
     jf.save_obj(output_data, f"{GVARS.scratch_dir}/{fname}")
-
-    '''
