@@ -1,0 +1,14 @@
+#!/bin/bash
+#PBS -N emcee.1
+#PBS -o mcout.01.log
+#PBS -e mcerr.01.log
+#PBS -l select=1:ncpus=32:mem=60gb
+#PBS -l walltime=45:00:00
+#PBS -q small
+cd $PBS_O_WORKDIR
+cd ..
+PYTHON=/home/g.samarth/.conda/envs/jaxpyro/bin/python
+SCRIPT=/home/g.samarth/qdpy-numpyro/qdpy_jax/run_reduced_problem_emcee.py
+OUTFILE=/home/g.samarth/qdpy-numpyro/jobscripts/qd4out.log
+ERRFILE=/home/g.samarth/qdpy-numpyro/jobscripts/qd4err.log
+$PYTHON $SCRIPT >$OUTFILE  2>$ERRFILE
