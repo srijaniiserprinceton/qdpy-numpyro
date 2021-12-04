@@ -36,6 +36,8 @@ parser.add_argument("--maxiter", help="max MCMC iterations",
                     type=int, default=100)
 parser.add_argument("--chain_num", help="chain number",
                     type=int, default=1)
+parser.add_argument("--warmup", help="number of warmup steps",
+                    type=int, default=20)
 PARSED_ARGS = parser.parse_args()
 
 
@@ -64,10 +66,11 @@ dim_hyper = int(np.loadtxt('.dimhyper'))
 # true params from Antia wsr
 true_params = np.load('true_params.npy')
 eigvals_true = np.load('evals_model.npy')
-omega0_arr = np.load('omega0_arr.npy')
-ell0_arr = np.load('ell0_arr.npy')
-acoeffs_sigma = np.load('acoeffs_sigma.npy')
 acoeffs_true = np.load('acoeffs_true.npy')
+acoeffs_sigma = np.load('acoeffs_sigma.npy')
+
+ell0_arr = np.load('ell0_arr.npy')
+omega0_arr = np.load('omega0_arr.npy')
 
 cind_arr = np.load('cind_arr.npy')
 smin_ind, smax_ind = np.load('sind_arr.npy')
@@ -154,7 +157,7 @@ def loop_in_mults(mult_ind, data_acoeff):
 data_acoeffs = foril(0, nmults, loop_in_mults, data_acoeffs)
 
 # this is actually done in the function create_sparse_noc
-param_coeff *= 1e-3
+# param_coeff *= 1e-3
 
 ell0_arr_jax = jnp.asarray(GVARS.ell0_arr)
 omega0_arr_jax = jnp.asarray(omega0_arr)
@@ -169,8 +172,8 @@ param_coeff = jnp.moveaxis(param_coeff, 0, 1)
 
 
 # setting the prior limits
-cmin = 0.5 * true_params / 1e-3
-cmax = 1.5 * true_params / 1e-3
+cmin = 0.8 * jnp.ones_like(true_params)# / 1e-3
+cmax = 1.2 * jnp.ones_like(true_params)# / 1e-3
 
 ctrl_limits = {}
 ctrl_limits['cmin'] = cmin
@@ -183,7 +186,7 @@ def compare_model():
     eigvals_acoeffs = jnp.array([])
     pred_acoeffs = jnp.zeros(num_j * nmults)
 
-    pred = true_params/1e-3 @ param_coeff + fixed_part
+    pred = true_params @ param_coeff + fixed_part
     
     def loop_in_mults(mult_ind, pred_acoeff):
         ell0 = ell0_arr_jax[mult_ind]
@@ -212,7 +215,7 @@ def model():
     c_arr = numpyro.sample(f'c_arr', dist.Uniform(cmin, cmax))
 
     pred_acoeffs = jnp.zeros(num_j * nmults)
-    pred = c_arr @ param_coeff + fixed_part
+    pred = (c_arr*true_params) @ param_coeff + fixed_part
 
     def loop_in_mults(mult_ind, pred_acoeff):
         ell0 = ell0_arr_jax[mult_ind]
@@ -276,7 +279,7 @@ if __name__ == "__main__":
     kernel = NUTS(model, max_tree_depth=(5, 1),
                   find_heuristic_step_size=True)
     mcmc = MCMC(kernel,
-                num_warmup=120,
+                num_warmup=PARSED_ARGS.warmup,
                 num_samples=PARSED_ARGS.maxiter,
                 num_chains=1)  
     mcmc.run(rng_key_, extra_fields=('potential_energy',))
@@ -286,13 +289,31 @@ if __name__ == "__main__":
     mcmc_sample = mcmc.get_samples()
     keys = mcmc_sample.keys()
 
+    metadata = {}
+    metadata['n0'] = ARGS['n0']
+    metadata['lmin'] = ARGS['lmin']
+    metadata['lmax'] = ARGS['lmax']
+    metadata['rth'] = GVARS.rth
+    metadata['knot_num'] = GVARS.knot_num
+    metadata['maxiter'] = PARSED_ARGS.maxiter
+
+    output_data = {}
+    output_data['samples'] = mcmc.get_samples()
+    output_data['metadata'] = metadata
+    output_data['ctrl_limits'] = ctrl_limits
+
+    fname = f"output-{PARSED_ARGS.maxiter}-{PARSED_ARGS.chain_num:03d}"
+    jf.save_obj(output_data, f"{GVARS.scratch_dir}/{fname}")
+    print_summary(mcmc_sample, true_params)
+
     # putting the true params
     refs = {}
     # initializing the keys
-    for sind in range(smin_ind, smax_ind+1):
-        s = 2*sind + 1
-        for ci in range(num_params):
-            refs[f"c{s}_{ci}"] = true_params[sind-1, ci] / 1e-3
+    for idx in range(num_params):
+        sind = idx % 2
+        ci = int(idx//2)
+        s = 2*sind + 3
+        refs[f"c{s}_{ci}"] = true_params[idx]
 
     ax = az.plot_pair(
         mcmc_sample,
@@ -310,22 +331,3 @@ if __name__ == "__main__":
     plt.tight_layout()
     plt.savefig(f'{GVARS.scratch_dir}/corner-reduced-{PARSED_ARGS.chain_num:03d}.png')
 
-    print_summary(mcmc_sample, true_params)
-
-
-    
-    metadata = {}
-    metadata['n0'] = ARGS['n0']
-    metadata['lmin'] = ARGS['lmin']
-    metadata['lmax'] = ARGS['lmax']
-    metadata['rth'] = GVARS.rth
-    metadata['knot_num'] = GVARS.knot_num
-    metadata['maxiter'] = PARSED_ARGS.maxiter
-
-    output_data = {}
-    output_data['samples'] = mcmc.get_samples()
-    output_data['metadata'] = metadata
-    output_data['ctrl_limits'] = ctrl_limits
-
-    fname = f"output-{PARSED_ARGS.maxiter}-{PARSED_ARGS.chain_num:03d}"
-    jf.save_obj(output_data, f"{GVARS.scratch_dir}/{fname}")
