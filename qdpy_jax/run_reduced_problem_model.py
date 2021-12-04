@@ -257,7 +257,7 @@ def get_eigs(mat):
 def print_summary(samples, ctrl_arr):
     count = 0
     for i in range(len(true_params)):
-        sample = samples['c_arr'][i, :] * true_params[i]
+        sample = samples['c_arr'][:, i] * true_params[i]
         obs = true_params[i] 
         print(f"[{obs:11.4e}] c_arr[{i}]: {sample.mean():.4e} +/- {sample.std():.4e}:" +
               f"error/sigma = {(sample.mean()-obs)/sample.std():8.3f}")
@@ -303,7 +303,8 @@ if __name__ == "__main__":
     jf.save_obj(output_data, f"{GVARS.scratch_dir}/{fname}")
     print_summary(mcmc_sample, true_params)
 
-"""
+    plot_samples = {}
+
     # putting the true params
     refs = {}
     # initializing the keys
@@ -311,11 +312,13 @@ if __name__ == "__main__":
         sind = idx % 2
         ci = int(idx//2)
         s = 2*sind + 3
-        refs[f"c{s}_{ci}"] = true_params[idx]
+        argstr = f"c{s}_{ci}"
+        refs[argstr] = true_params[idx]
+        plot_samples[argstr] = output_data['samples']['c_arr'][:, idx]
 
     ax = az.plot_pair(
-        mcmc_sample,
-        var_names=[key for key in mcmc_sample.keys()],
+        plot_samples,
+        var_names=[key for key in plot_samples.keys()],
         kde_kwargs={"fill_last": False},
         kind=["scatter", "kde"],
         marginals=True,
@@ -329,4 +332,3 @@ if __name__ == "__main__":
     plt.tight_layout()
     plt.savefig(f'{GVARS.scratch_dir}/corner-reduced-{PARSED_ARGS.chain_num:03d}.png')
 
-"""
