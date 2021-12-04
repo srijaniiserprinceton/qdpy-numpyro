@@ -256,12 +256,10 @@ def get_eigs(mat):
 
 def print_summary(samples, ctrl_arr):
     keys = samples.keys()
+    count = 0
     for key in keys:
-        sample = samples[key]
-        key_split = key.split("_")
-        idx = int(key_split[-1])
-        sidx = int((int(key_split[0][1])-1)//2)
-        obs = ctrl_arr[sidx-1, idx] / 1e-3
+        sample = samples[key] * true_params[count]
+        obs = true_params[count] 
         print(f"[{obs:11.4e}] {key}: {sample.mean():.4e} +/- {sample.std():.4e}:" +
               f"error/sigma = {(sample.mean()-obs)/sample.std():8.3f}")
     return None
