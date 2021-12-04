@@ -255,12 +255,11 @@ def get_eigs(mat):
 
 
 def print_summary(samples, ctrl_arr):
-    keys = samples.keys()
     count = 0
-    for key in keys:
-        sample = samples[key] * true_params[count]
-        obs = true_params[count] 
-        print(f"[{obs:11.4e}] {key}: {sample.mean():.4e} +/- {sample.std():.4e}:" +
+    for i in range(len(true_params)):
+        sample = samples['c_arr'][i, :] * true_params[i]
+        obs = true_params[i] 
+        print(f"[{obs:11.4e}] c_arr[{i}]: {sample.mean():.4e} +/- {sample.std():.4e}:" +
               f"error/sigma = {(sample.mean()-obs)/sample.std():8.3f}")
     return None
 
