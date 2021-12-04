@@ -1,5 +1,5 @@
 import os
-num_chains = 1
+num_chains = 4
 os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
 import matplotlib.pyplot as plt
 import numpy as np
@@ -273,12 +273,12 @@ if __name__ == "__main__":
     # sys.exit()
 
     # kernel = SA(model, adapt_state_size=200)
-    kernel = NUTS(model, max_tree_depth=(20, 5),
+    kernel = NUTS(model, max_tree_depth=(5, 1),
                   find_heuristic_step_size=True)
     mcmc = MCMC(kernel,
-                num_warmup=20,
+                num_warmup=120,
                 num_samples=PARSED_ARGS.maxiter,
-                num_chains=num_chains)  
+                num_chains=1)  
     mcmc.run(rng_key_, extra_fields=('potential_energy',))
     pe = mcmc.get_extra_fields()['potential_energy']
 
