@@ -304,6 +304,7 @@ if __name__ == "__main__":
     jf.save_obj(output_data, f"{GVARS.scratch_dir}/{fname}")
     print_summary(mcmc_sample, true_params)
 
+"""
     # putting the true params
     refs = {}
     # initializing the keys
@@ -329,3 +330,4 @@ if __name__ == "__main__":
     plt.tight_layout()
     plt.savefig(f'{GVARS.scratch_dir}/corner-reduced-{PARSED_ARGS.chain_num:03d}.png')
 
+"""
