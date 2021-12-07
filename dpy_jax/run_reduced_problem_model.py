@@ -1,4 +1,4 @@
-BBimport os
+import os
 num_chains = 38
 os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
 import numpy as np
@@ -181,13 +181,13 @@ seed = int(123 + 100*np.random.rand())
 rng_key = random.PRNGKey(seed)
 rng_key, rng_key_ = random.split(rng_key)
 
-#kernel = SA(model, adapt_state_size=200)    
-kernel = NUTS(model,
-              max_tree_depth=(20, 5))
+# kernel = SA(model) #, adapt_state_size=200)    
+kernel = NUTS(model, find_heuristic_step_size=True,
+              max_tree_depth=(7, 3))
 mcmc = MCMC(kernel,
-            num_warmup=1500,
-            num_samples=6000,
-            num_chains=num_chains)  
+            num_warmup=1000,
+            num_samples=1000,
+            num_chains=8)  
 mcmc.run(rng_key_, extra_fields=('potential_energy',))
 pe = mcmc.get_extra_fields()['potential_energy']
 
