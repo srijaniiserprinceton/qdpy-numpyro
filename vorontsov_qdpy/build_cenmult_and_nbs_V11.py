@@ -56,13 +56,6 @@ def getnt4cenmult(n0, ell0, GVARS):
     nl_arr = np.asarray(GVARS.nl_all)
     nl_list = list(map(list, GVARS.nl_all))
 
-    # unperturbed frequency of central multiplet (n0, ell0)
-    mult_idx = np.in1d(nl_arr[:, 0], n0) * np.in1d(nl_arr[:, 1], ell0)
-    omega0 = omega_list[mult_idx]
-
-    # frequency distances from central multiplet
-    omega_diff = (omega_list - omega0) * GVARS.OM * 1e6
-        
     # masking the other radial orders
     mask_n = abs(nl_arr[:,0] - n0) == 0 
     
@@ -73,11 +66,18 @@ def getnt4cenmult(n0, ell0, GVARS):
     # creating the final mask accounting for all of the masks above
     mask_nb_k = mask_n * mask_k_width
 
-    # sorting the multiplets in ascending order of distance from (n0, ell0)
-    sort_idx = np.argsort(abs(omega_diff[mask_nb_k]))
+    # the unsorted array of nl_neighbours
+    nl_neighbours_unsorted = nl_arr[mask_nb_k]
+    # removing the central multiplet
+    nl_neighbours_unsorted =\
+        nl_neighbours_unsorted[np.abs(nl_neighbours_unsorted[:,1] - ell0) > 0]
+
+    # sorting the multiplets in ascending order of distance from ell0 (i.e, k)
+    # sort_idx = np.argsort(abs(omega_diff[mask_nb_k]))
+    sort_idx = np.argsort(np.abs(nl_neighbours_unsorted[:,1] - ell0))
     
     # the final attributes that will be stored
-    nl_neighbours = nl_arr[mask_nb_k][sort_idx]
+    nl_neighbours = nl_neighbours_unsorted[sort_idx]
     nl_neighbours_idx = nl_idx_vec(nl_neighbours)
     omega_neighbours = get_omega_neighbors(nl_neighbours_idx)
 
