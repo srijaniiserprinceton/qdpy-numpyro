@@ -257,6 +257,11 @@ def build_bkm_all_cenmults():
     noc_bkm_shaped = np.zeros((nmults, num_k, len_s, GVARS.nc, dim_hyper))
     fixed_bkm_shaped = np.zeros((nmults, num_k, dim_hyper))
     
+    # to make it convenient to perform explicit k-dependent operations
+    k_arr_shaped = np.zeros_like(fixed_bkm_shaped)
+    # to make it convenient to perform explicit p-dependent operations
+    p_arr_shaped = np.zeros((nmults, dim_hyper))
+    
     # looping over cenmtral multipelts
     for i in range(nmults):
         n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
@@ -282,6 +287,7 @@ def build_bkm_all_cenmults():
             # to keep the start indiex of the global m dimension
             start_global_m = int(0)
             
+            print(s)
             for pind, ellp in enumerate(CNM_AND_NBS.nl_nbs[:,1]):
                 m_ellp = 2 * ellp + 1
                 
@@ -297,22 +303,31 @@ def build_bkm_all_cenmults():
                     local_dem = np.abs(m_ellp - len_m_unshaped)//2
                     
                     # local_m start and end indices depending on k
-                    start_local_m, end_local_m = 0, len_m_unshaped
+                    start_local_slice, end_local_slice = 0, len_m_unshaped
                     
                     # indices to slice the shaped and unshaped m arrays
                     if(m_ellp > len_m_unshaped):
-                        start_global_m += local_dem
-                        end_global_m -= local_dem
+                        start_global_slice = start_global_m + local_dem
+                        end_global_slice = end_global_m - local_dem
                     else:
-                        start_local_m += local_dem
-                        end_local_m -= local_dem
-                        
-                        noc_bkm_shaped[i, kind, sind, :, start_global_m:end_global_m] =\
-                                    noc_bkm[kind][:, start_local_m:end_local_m]
-                        fixed_bkm_shaped[i, kind, start_global_m:end_global_m] +=\
-                                    fixed_bkm[kind][start_local_m:end_local_m]
-                        
-            # updating the start_global_m
-            start_global_m = end_global_m
+                        start_local_slice += local_dem
+                        end_local_slice -= local_dem
 
-        return noc_bkm_shaped, fixed_bkm_shaped
+                    print(end_local_slice - start_local_slice,
+                          end_global_slice - start_global_slice)
+                    print(m_ellp, len_m_unshaped)
+                    print(kind,pind)    
+                    noc_bkm_shaped[i, kind, sind, :, start_global_slice:end_global_slice] =\
+                                        noc_bkm[kind][:, start_local_slice:end_local_slice]
+                    fixed_bkm_shaped[i, kind, start_global_slice:end_global_slice] +=\
+                                        fixed_bkm[kind][start_local_slice:end_local_slice]
+                        
+                    # since k = 2, 4, ... for kind = 0, 1, ...
+                    k_arr_shaped[i, kind, start_global_slice:end_global_slice] = 2*(kind+1)
+                    p_arr_shaped[i, start_global_slice:end_global_slice] = ellp-ell0
+                    
+
+                # updating the start_global_m
+                start_global_m = end_global_m
+
+        return noc_bkm_shaped, fixed_bkm_shaped, k_arr_shaped, p_arr_shaped
