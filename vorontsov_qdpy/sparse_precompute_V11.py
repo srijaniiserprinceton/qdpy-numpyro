@@ -287,13 +287,12 @@ def build_bkm_all_cenmults():
             # to keep the start indiex of the global m dimension
             start_global_m = int(0)
             
-            print(s)
             for pind, ellp in enumerate(CNM_AND_NBS.nl_nbs[:,1]):
                 m_ellp = 2 * ellp + 1
                 
                 # global_m start and end indices depending on ellp
                 end_global_m = start_global_m + m_ellp
-                
+
                 # looping over k
                 for kind in range(num_k):
                     len_m_unshaped = len(fixed_bkm[kind])
@@ -302,21 +301,21 @@ def build_bkm_all_cenmults():
                     # m array corresponding to ellp
                     local_dem = np.abs(m_ellp - len_m_unshaped)//2
                     
-                    # local_m start and end indices depending on k
+                    # local_m start and end slices depending on k
                     start_local_slice, end_local_slice = 0, len_m_unshaped
                     
+                    # the global_m start and end slices depending on k
+                    start_global_slice = start_global_m * 1
+                    end_global_slice = end_global_m * 1
+
                     # indices to slice the shaped and unshaped m arrays
                     if(m_ellp > len_m_unshaped):
-                        start_global_slice = start_global_m + local_dem
-                        end_global_slice = end_global_m - local_dem
+                        start_global_slice += local_dem
+                        end_global_slice -= local_dem
                     else:
                         start_local_slice += local_dem
                         end_local_slice -= local_dem
 
-                    print(end_local_slice - start_local_slice,
-                          end_global_slice - start_global_slice)
-                    print(m_ellp, len_m_unshaped)
-                    print(kind,pind)    
                     noc_bkm_shaped[i, kind, sind, :, start_global_slice:end_global_slice] =\
                                         noc_bkm[kind][:, start_local_slice:end_local_slice]
                     fixed_bkm_shaped[i, kind, start_global_slice:end_global_slice] +=\
