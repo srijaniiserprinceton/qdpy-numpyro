@@ -2,10 +2,6 @@ from jax import jit
 import numpy as np
 
 from qdpy_jax import wigner_map2 as wigmap
-from vorontsov_qdpy import build_cenmult_and_nbs_V11 as build_cnm
-
-# jitting various functions
-getnt4cenmult_ = jit(build_cnm.getnt4cenmult, static_argnums = (0, 1, 2))
 
 # slices out the unique nl, nl_idx and omega from
 # from the arguments nl, omega which may contain repetitions
@@ -28,9 +24,12 @@ def get_pruned_multiplets(nl, omega, nl_all):
     return nl_pruned, nl_idx_pruned, omega_pruned
 
 
-def get_pruned_attributes(GVARS, GVARS_ST):
+def get_pruned_attributes(GVARS, GVARS_ST, getnt4cenmult):
     wig_list = []
     wig_idx = []
+
+    # jitting 
+    getnt4cenmult_ = jit(getnt4cenmult, static_argnums = (0, 1, 2))
     
     for i in range(len(GVARS.n0_arr)):
         n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]

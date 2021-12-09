@@ -18,12 +18,12 @@ from vorontsov_qdpy import prune_multiplets_V11
 from qdpy_jax import jax_functions as jf
 from qdpy_jax import wigner_map2 as wigmap
 from qdpy_jax import globalvars as gvar_jax
-from vorontsov_qdpy import build_cenmult_and_nbs_V11 as build_cnm_V11
+from vorontsov_qdpy import build_cenmult_and_nbs_bkm as build_cnm_bkm
 from qdpy_jax import build_cenmult_and_nbs as build_cnm
 
 # defining functions used in multiplet functions in the script
 getnt4cenmult = build_cnm.getnt4cenmult
-getnt4cenmult_V11 = build_cnm_V11.getnt4cenmult
+getnt4cenmult_bkm = build_cnm_bkm.getnt4cenmult
 
 jax_minus1pow_vec = jf.jax_minus1pow_vec
 _find_idx = wigmap.find_idx
@@ -43,7 +43,8 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
 GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx =\
                     prune_multiplets_V11.get_pruned_attributes(GVARS,
-                                                           GVARS_ST)
+                                                               GVARS_ST,
+                                                               getnt4cenmult_bkm)
 
 lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
                                      nl_idx_pruned,
@@ -157,7 +158,7 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
     return SUBMAT_DICT
 
 
-def build_bkm_nonint_n_fxd_1cnm(CNM_AND_NBS_V11, s):
+def build_bkm_nonint_n_fxd_1cnm(CNM_AND_NBS_bkm, s):
     """Computes elements in the hypermatrix excluding the
     integral part.
     """
@@ -169,9 +170,8 @@ def build_bkm_nonint_n_fxd_1cnm(CNM_AND_NBS_V11, s):
     fixed_b_k_m = []
 
     # extracting attributes from CNM_AND_NBS
-    num_nbs = len(CNM_AND_NBS_V11.omega_nbs)
-    nl_nbs = CNM_AND_NBS_V11.nl_nbs
-    # omegaref = CNM_AND_NBS.omega_nbs[0]
+    num_nbs = len(CNM_AND_NBS_bkm.omega_nbs)
+    nl_nbs = CNM_AND_NBS_bkm.nl_nbs
 
     # filling in the non-m part using the masks
     # k =  +/1 or k = +/2 are arranged one after another.
@@ -203,8 +203,8 @@ def build_bkm_nonint_n_fxd_1cnm(CNM_AND_NBS_V11, s):
                         4 * np.pi * (1 - jax_minus1pow_vec(ell1 + ell2 + s))
         
         # parameters for calculating the integrated part
-        eig_idx1 = nl_idx_pruned.index(CNM_AND_NBS_V11.nl_nbs_idx[i])
-        eig_idx2 = nl_idx_pruned.index(CNM_AND_NBS_V11.nl_nbs_idx[j])
+        eig_idx1 = nl_idx_pruned.index(CNM_AND_NBS_bkm.nl_nbs_idx[i])
+        eig_idx2 = nl_idx_pruned.index(CNM_AND_NBS_bkm.nl_nbs_idx[j])
         
         # shape (n_control_points,)
         # integrated_part = build_integrated_part(eig_idx1, eig_idx2, ell1, ell2, s)
@@ -268,7 +268,7 @@ def build_bkm_all_cenmults():
         
         # building the namedtuple for the central multiplet and its neighbours            
         # for V11
-        CNM_AND_NBS_V11 = getnt4cenmult_V11(n0, ell0, GVARS_ST)
+        CNM_AND_NBS_bkm = getnt4cenmult_bkm(n0, ell0, GVARS_ST)
         
         # building the namedtuple for the usual supermatrix
         # to tile the dim_hyper dimension
@@ -282,7 +282,7 @@ def build_bkm_all_cenmults():
         
             # computing the unshaped bkm (noc and fixed)
             noc_bkm, fixed_bkm =\
-                    build_bkm_nonint_n_fxd_1cnm(CNM_AND_NBS_V11, s)
+                    build_bkm_nonint_n_fxd_1cnm(CNM_AND_NBS_bkm, s)
             
             # to keep the start indiex of the global m dimension
             start_global_m = int(0)

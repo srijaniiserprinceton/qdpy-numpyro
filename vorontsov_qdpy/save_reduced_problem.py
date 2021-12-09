@@ -23,6 +23,7 @@ config.update('jax_enable_x64', True)
 from qdpy_jax import jax_functions as jf
 from qdpy_jax import globalvars as gvar_jax
 from qdpy_jax import sparse_precompute as precompute
+from vorontsov_qdpy import sparse_precompute_bkm as precompute_bkm
 from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
 
 from jax.lib import xla_bridge
@@ -60,7 +61,10 @@ for sind in range(smin_ind, smax_ind+1):
     for ci, cind in enumerate(cind_arr):
         true_params[sind-1, ci] = GVARS.ctrl_arr_dpt_clipped[sind, cind]
 
+# precomputing the V11 bkm components
+noc_bkm, fixed_bkm, k_arr, p_arr = precompute_bkm.build_bkm_all_cenmults()
 
+# precomputing the supermatrix components
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr, sp_indices_all =\
     precompute.build_hypmat_all_cenmults()
 
@@ -193,6 +197,7 @@ for i in range(nmults):
         for ci, cind in enumerate(cind_arr):
             param_coeff[si, ci, i, :] = noc_hypmat_all_sparse[i, si, cind, :]
 
+# saving the sueprmatrix components
 np.save('fixed_part.npy', fixed_hypmat_sparse)
 np.save('param_coeff.npy', param_coeff)
 np.save('sparse_idx.npy', hypmat_idx)
@@ -203,6 +208,12 @@ np.save('data_model.npy', eigvals_model)
 np.save('cind_arr.npy', cind_arr)
 np.save('sind_arr.npy', sind_arr)
 np.save('true_params.npy', true_params)
+
+# saving the V11 bkm components
+np.save('noc_bkm.npy', noc_bkm)
+np.save('fixed_bkm.npy', fixed_bkm)
+np.save('k_arr.npy', k_arr)
+np.save('p_arr.npy', p_arr)
 sys.exit()
 # sys.exit()
 
