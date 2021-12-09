@@ -14,15 +14,16 @@ from jax import jit
 '''
 
 from qdpy_jax import load_multiplets
-from qdpy_jax import prune_multiplets
+from vorontsov_qdpy import prune_multiplets_V11
 from qdpy_jax import jax_functions as jf
 from qdpy_jax import wigner_map2 as wigmap
 from qdpy_jax import globalvars as gvar_jax
 from qdpy_jax import build_cenmult_and_nbs as build_cnm
-from vorontsov_qdpy import build_cnm_and_nbs_M as build_cnm_M
+from vorontsov_qdpy import build_cenmult_and_nbs_M as build_cnm_M
 
 # defining functions used in multiplet functions in the script
-getnt4cenmult = build_cnm_M.getnt4cenmult
+getnt4cenmult_M = build_cnm_M.getnt4cenmult
+getnt4cenmult = build_cnm.getnt4cenmult
 jax_minus1pow_vec = jf.jax_minus1pow_vec
 _find_idx = wigmap.find_idx
 
@@ -40,14 +41,17 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
 
 GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx =\
-                    prune_multiplets.get_pruned_attributes(GVARS,
+                    prune_multiplets_V11.get_pruned_attributes(GVARS,
                                                            GVARS_ST,
                                                            getnt4cenmult)
 
 # we only need the unique prunedm multiplets
 nl_idx_pruned, unique_idx = np.unique(nl_idx_pruned, return_index=True)
-nl_pruned = nl_pruned[unique_idx]
-omega_pruned = omega_pruned[unique_idx]
+nl_pruned = np.asarray(nl_pruned)[unique_idx]
+omega_pruned = np.asarray(omega_pruned)[unique_idx]
+
+# converting them back to lists to use .index() function later
+nl_idx_pruned = nl_idx_pruned.tolist()
 
 # since there maybe repeatitions, we pass only the unique pruned mults
 lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
@@ -164,7 +168,8 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
 
 
 
-def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
+def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, CNM_AND_NBS_M,
+                               SUBMAT_DICT, dim_hyper, s):
     """Computes elements in the hypermatrix excluding the
     integral part.
     """
@@ -182,7 +187,7 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
     # extracting attributes from CNM_AND_NBS
     num_nbs = len(CNM_AND_NBS.omega_nbs)
     nl_nbs = CNM_AND_NBS.nl_nbs
-    omegaref = CNM_AND_NBS.omega_nbs[0]
+    # omegaref = CNM_AND_NBS.omega_nbs[0]
 
     # extracting attributes from SUBMAT_DICT
     startx_arr, endx_arr = SUBMAT_DICT.startx_arr, SUBMAT_DICT.endx_arr
@@ -190,22 +195,26 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
     for i in range(num_nbs):
         # filling only Upper Triangle
         # for j in range(i, num_nbs):
-        omega_nl = CNM_AND_NBS.omega_nbs[i]
+        # omega_nl = CNM_AND_NBS.omega_nbs[i]
         
         for j in range(num_nbs):
-            ell1, ell2 = nl_nbs[i, 1], nl_nbs[j, 1]
+            # nl_nbs contains the two ells that gets coupled
+            # in the shape (num_nbs, num_nbs, 2, 2)
+            ell1 = CNM_AND_NBS_M.nl_nbs[i, j, 0, 1]
+            ell2 = CNM_AND_NBS_M.nl_nbs[i, j, 1, 1]
+            ellmin = min(ell1, ell2)
             dell = ell1 - ell2
+            
+            # the true ells in the supermatrix (without Taylor exp)
+            ell1_true, ell2_true = nl_nbs[i, 1], nl_nbs[j, 1]
+
             dellx, delly = 0, 0
 
-            if dell > 0:
-                dellx = abs(dell)
-                delly = 0
-            elif dell < 0:
-                dellx = 0
-                delly = abs(dell)
-
-            ellmin = min(ell1, ell2)
-
+            # padding inside each submatrix
+            dellx = abs(ell1_true - ellmin)
+            delly = abs(ell2_true - ellmin)
+                        
+            
             # submat tiling indices
             startx, endx = startx_arr[i], endx_arr[i]
             starty, endy = startx_arr[j], endx_arr[j]
@@ -226,6 +235,7 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
             mask_val = np.ones_like(m_arr) * (1 - jax_minus1pow_vec(ell1 + ell2 + s))
             mask_val = mask_val.astype('bool')
             
+
             np.fill_diagonal(mask_hypmat[startx+dellx:endx-dellx,
                                          starty+delly:endy-delly],
                              mask_val)
@@ -238,12 +248,13 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
             
             # also including 8 pi * omega_ref
             ell1_ell2_fac = gamma_prod * Omega_prod *\
-                            8 * np.pi * omegaref *\
+                            4 * np.pi *\
                             (1 - jax_minus1pow_vec(ell1 + ell2 + s))
 
             # parameters for calculating the integrated part
-            eig_idx1 = nl_idx_pruned.index(CNM_AND_NBS.nl_nbs_idx[i])
-            eig_idx2 = nl_idx_pruned.index(CNM_AND_NBS.nl_nbs_idx[j])
+            # CNM_AND_NBS_M.nl_nbs is of shape (num_nbs, num_nbs, 2)
+            eig_idx1 = nl_idx_pruned.index(CNM_AND_NBS_M.nl_nbs_idx[i, j, 0])
+            eig_idx2 = nl_idx_pruned.index(CNM_AND_NBS_M.nl_nbs_idx[i, j, 1])
 
             # shape (n_control_points,)
             # integrated_part = build_integrated_part(eig_idx1, eig_idx2, ell1, ell2, s)
@@ -349,8 +360,12 @@ def build_hypmat_all_cenmults():
 
     # getting the sparse-element size for largest ell cenmult
     MAXMULT_AND_NBS = getnt4cenmult(GVARS.n0_arr[0], GVARS.ell0_arr[0], GVARS_ST)
+    MAXMULT_AND_NBS_M = getnt4cenmult_M(MAXMULT_AND_NBS, GVARS_ST,
+                                        return_shaped=True)
+    
     SUBMAT_DICT_MAX = build_SUBMAT_INDICES(MAXMULT_AND_NBS)
     __, __, maskmat_maxmult = build_hm_nonint_n_fxd_1cnm(MAXMULT_AND_NBS,
+                                                         MAXMULT_AND_NBS_M,
                                                          SUBMAT_DICT_MAX,
                                                          dim_hyper, GVARS.smax)
     
@@ -376,16 +391,18 @@ def build_hypmat_all_cenmults():
         SUBMAT_DICT = build_SUBMAT_INDICES(CENMULT_AND_NBS)
         omegaref_nmults.append(CENMULT_AND_NBS.omega_nbs[0])
 
-        freqdiag = build_hypmat_freqdiag(CENMULT_AND_NBS,
-                                         SUBMAT_DICT,
-                                         dim_hyper)
-        
+        # building the cenmult for the M matrix computation
+        # Here, we need the attributes to the correctly shaped
+        CENMULT_AND_NBS_M = getnt4cenmult_M(CENMULT_AND_NBS, GVARS_ST,
+                                            return_shaped=True)
+
         noc_hypmat_this_s = []
         
         for s_ind, s in enumerate(GVARS.s_arr):
             # shape (dim_hyper x dim_hyper) but sparse form
             non_c_hypmat, fixed_hypmat_s, maskmat_cenmult =\
                     build_hm_nonint_n_fxd_1cnm(CENMULT_AND_NBS,
+                                               CENMULT_AND_NBS_M,
                                                SUBMAT_DICT,
                                                dim_hyper, s)
 
@@ -410,9 +427,7 @@ def build_hypmat_all_cenmults():
         # getting the mask indices
         maskmat_cenmult_sp = sparse.coo_matrix(maskmat_cenmult)
         sp_indices_cenmult = (maskmat_cenmult_sp.row, maskmat_cenmult_sp.col)
-
-        # adding the freqdiag to the fixed_hypmat
-        fixed_hypmat_this_mult += np.diag(freqdiag)
+        
         fixed_hypmat_this_mult_sparse = fixed_hypmat_this_mult[maskmat_cenmult]
 
         # making the shape compatible to the maxmult sparse form
