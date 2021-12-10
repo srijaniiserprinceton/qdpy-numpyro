@@ -1,5 +1,5 @@
 import os
-num_chains = 38
+num_chains = 4
 os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
 import numpy as np
 import jax
@@ -10,6 +10,7 @@ from jax.lax import fori_loop as foril
 from jax.lax import dynamic_slice as jdc
 from jax.lax import dynamic_update_slice as jdc_update
 from jax.ops import index as jidx
+from collections import namedtuple
 import matplotlib.pyplot as plt
 import jax.numpy as jnp
 import numpyro
@@ -128,9 +129,17 @@ np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
 num_params = len(cind_arr)
 
 # setting the prior limits
-cmin = 0.5 * true_params / 1e-3
-cmax = 1.5 * true_params / 1e-3
-param_coeff *= 1e-3
+cmin = 0.95 * np.ones_like(true_params.flatten())# / 1e-3
+cmax = 1.05 * np.ones_like(true_params.flatten())# / 1e-3
+#param_coeff *= 1e-3
+
+
+init_params = {}
+init_params[f'c_arr'] = jnp.ones_like(true_params.flatten())
+ip_nt = namedtuple('ip', init_params.keys())(*init_params.values())
+
+param_coeff = jnp.reshape(param_coeff, (nc*len_s, -1), 'F')
+true_params_flat = jnp.reshape(true_params, nc*len_s, 'F')
 
 
 def model():
@@ -138,18 +147,11 @@ def model():
     pred_acoeffs = jnp.zeros(num_j * nmults)
     # sampling from a uniform prior
     # c1 = []
-    c3 = []
-    c5 = []
+    c_arr = numpyro.sample(f'c_arr', dist.Uniform(cmin, cmax))
+    c_arr = c_arr * true_params_flat
 
-    for i in range(num_params):
-        c3.append(numpyro.sample(f'c3_{i}', dist.Uniform(cmin[0,i], cmax[0,i])))
-        c5.append(numpyro.sample(f'c5_{i}', dist.Uniform(cmin[1,i], cmax[1,i])))
+    pred = fixed_part + c_arr @ param_coeff
 
-    c3 = jnp.asarray(c3)
-    c5 = jnp.asarray(c5)
-    
-    pred = fixed_part + c3 @ param_coeff[0] + c5 @ param_coeff[1]
-    
     def loop_in_mults(mult_ind, pred_acoeff):
         pred_omega = jdc(pred, (mult_ind*dim_hyper,), (dim_hyper,))
         pred_acoeff = jdc_update(pred_acoeff,
@@ -181,40 +183,53 @@ seed = int(123 + 100*np.random.rand())
 rng_key = random.PRNGKey(seed)
 rng_key, rng_key_ = random.split(rng_key)
 
-# kernel = SA(model) #, adapt_state_size=200)    
-kernel = NUTS(model, find_heuristic_step_size=True,
-              max_tree_depth=(7, 3))
+#kernel = SA(model, adapt_state_size=200)
+init_strat = numpyro.infer.init_to_value(values=init_params)
+
+kernel = NUTS(model,
+              max_tree_depth=(10, 4),
+              # adapt_step_size=False,
+              # step_size=1e-3,
+              init_strategy=init_strat)
 mcmc = MCMC(kernel,
             num_warmup=1000,
             num_samples=1000,
-            num_chains=8)  
-mcmc.run(rng_key_, extra_fields=('potential_energy',))
+            num_chains=num_chains)  
+mcmc.run(rng_key_,
+         extra_fields=('potential_energy',))
 pe = mcmc.get_extra_fields()['potential_energy']
 
 # extracting necessary fields for plotting
 mcmc_sample = mcmc.get_samples()
 keys = mcmc_sample.keys()
 
+plot_samples = {}
+
 # putting the true params
 refs = {}
 # initializing the keys
-for sind in range(smin_ind, smax_ind+1):
-    s = 2*sind + 1
-    for ci in range(num_params):
-        refs[f"c{s}_{ci}"] = true_params[sind-1, ci] / 1e-3
+for idx in range(len_s * nc):
+    sind = idx % len_s 
+    ci = int(idx//len_s)
+    s = 2*sind + 3
+    argstr = f"c{s}_{ci}"
+    refs[argstr] = 1.0
+    plot_samples[argstr] = mcmc_sample['c_arr'][:, idx]
 
 ax = az.plot_pair(
-    mcmc_sample,
-    var_names=[key for key in mcmc_sample.keys()],
+    plot_samples,
+    var_names=[key for key in plot_samples.keys()],
     kde_kwargs={"fill_last": False},
     kind=["scatter", "kde"],
     marginals=True,
     point_estimate="median",
     figsize=(10, 8),
     reference_values=refs,
-    reference_values_kwargs={'color':"red", "marker":"o", "markersize":6}
+    reference_values_kwargs={'color':"red",
+                                "marker":"o",
+                                "markersize":6}
 )
-plt.tight_layout()
+
 plt.savefig('corner_reduced_prob.png')
 
-print_summary(mcmc_sample, true_params)
+# print_summary(mcmc_sample, true_params)

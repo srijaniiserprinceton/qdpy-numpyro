@@ -227,7 +227,7 @@ class GlobalVars():
         return acoeffs_true*1e-3, acoeffs_sigma*1e-3
 
 
-    # {{{ def findfreq(data, l, n, m):
+    # {{{ def findfreq(self, l, n, m, fullfreq=False):
     def findfreq(self, l, n, m, fullfreq=False):
         '''
         Find the eigenfrequency for a given (l, n, m)
