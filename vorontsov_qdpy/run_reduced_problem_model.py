@@ -67,6 +67,7 @@ acoeffs_sigma = np.load('acoeffs_sigma.npy')
 
 ell0_arr = np.load('ell0_arr.npy')
 omega0_arr = np.load('omega0_arr.npy')
+dom_dell_arr = np.load('dom_dell_arr.npy')
 
 cind_arr = np.load('cind_arr.npy')
 smin_ind, smax_ind = np.load('sind_arr.npy')
@@ -151,6 +152,7 @@ Pjl_norm = jnp.asarray(Pjl_norm)
 sparse_idx = jnp.asarray(sparse_idx)
 ell0_arr_jax = jnp.asarray(GVARS.ell0_arr)
 omega0_arr_jax = jnp.asarray(omega0_arr)
+dom_dell_jax = jnp.asarray(dom_dell_arr)
 
 ######################## making the data_acoeffs ########################
 data_acoeffs = jnp.zeros(num_j*nmults)
@@ -191,7 +193,7 @@ ctrl_limits['cmax'] = cmax
 
 
 def get_clp(bkm):
-    tvals = jnp.linspace(0, jnp.pi, 30)
+    tvals = jnp.linspace(0, jnp.pi, 300)
     integrand = jnp.zeros((p_arr.shape[0],
                            p_arr.shape[1],
                            len(tvals)))
@@ -210,6 +212,7 @@ def get_clp(bkm):
 def get_eig_corr(clp, z1):
     return clp.conj() * (z1 @ clp)
 
+
 def compare_model():
     # predicted a-coeficients                                                             
     eigvals_compute = jnp.array([])
@@ -221,14 +224,20 @@ def compare_model():
     bkm = true_params @ param_coeff_bkm + fixed_part_bkm
     clp = get_clp(bkm)
 
-    z1 = zfull - z0
+    # z1 = zfull - z0
 
     def loop_in_mults(mult_ind, pred_acoeff):
         ell0 = ell0_arr_jax[mult_ind]
+        z0mult = z0[mult_ind]/dom_dell_jax[mult_ind]*ell0
+        z1mult = zfull[mult_ind] - z0mult
         omegaref = omega0_arr_jax[mult_ind]
-        z1_dense = sparse.bcoo_todense(z1[mult_ind], sparse_idx[mult_ind],
+        z1_dense = sparse.bcoo_todense(z1mult, sparse_idx[mult_ind],
                                        shape=(dim_hyper, dim_hyper))
-        _eigval_mult = get_eig_corr(clp[mult_ind], z1_dense)/2./omegaref*GVARS.OM*1e6
+        z0_dense = sparse.bcoo_todense(z0mult, sparse_idx[mult_ind],
+                                       shape=(dim_hyper, dim_hyper))
+        _eigval0mult = get_eig_corr(clp[mult_ind], z0_dense)/2./omegaref*GVARS.OM*1e6
+        _eigval1mult = get_eig_corr(clp[mult_ind], z1_dense)/2./omegaref*GVARS.OM*1e6
+        _eigval_mult = _eigval0mult + _eigval1mult
         Pjl_local = Pjl[mult_ind]
         # pred_acoeff = (Pjl_local @ _eigval_mult[:2*ell0+1])/Pjl_norm[i]                  
         # eigvals_acoeffs = jnp.append(eigvals_acoeffs, pred_acoeff)                    
@@ -297,7 +306,11 @@ def print_summary(samples, ctrl_arr):
 
 
 if __name__ == "__main__":
-    diff = compare_model_()
+    acoeffs_model = compare_model_()
+    print(f"acoeffs model = \n {acoeffs_model}")
+    print(f"acoeffs true = \n {acoeffs_true}")
+    print(f"\n diff = \n {acoeffs_model - acoeffs_true}")
+    print(f"\n diff/sigma = \n {(acoeffs_model - acoeffs_true)/acoeffs_sigma}")
     # Start from this source of randomness. We will split keys for subsequent operations.
     sys.exit()
 

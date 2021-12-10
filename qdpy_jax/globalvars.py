@@ -147,6 +147,7 @@ class GlobalVars():
         self.n0_arr = n_arr[sorted_idx_ell]
         self.ell0_arr = ell_arr[sorted_idx_ell]
         self.omega0_arr = omega0_arr[sorted_idx_ell]
+        self.dom_dell = self.get_dom_dell()
 
         self.eigvals_true, self.eigvals_sigma = self.get_eigvals_true()
         self.acoeffs_true, self.acoeffs_sigma = self.get_acoeffs_true()
@@ -200,6 +201,19 @@ class GlobalVars():
                                                   self.knot_ind_th,
                                                   self.spl_deg)
         return None
+
+    def get_dom_dell(self):
+        n0arr = self.n0_arr
+        ell0arr = self.ell0_arr
+        dom_dell = []
+
+        for i in range(len(ell0arr)):
+            omega1 = self.findfreq(ell0arr[i]+1, n0arr[i],
+                                   np.array([0]), fullfreq=True)[0]
+            omega0 = self.omega0_arr[i]
+            dom_dell.append(omega1 - omega0)
+        return np.array(dom_dell)
+
 
     def get_eigvals_true(self):
         n0arr = self.n0_arr
