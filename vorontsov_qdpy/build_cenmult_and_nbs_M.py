@@ -1,4 +1,4 @@
-import numpy as np   
+Bimport numpy as np   
 from qdpy_jax import jax_functions as jf
 
 def getnt4cenmult(CNM_AND_NBS, GVARS, return_shaped=False):

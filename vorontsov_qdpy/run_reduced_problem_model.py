@@ -57,10 +57,7 @@ GVARS = gvar_jax.GlobalVars(n0=ARGS['n0'],
                             knot_num=ARGS['knot_num'],
                             load_from_file=ARGS['load_from_file'])
 
-nmults = len(GVARS.ell0_arr)
-num_j = len(GVARS.s_arr)
-
-# loading the files forthe problem
+################ loading the files for the problem ###############
 dim_hyper = int(np.loadtxt('.dimhyper'))
 
 # true params from Antia wsr
@@ -75,10 +72,19 @@ omega0_arr = np.load('omega0_arr.npy')
 cind_arr = np.load('cind_arr.npy')
 smin_ind, smax_ind = np.load('sind_arr.npy')
 
+# supermatrix specific files for the exact problem
 param_coeff = np.load('param_coeff.npy')
 sparse_idx = np.load('sparse_idx.npy')
 fixed_part = np.load('fixed_part.npy')
 param_coeff = param_coeff[smin_ind:smax_ind+1, ...]
+
+# supermatrix M specific files for the V11 approximated problem
+param_coeff_M = np.load('param_coeff_M.npy')
+sparse_idx_M = np.load('sparse_idx_M.npy')
+fixed_part_M = np.load('fixed_part_M.npy')
+param_coeff_M = param_coeff_M[smin_ind:smax_ind+1, ...]
+
+#################################################################
 
 # comparing the matrices with the true values
 supmat_jax = np.sum((true_params[:, :, NAX, NAX] * param_coeff),
@@ -100,7 +106,7 @@ plt.plot(diff)
 plt.savefig('supmat_diff.pdf')
 # sys.exit()
 """
-
+#############################################################
 # Reading RL poly from precomputed file
 # shape (nmults x (smax+1) x 2*ellmax+1)
 # reshaping to (nmults x (smax+1) x dim_hyper)
@@ -119,11 +125,17 @@ Pjl_norm = np.zeros((nmults, Pjl.shape[1]))
 for mult_ind in range(nmults):
     Pjl_norm[mult_ind] = np.diag(Pjl[mult_ind] @ Pjl[mult_ind].T)
 
+#############################################################
 
+# number of central multiplets
+nmults = len(GVARS.ell0_arr)
+# total number of s for which to create a-coeffs
+num_j = len(GVARS.s_arr)
 # number of s to fit
 len_s = true_params.shape[0]
 # number of c's to fit
 nc = true_params.shape[1]
+num_params = len(cind_arr)
 
 # converting to device array
 Pjl = jnp.asarray(Pjl)
@@ -131,16 +143,16 @@ Pjl = jnp.asarray(Pjl)
 true_params = jnp.asarray(true_params)
 param_coeff = jnp.asarray(param_coeff)
 fixed_part = jnp.asarray(fixed_part)
+true_params_M = jnp.asarray(true_params_M)
+param_coeff_M = jnp.asarray(param_coeff_M)
+fixed_part_M = jnp.asarray(fixed_part_M)
 acoeffs_sigma = jnp.asarray(acoeffs_sigma)
 Pjl_norm = jnp.asarray(Pjl_norm)
 sparse_idx = jnp.asarray(sparse_idx)
+ell0_arr_jax = jnp.asarray(GVARS.ell0_arr)
+omega0_arr_jax = jnp.asarray(omega0_arr)
 
-
-
-num_params = len(cind_arr)
-
-
-# making the data_acoeffs
+######################## making the data_acoeffs ########################
 data_acoeffs = jnp.zeros(num_j*nmults)
 ell0_arr = jnp.array(GVARS.ell0_arr)
 
@@ -156,11 +168,7 @@ def loop_in_mults(mult_ind, data_acoeff):
 
 data_acoeffs = foril(0, nmults, loop_in_mults, data_acoeffs)
 
-# this is actually done in the function create_sparse_noc
-# param_coeff *= 1e-3
-
-ell0_arr_jax = jnp.asarray(GVARS.ell0_arr)
-omega0_arr_jax = jnp.asarray(omega0_arr)
+########################################################################
 
 # reshaping true_params and param_coeff
 
@@ -169,7 +177,6 @@ param_coeff = jnp.reshape(param_coeff, (nc * len_s, nmults, -1), 'F')
 
 # moving axis to allow seamless jnp.dot
 param_coeff = jnp.moveaxis(param_coeff, 0, 1)
-
 
 # setting the prior limits
 cmin = 0.8 * jnp.ones_like(true_params)# / 1e-3

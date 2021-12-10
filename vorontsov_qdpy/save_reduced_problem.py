@@ -197,7 +197,7 @@ for i in range(nmults):
         for ci, cind in enumerate(cind_arr):
             param_coeff[si, ci, i, :] = noc_hypmat_all_sparse[i, si, cind, :]
 
-# saving the sueprmatrix components
+# saving the supermatrix components
 np.save('fixed_part.npy', fixed_hypmat_sparse)
 np.save('param_coeff.npy', param_coeff)
 np.save('sparse_idx.npy', hypmat_idx)
