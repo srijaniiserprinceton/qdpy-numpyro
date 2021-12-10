@@ -195,6 +195,8 @@ for i in range(nmults):
             param_coeff[si, ci, i, :] = noc_hypmat_all_sparse[i, si, cind, :]
 
 # saving the sueprmatrix components
+print(f"param_coeff = {param_coeff.shape}")
+print(f"cind_arr = {cind_arr}")
 np.save('fixed_part_M.npy', fixed_hypmat_sparse)
 np.save('param_coeff_M.npy', param_coeff)
 np.save('sparse_idx_M.npy', hypmat_idx)
@@ -232,7 +234,7 @@ for i in range(nmults):
             noc_hypmat_sparse[sind, cind, i, :_lendata] = _data
             noc_hypmat_idx[sind, cind, i, :_lendata, :] = _idx
 
-np.save('param_coeff.npy', noc_hypmat_sparse)
+np.save('param_coeff_M.npy', noc_hypmat_sparse)
 np.save('param_coeff_idx.npy', noc_hypmat_idx)
 np.save('data_model.npy', eigvals_model)
 np.save('cind_arr.npy', cind_arr)

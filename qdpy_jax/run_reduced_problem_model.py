@@ -135,8 +135,6 @@ acoeffs_sigma = jnp.asarray(acoeffs_sigma)
 Pjl_norm = jnp.asarray(Pjl_norm)
 sparse_idx = jnp.asarray(sparse_idx)
 
-
-
 num_params = len(cind_arr)
 
 
@@ -195,7 +193,7 @@ def compare_model():
                                          shape=(dim_hyper, dim_hyper))
         _eigval_mult = get_eigs(pred_dense)/2./omegaref*GVARS.OM*1e6
         Pjl_local = Pjl[mult_ind]
-        # pred_acoeff = (Pjl_local @ _eigval_mult[:2*ell0+1])/Pjl_norm[i]                  
+        # pred_acoeff = (Pjl_local @ _eigval_mult[:2*ell0+1])/Pjl_norm[i]
         # eigvals_acoeffs = jnp.append(eigvals_acoeffs, pred_acoeff)                    
         # eigvals_compute = jnp.append(eigvals_compute, _eigval_mult)                     
         pred_acoeff = jdc_update(pred_acoeff,

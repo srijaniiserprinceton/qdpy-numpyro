@@ -69,6 +69,7 @@ fixed_hypmat_dense = sparse.coo_matrix((fixed_hypmat_all_sparse[0], sp_indices_a
 
 # length of data
 nc = GVARS.nc
+print(f"nc = {GVARS.nc}")
 len_data = len(omega0_arr)
 len_s = len(GVARS.s_arr)
 nmults = len(GVARS.n0_arr)

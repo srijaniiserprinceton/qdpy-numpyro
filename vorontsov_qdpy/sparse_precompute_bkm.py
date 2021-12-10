@@ -1,4 +1,4 @@
-Bimport numpy as np
+import numpy as np
 from tqdm import tqdm
 from scipy import integrate
 from scipy.interpolate import splev
@@ -276,20 +276,16 @@ def build_bkm_all_cenmults():
         
         # list of arrays for different s
         noc_bkm_this_mult = []
-        
+
         # loop in s
         for sind, s in enumerate(GVARS.s_arr):
-        
             # computing the unshaped bkm (noc and fixed)
-            noc_bkm, fixed_bkm =\
-                    build_bkm_nonint_n_fxd_1cnm(CNM_AND_NBS_bkm, s)
-            
+            noc_bkm, fixed_bkm = build_bkm_nonint_n_fxd_1cnm(CNM_AND_NBS_bkm, s)
             # to keep the start indiex of the global m dimension
             start_global_m = int(0)
-            
+
             for pind, ellp in enumerate(CNM_AND_NBS.nl_nbs[:,1]):
                 m_ellp = 2 * ellp + 1
-                
                 # global_m start and end indices depending on ellp
                 end_global_m = start_global_m + m_ellp
 
@@ -322,6 +318,8 @@ def build_bkm_all_cenmults():
                                         fixed_bkm[kind][start_local_slice:end_local_slice]
                         
                     # since k = 2, 4, ... for kind = 0, 1, ...
+                    print(f"i={i:3d} kind={kind:3d}, {start_global_slice:4d}: " +
+                          f"{end_global_slice:4d}")
                     k_arr_shaped[i, kind, start_global_slice:end_global_slice] = 2*(kind+1)
                     p_arr_shaped[i, start_global_slice:end_global_slice] = ellp-ell0
                     
@@ -329,4 +327,4 @@ def build_bkm_all_cenmults():
                 # updating the start_global_m
                 start_global_m = end_global_m
 
-        return noc_bkm_shaped, fixed_bkm_shaped, k_arr_shaped, p_arr_shaped
+    return noc_bkm_shaped, fixed_bkm_shaped, k_arr_shaped, p_arr_shaped

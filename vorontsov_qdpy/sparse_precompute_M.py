@@ -207,13 +207,19 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, CNM_AND_NBS_M,
             
             # the true ells in the supermatrix (without Taylor exp)
             ell1_true, ell2_true = nl_nbs[i, 1], nl_nbs[j, 1]
+            ellmin_true = min(ell1_true, ell2_true)
+            m_arr_true = np.arange(-ellmin_true, ellmin_true+1)
 
             dellx, delly = 0, 0
+            dellx_true, delly_true = 0, 0
 
             # padding inside each submatrix
             dellx = abs(ell1_true - ellmin)
             delly = abs(ell2_true - ellmin)
-                        
+
+            # padding for masked matrix
+            dellx_true = abs(ell1_true - ellmin_true)
+            delly_true = abs(ell2_true - ellmin_true)
             
             # submat tiling indices
             startx, endx = startx_arr[i], endx_arr[i]
@@ -232,12 +238,12 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, CNM_AND_NBS_M,
             # this happens for all s where selection rule doesn't set it to zero
             # only using the odd-even selection rule here since the triangle rule has been 
             # taken care of in the creation of CNM and NBS
-            mask_val = np.ones_like(m_arr) * (1 - jax_minus1pow_vec(ell1 + ell2 + s))
+            mask_val = np.ones_like(m_arr_true) * (1 - jax_minus1pow_vec(ell1 + ell2 + s))
             mask_val = mask_val.astype('bool')
             
 
-            np.fill_diagonal(mask_hypmat[startx+dellx:endx-dellx,
-                                         starty+delly:endy-delly],
+            np.fill_diagonal(mask_hypmat[startx+dellx_true:endx-dellx_true,
+                                         starty+delly_true:endy-delly_true],
                              mask_val)
 
             #-------------------------------------------------------
@@ -359,6 +365,7 @@ def build_hypmat_all_cenmults():
 
 
     # getting the sparse-element size for largest ell cenmult
+    print(f"nl = {GVARS.n0_arr[0]}, {GVARS.ell0_arr[0]}")
     MAXMULT_AND_NBS = getnt4cenmult(GVARS.n0_arr[0], GVARS.ell0_arr[0], GVARS_ST)
     MAXMULT_AND_NBS_M = getnt4cenmult_M(MAXMULT_AND_NBS, GVARS_ST,
                                         return_shaped=True)
@@ -375,6 +382,7 @@ def build_hypmat_all_cenmults():
     
     # the shape of all the cenmult data and indices
     len_sp_indices_maxmult = len(sp_indices_maxmult[0])
+    print(f"maxmult spindices = {len_sp_indices_maxmult}")
     
     sp_indices_all.append(sp_indices_maxmult)
 

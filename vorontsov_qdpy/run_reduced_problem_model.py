@@ -40,7 +40,6 @@ parser.add_argument("--warmup", help="number of warmup steps",
                     type=int, default=20)
 PARSED_ARGS = parser.parse_args()
 
-
 read_params = np.loadtxt(".n0-lmin-lmax.dat")
 ARGS = {}
 ARGS['n0'] = int(read_params[0])
@@ -84,28 +83,33 @@ sparse_idx_M = np.load('sparse_idx_M.npy')
 fixed_part_M = np.load('fixed_part_M.npy')
 param_coeff_M = param_coeff_M[smin_ind:smax_ind+1, ...]
 
+# reading the bkm values
+fixed_part_bkm = np.load('fixed_bkm.npy')
+param_coeff_bkm = np.load('noc_bkm.npy')
+param_coeff_bkm = param_coeff_bkm[:, :, smin_ind:smax_ind+1, ...]
+k_arr = np.load('k_arr.npy')
+p_arr = np.load('p_arr.npy')
+
+k_arr_denom = k_arr*1
+k_arr_denom[k_arr==0] = 1
+
+
 #################################################################
+# number of central multiplets
+nmults = len(GVARS.ell0_arr)
+# total number of s for which to create a-coeffs
+num_j = len(GVARS.s_arr)
+# number of s to fit
+len_s = true_params.shape[0]
+# number of c's to fit
+nc = true_params.shape[1]
+num_params = len(cind_arr)
+num_k = (np.unique(k_arr)>0).sum()
 
 # comparing the matrices with the true values
 supmat_jax = np.sum((true_params[:, :, NAX, NAX] * param_coeff),
                     axis=(0,1)) + fixed_part
 
-"""
-for i in range(nmults):
-    supmat_jax_dense = sparse.bcoo_todense(supmat_jax[i], sparse_idx[i],
-                                        shape=(dim_hyper, dim_hyper))
-    supmat_jax_dense *= 1./2./omega0_arr[i] * GVARS.OM * 1e6
-    ell0 = ell0_arr[i]
-    supmat_qdpt = np.load(f'supmat_qdpt_{ell0}.npy').real
-    supmat_qdpt *= 1./2./omega0_arr[i]*GVARS.OM*1e6
-    spsize = supmat_qdpt.shape[0]
-    diff = supmat_qdpt - supmat_jax_dense[:spsize, :spsize]
-    print(f"cenmult l0 = {ell0}: maxdiff = {abs(diff).max()}")
-    # max_diff = np.diag(supmat_jax_dense)[:2005] - np.diag(supmat_qdpt_200)
-plt.plot(diff)
-plt.savefig('supmat_diff.pdf')
-# sys.exit()
-"""
 #############################################################
 # Reading RL poly from precomputed file
 # shape (nmults x (smax+1) x 2*ellmax+1)
@@ -127,25 +131,21 @@ for mult_ind in range(nmults):
 
 #############################################################
 
-# number of central multiplets
-nmults = len(GVARS.ell0_arr)
-# total number of s for which to create a-coeffs
-num_j = len(GVARS.s_arr)
-# number of s to fit
-len_s = true_params.shape[0]
-# number of c's to fit
-nc = true_params.shape[1]
-num_params = len(cind_arr)
-
 # converting to device array
 Pjl = jnp.asarray(Pjl)
 # data = jnp.asarray(data)
 true_params = jnp.asarray(true_params)
 param_coeff = jnp.asarray(param_coeff)
 fixed_part = jnp.asarray(fixed_part)
-true_params_M = jnp.asarray(true_params_M)
+
 param_coeff_M = jnp.asarray(param_coeff_M)
 fixed_part_M = jnp.asarray(fixed_part_M)
+
+param_coeff_bkm = jnp.asarray(param_coeff_bkm)
+fixed_part_bkm = jnp.asarray(fixed_part_bkm)
+k_arr = jnp.asarray(k_arr)
+p_arr = jnp.asarray(p_arr)
+
 acoeffs_sigma = jnp.asarray(acoeffs_sigma)
 Pjl_norm = jnp.asarray(Pjl_norm)
 sparse_idx = jnp.asarray(sparse_idx)
@@ -174,9 +174,12 @@ data_acoeffs = foril(0, nmults, loop_in_mults, data_acoeffs)
 
 true_params = jnp.reshape(true_params, (nc * len_s,), 'F')
 param_coeff = jnp.reshape(param_coeff, (nc * len_s, nmults, -1), 'F')
+param_coeff_M = jnp.reshape(param_coeff_M, (nc * len_s, nmults, -1), 'F')
+param_coeff_bkm = jnp.reshape(param_coeff_bkm, (nmults, num_k, nc*len_s, -1), 'F')
 
 # moving axis to allow seamless jnp.dot
 param_coeff = jnp.moveaxis(param_coeff, 0, 1)
+param_coeff_M = jnp.moveaxis(param_coeff_M, 0, 1)
 
 # setting the prior limits
 cmin = 0.8 * jnp.ones_like(true_params)# / 1e-3
@@ -187,20 +190,45 @@ ctrl_limits['cmin'] = cmin
 ctrl_limits['cmax'] = cmax
 
 
+def get_clp(bkm):
+    tvals = jnp.linspace(0, jnp.pi, 30)
+    integrand = jnp.zeros((p_arr.shape[0],
+                           p_arr.shape[1],
+                           len(tvals)))
+
+    def true_func(i, intg):
+        term2 = 2*bkm*jnp.sin(k_arr*tvals[i])/k_arr_denom
+        term2 = term2.sum(axis=1)
+        intg = jidx_update(intg, jidx[:, :, i], jnp.cos(p_arr*tvals[i] - term2))
+        return intg
+
+    integrand = foril(0, len(tvals), true_func, integrand)
+    integral = jnp.trapz(integrand, axis=-1, x=tvals)/jnp.pi
+    return integral
+
+
+def get_eig_corr(clp, z1):
+    return clp.conj() * (z1 @ clp)
+
 def compare_model():
     # predicted a-coeficients                                                             
     eigvals_compute = jnp.array([])
     eigvals_acoeffs = jnp.array([])
     pred_acoeffs = jnp.zeros(num_j * nmults)
 
-    pred = true_params @ param_coeff + fixed_part
-    
+    z0 = true_params @ param_coeff_M + fixed_part_M
+    zfull = true_params @ param_coeff + fixed_part
+    bkm = true_params @ param_coeff_bkm + fixed_part_bkm
+    clp = get_clp(bkm)
+
+    z1 = zfull - z0
+
     def loop_in_mults(mult_ind, pred_acoeff):
         ell0 = ell0_arr_jax[mult_ind]
         omegaref = omega0_arr_jax[mult_ind]
-        pred_dense = sparse.bcoo_todense(pred[mult_ind], sparse_idx[mult_ind],
-                                         shape=(dim_hyper, dim_hyper))
-        _eigval_mult = get_eigs(pred_dense)/2./omegaref*GVARS.OM*1e6
+        z1_dense = sparse.bcoo_todense(z1[mult_ind], sparse_idx[mult_ind],
+                                       shape=(dim_hyper, dim_hyper))
+        _eigval_mult = get_eig_corr(clp[mult_ind], z1_dense)/2./omegaref*GVARS.OM*1e6
         Pjl_local = Pjl[mult_ind]
         # pred_acoeff = (Pjl_local @ _eigval_mult[:2*ell0+1])/Pjl_norm[i]                  
         # eigvals_acoeffs = jnp.append(eigvals_acoeffs, pred_acoeff)                    
@@ -210,10 +238,7 @@ def compare_model():
                                  (mult_ind * num_j,))
         return pred_acoeff
 
-
     pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
-    # diff = eigvals_compute - eigvals_true                                              
-    # print(f"Max(Pred - True): {abs(diff).max():.5e}")                                   
     return pred_acoeffs
 
 compare_model_ = jax.jit(compare_model)
@@ -272,8 +297,10 @@ def print_summary(samples, ctrl_arr):
 
 
 if __name__ == "__main__":
-    # diff = compare_model_()
-    # Start from this source of randomness. We will split keys for subsequent operations.    
+    diff = compare_model_()
+    # Start from this source of randomness. We will split keys for subsequent operations.
+    sys.exit()
+
     seed = int(123 + 100*np.random.rand())
     rng_key = random.PRNGKey(seed)
     rng_key, rng_key_ = random.split(rng_key)

@@ -338,6 +338,7 @@ def build_hypmat_all_cenmults():
     # number of multiplets used
     nmults = len(GVARS.n0_arr)
     dim_hyper = get_dim_hyper()
+    print(f"dim_hyper = {dim_hyper}")
 
     # storing as a list of sparse matrices
     # the fixed hypat (the part of hypermatrix that does not
@@ -353,6 +354,7 @@ def build_hypmat_all_cenmults():
 
 
     # getting the sparse-element size for largest ell cenmult
+    print(f"nl = {GVARS.n0_arr[0]}, {GVARS.ell0_arr[0]}")
     MAXMULT_AND_NBS = getnt4cenmult(GVARS.n0_arr[0], GVARS.ell0_arr[0], GVARS_ST)
     SUBMAT_DICT_MAX = build_SUBMAT_INDICES(MAXMULT_AND_NBS)
     __, __, maskmat_maxmult = build_hm_nonint_n_fxd_1cnm(MAXMULT_AND_NBS,
@@ -365,6 +367,7 @@ def build_hypmat_all_cenmults():
     
     # the shape of all the cenmult data and indices
     len_sp_indices_maxmult = len(sp_indices_maxmult[0])
+    print(f"maxmult spindices = {len_sp_indices_maxmult}")
     
     sp_indices_all.append(sp_indices_maxmult)
 

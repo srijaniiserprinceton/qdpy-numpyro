@@ -25,6 +25,7 @@ from qdpy_jax import globalvars as gvar_jax
 from qdpy_jax import sparse_precompute as precompute
 from vorontsov_qdpy import sparse_precompute_bkm as precompute_bkm
 from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
+from vorontsov_qdpy import build_hypermatrix_bkm as build_hm_bkm
 
 from jax.lib import xla_bridge
 print('JAX using:', xla_bridge.get_backend().platform)
@@ -63,6 +64,7 @@ for sind in range(smin_ind, smax_ind+1):
 
 # precomputing the V11 bkm components
 noc_bkm, fixed_bkm, k_arr, p_arr = precompute_bkm.build_bkm_all_cenmults()
+num_k = int((np.unique(k_arr)>0).sum())
 
 # precomputing the supermatrix components
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr, sp_indices_all =\
@@ -118,33 +120,10 @@ for i in range(nmults):
                                         shape = (dim_hyper, dim_hyper)).toarray()
     # supmat in muHz
     synth_supmat[i] *= 1.0/2./omega0_arr[i]*GVARS.OM*1e6
-    
-    '''
-    # extracting eigenvalues
-    ell0 = ell0_arr[i]
-    omegaref = omega0_arr[i]
-    eigval_qdpt_mult = get_eigs(synth_supmat[i])[:2*ell0+1]/2./omegaref
-    eigval_qdpt_mult *= GVARS.OM*1e6
-    
-    # storing in the correct order of nmult
-    synth_eigvals = jnp.append(synth_eigvals, eigval_qdpt_mult)
-    '''
 
 # testing the difference with eigvals_model
 # np.testing.assert_array_almost_equal(synth_eigvals, eigvals_model, decimal=12)
 
-############ COMPARING AGAINST supmat_qdpt.npy ########################
-"""
-
-for il, ell in enumerate(ell0_arr):
-    print(f'{il}: {ell}')
-    supmat_qdpt = np.load(f'supmat_qdpt_{ell}.npy') / 2. / omega0_arr[il] * GVARS.OM * 1e6
-    spsize = supmat_qdpt.shape[0]
-    np.testing.assert_array_almost_equal(synth_supmat[il][:spsize, :spsize],
-                                         supmat_qdpt, decimal=12, verbose=True)
-
-
-"""
 ############ COMPARING AGAINST supmat_qdpt.npy ######################## 
 len_hyper_arr = fixed_hypmat_all_sparse.shape[-1]
 
@@ -153,6 +132,7 @@ hypmat_idx = np.array(sp_indices_all, dtype=int)
 hypmat_idx = np.moveaxis(hypmat_idx, 1, -1)
 
 fixed_hypmat_sparse = np.zeros((nmults, len_hyper_arr))
+fixed_bkm_sparse = np.zeros((nmults, num_k, dim_hyper))
 
 cmax = jnp.array(1.1 * GVARS.ctrl_arr_dpt_clipped)
 cmin = jnp.array(0.9 * GVARS.ctrl_arr_dpt_clipped)
@@ -185,23 +165,36 @@ for i in range(nmults):
                                                fixed_hypmat_all_sparse[i],
                                                c_fixed, nc, len_s)
 
+    _fixmat_bkm = build_hm_bkm.build_hypmat_w_c(noc_bkm[i],
+                                                fixed_bkm[i],
+                                                c_fixed, nc, len_s)
+
     fixed_hypmat_sparse[i, :] = _fixmat
+    fixed_bkm_sparse[i, ...] = _fixmat_bkm
 
 param_coeff = np.zeros((len_s,
                         len(cind_arr),
                         nmults,
                         len_hyper_arr))
 
+param_coeff_bkm = np.zeros((nmults,
+                            num_k,
+                            len_s,
+                            len(cind_arr),
+                            dim_hyper))
+
+
 for i in range(nmults):
     for si in range(len_s):
         for ci, cind in enumerate(cind_arr):
             param_coeff[si, ci, i, :] = noc_hypmat_all_sparse[i, si, cind, :]
+            param_coeff_bkm[i, :, si, ci, :] = noc_bkm[i, :, si, cind, :]
 
 # saving the supermatrix components
+np.savetxt('.dimhyper', np.array([dim_hyper]), fmt='%d')
 np.save('fixed_part.npy', fixed_hypmat_sparse)
 np.save('param_coeff.npy', param_coeff)
 np.save('sparse_idx.npy', hypmat_idx)
-np.savetxt('.dimhyper', np.array([dim_hyper]), fmt='%d')
 np.save('omega0_arr.npy', omega0_arr)
 np.save('ell0_arr.npy', ell0_arr)
 np.save('data_model.npy', eigvals_model)
@@ -210,8 +203,8 @@ np.save('sind_arr.npy', sind_arr)
 np.save('true_params.npy', true_params)
 
 # saving the V11 bkm components
-np.save('noc_bkm.npy', noc_bkm)
-np.save('fixed_bkm.npy', fixed_bkm)
+np.save('noc_bkm.npy', param_coeff_bkm)
+np.save('fixed_bkm.npy', fixed_bkm_sparse)
 np.save('k_arr.npy', k_arr)
 np.save('p_arr.npy', p_arr)
 sys.exit()
