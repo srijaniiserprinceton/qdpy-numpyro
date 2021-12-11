@@ -102,7 +102,7 @@ for sind in range(smin_ind, smax_ind+1):
 np.testing.assert_array_almost_equal(pred, data)
 
 ######################################################
-# checking that the loaded data are correct                                                   
+# checking that the loaded data are correct
 pred_acoeffs = jnp.zeros(num_j * nmults)
 
 pred = fixed_part * 1.0

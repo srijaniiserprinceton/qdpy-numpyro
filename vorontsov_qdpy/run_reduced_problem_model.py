@@ -1,4 +1,5 @@
 import os
+import time
 num_chains = 4
 os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
 import matplotlib.pyplot as plt
@@ -193,7 +194,7 @@ ctrl_limits['cmax'] = cmax
 
 
 def get_clp(bkm):
-    tvals = jnp.linspace(0, jnp.pi, 300)
+    tvals = jnp.linspace(0, jnp.pi, 25)
     integrand = jnp.zeros((p_arr.shape[0],
                            p_arr.shape[1],
                            len(tvals)))
@@ -210,7 +211,8 @@ def get_clp(bkm):
 
 
 def get_eig_corr(clp, z1):
-    return clp.conj() * (z1 @ clp)
+    return jnp.ones_like(clp)
+    # return clp.conj() * (z1 @ clp)
 
 
 def compare_model():
@@ -223,6 +225,7 @@ def compare_model():
     zfull = true_params @ param_coeff + fixed_part
     bkm = true_params @ param_coeff_bkm + fixed_part_bkm
     clp = get_clp(bkm)
+    # clp = jnp.ones_like(bkm[:, 0, :])
 
     # z1 = zfull - z0
 
@@ -231,12 +234,16 @@ def compare_model():
         z0mult = z0[mult_ind]/dom_dell_jax[mult_ind]*ell0
         z1mult = zfull[mult_ind] - z0mult
         omegaref = omega0_arr_jax[mult_ind]
-        z1_dense = sparse.bcoo_todense(z1mult, sparse_idx[mult_ind],
-                                       shape=(dim_hyper, dim_hyper))
-        z0_dense = sparse.bcoo_todense(z0mult, sparse_idx[mult_ind],
-                                       shape=(dim_hyper, dim_hyper))
-        _eigval0mult = get_eig_corr(clp[mult_ind], z0_dense)/2./omegaref*GVARS.OM*1e6
-        _eigval1mult = get_eig_corr(clp[mult_ind], z1_dense)/2./omegaref*GVARS.OM*1e6
+        # z1_dense = sparse.bcoo_todense(z1mult, sparse_idx[mult_ind],
+        #                                shape=(dim_hyper, dim_hyper))
+        # z0_dense = sparse.bcoo_todense(z0mult, sparse_idx[mult_ind],
+        #                                shape=(dim_hyper, dim_hyper))
+        z1_sparse = sparse.BCOO((z1mult, sparse_idx[mult_ind]),
+                               shape=(dim_hyper, dim_hyper))
+        z0_sparse = sparse.BCOO((z0mult, sparse_idx[mult_ind]),
+                               shape=(dim_hyper, dim_hyper))
+        _eigval0mult = get_eig_corr(clp[mult_ind], z0_sparse)/2./omegaref*GVARS.OM*1e6
+        _eigval1mult = get_eig_corr(clp[mult_ind], z1_sparse)/2./omegaref*GVARS.OM*1e6
         _eigval_mult = _eigval0mult + _eigval1mult
         Pjl_local = Pjl[mult_ind]
         # pred_acoeff = (Pjl_local @ _eigval_mult[:2*ell0+1])/Pjl_norm[i]                  
@@ -311,9 +318,18 @@ if __name__ == "__main__":
     print(f"acoeffs true = \n {acoeffs_true}")
     print(f"\n diff = \n {acoeffs_model - acoeffs_true}")
     print(f"\n diff/sigma = \n {(acoeffs_model - acoeffs_true)/acoeffs_sigma}")
-    # Start from this source of randomness. We will split keys for subsequent operations.
+
+    t1 = time.time()
+    N = 50
+    count = 0
+    for i in range(N):
+        _temp = compare_model_()
+        count += _temp.sum()/N
+    t2 = time.time()
+    print(f"Total time taken for {nmults} modes = {(t2-t1)/N:.3e} seconds")
     sys.exit()
 
+    # Start from this source of randomness. We will split keys for subsequent operations.
     seed = int(123 + 100*np.random.rand())
     rng_key = random.PRNGKey(seed)
     rng_key, rng_key_ = random.split(rng_key)

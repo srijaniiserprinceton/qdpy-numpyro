@@ -209,9 +209,12 @@ class GlobalVars():
 
         for i in range(len(ell0arr)):
             omega1 = self.findfreq(ell0arr[i]+1, n0arr[i],
-                                   np.array([0]), fullfreq=True)[0]
+                                np.array([0]), fullfreq=True)[0]
+            if omega1 == 0:
+                omega1 = self.findfreq(ell0arr[i]-1, n0arr[i],
+                                    np.array([0]), fullfreq=True)[0]
             omega0 = self.omega0_arr[i]
-            dom_dell.append(omega1 - omega0)
+            dom_dell.append(abs(omega1 - omega0))
         return np.array(dom_dell)
 
 

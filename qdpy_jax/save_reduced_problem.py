@@ -212,6 +212,7 @@ noc_hypmat_sparse = np.zeros((len(GVARS.s_arr),
                               len(cind_arr),
                               nmults,
                               9*dim_hyper))
+
 noc_hypmat_idx = np.zeros((len(GVARS.s_arr),
                            len(cind_arr),
                            nmults,
