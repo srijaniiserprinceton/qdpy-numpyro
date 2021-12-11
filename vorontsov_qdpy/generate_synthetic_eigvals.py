@@ -41,8 +41,8 @@ with open(".n0-lmin-lmax.dat", "w") as f:
 # importing local package 
 from qdpy_jax import jax_functions as jf
 from qdpy_jax import globalvars as gvar_jax
-from qdpy_jax import sparse_precompute as precompute
-from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
+from vorontsov_qdpy import sparse_precompute as precompute
+from vorontsov_qdpy import build_hypermatrix_sparse as build_hm_sparse
 
 GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
                             lmin=ARGS.lmin,
@@ -57,15 +57,37 @@ np.save('acoeffs_sigma.npy', GVARS.acoeffs_sigma)
 np.save('acoeffs_true.npy', GVARS.acoeffs_true)
 
 
-noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr, sp_indices_all =\
+noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr, sparse_idx =\
                                 precompute.build_hypmat_all_cenmults()
-fixed_hypmat_dense = sparse.coo_matrix((fixed_hypmat_all_sparse[0], sp_indices_all[0])).toarray()
-
-dim_hyper = fixed_hypmat_dense.shape[0]
-
-# converting to numpy ndarrays from lists
 noc_hypmat_all_sparse = np.asarray(noc_hypmat_all_sparse)
 fixed_hypmat_all_sparse = np.asarray(fixed_hypmat_all_sparse)
+
+fixmat_shape = fixed_hypmat_all_sparse[0].shape
+max_nbs = fixmat_shape[1]
+len_mmax = fixmat_shape[2]
+len_s = noc_hypmat_all_sparse.shape[1]
+nc = noc_hypmat_all_sparse.shape[2]
+
+fixed_hypmat = np.reshape(fixed_hypmat_all_sparse,
+                          (nmults, max_nbs*max_nbs*len_mmax),
+                          order='F')
+noc_hypmat = np.reshape(noc_hypmat_all_sparse,
+                        (nmults, len_s, nc, max_nbs*max_nbs*len_mmax),
+                        order='F')
+
+sparse_idxs_flat = np.zeros((nmults, max_nbs*max_nbs*len_mmax, 2), dtype=int)
+for i in range(nmults):
+    sparse_idxs_flat[i] = np.reshape(sparse_idx[i],
+                                     (max_nbs*max_nbs*len_mmax, 2),
+                                     order='F')
+
+fixed_hypmat_dense = sparse.coo_matrix((fixed_hypmat[0],
+                                        (sparse_idxs_flat[0, ..., 0],
+                                        sparse_idxs_flat[0, ..., 1]))).toarray()
+dim_hyper = fixed_hypmat_dense.shape[0]
+
+
+# converting to numpy ndarrays from lists
 
 
 def model():
@@ -73,13 +95,15 @@ def model():
     
     for i in range(nmults):
         eigval_mult = np.zeros(dim_hyper)
-        hypmat_sparse = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
-                                                         fixed_hypmat_all_sparse[i],
+        hypmat_sparse = build_hm_sparse.build_hypmat_w_c(noc_hypmat[i],
+                                                         fixed_hypmat[i],
                                                          GVARS.ctrl_arr_dpt_clipped,
                                                          GVARS.nc, len_s)
 
         # converting to dense
-        hypmat = sparse.coo_matrix((hypmat_sparse, sp_indices_all[i]),
+        hypmat = sparse.coo_matrix((hypmat_sparse,
+                                    (sparse_idxs_flat[i, ..., 0],
+                                     sparse_idxs_flat[i, ..., 1])),
                                    shape=(dim_hyper, dim_hyper)).toarray()
 
         print(i, hypmat.shape)
@@ -115,21 +139,19 @@ def get_eigvals_sigma(len_evals_true):
     '''Function to get the sigma from data
     for the frequency splittings.
     '''
-    # storing the eigvals sigmas                                                                                                                             
+    # storing the eigvals sigmas
     eigvals_sigma = jnp.array([])
 
     ellmax = np.max(GVARS.ell0_arr)
-
     start_ind_gvar = 0
     start_ind = 0
 
     for i, ell in enumerate(GVARS.ell0_arr):
         end_ind_gvar = start_ind_gvar + 2 * ell + 1
-
         # storing in the correct order of nmult
         eigvals_sigma = jnp.append(eigvals_sigma,
-                                   GVARS_TR.eigvals_sigma[start_ind_gvar:end_ind_gvar])
-
+                                   GVARS_TR.eigvals_sigma[start_ind_gvar:
+                                                          end_ind_gvar])
         start_ind_gvar += 2 * ell + 1
 
     return eigvals_sigma

@@ -27,12 +27,10 @@ def build_hypmat_w_c(noc_hypmat, fixed_hypmat, c_arr, nc, len_s):
             of control points sampled from Nympyro.
     '''
     # initializing the hypmat
-    # hypmat_cs_summed = 0.0*noc_hypmat[:, 0, 0, :]
     hypmat_cs_summed = 0.0*noc_hypmat[0][0]
 
     for s_ind in range(len_s):
         for c_ind in range(nc):
-            # hypmat_cs_summed += c_arr[s_ind][c_ind] * noc_hypmat[:, s_ind, c_ind, :]
             hypmat_cs_summed += c_arr[s_ind][c_ind] * noc_hypmat[s_ind][c_ind]
 
     hypmat_cs_summed += fixed_hypmat

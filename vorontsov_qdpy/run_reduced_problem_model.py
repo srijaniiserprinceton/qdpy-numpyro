@@ -88,7 +88,7 @@ param_coeff_M = param_coeff_M[smin_ind:smax_ind+1, ...]
 # reading the bkm values
 fixed_part_bkm = np.load('fixed_bkm.npy')
 param_coeff_bkm = np.load('noc_bkm.npy')
-param_coeff_bkm = param_coeff_bkm[:, :, smin_ind:smax_ind+1, ...]
+param_coeff_bkm = param_coeff_bkm[smin_ind:smax_ind+1, ...]
 k_arr = np.load('k_arr.npy')
 p_arr = np.load('p_arr.npy')
 
@@ -178,11 +178,12 @@ data_acoeffs = foril(0, nmults, loop_in_mults, data_acoeffs)
 true_params = jnp.reshape(true_params, (nc * len_s,), 'F')
 param_coeff = jnp.reshape(param_coeff, (nc * len_s, nmults, -1), 'F')
 param_coeff_M = jnp.reshape(param_coeff_M, (nc * len_s, nmults, -1), 'F')
-param_coeff_bkm = jnp.reshape(param_coeff_bkm, (nmults, num_k, nc*len_s, -1), 'F')
+param_coeff_bkm = jnp.reshape(param_coeff_bkm, (nc * len_s, nmults, -1), 'F')
 
 # moving axis to allow seamless jnp.dot
 param_coeff = jnp.moveaxis(param_coeff, 0, 1)
 param_coeff_M = jnp.moveaxis(param_coeff_M, 0, 1)
+param_coeff_bkm = jnp.moveaxis(param_coeff_bkm, 0, 1)
 
 # setting the prior limits
 cmin = 0.8 * jnp.ones_like(true_params)# / 1e-3
@@ -211,8 +212,8 @@ def get_clp(bkm):
 
 
 def get_eig_corr(clp, z1):
-    return jnp.ones_like(clp)
-    # return clp.conj() * (z1 @ clp)
+    # return jnp.ones_like(clp)
+    return clp.conj() * (z1 @ clp)
 
 
 def compare_model():

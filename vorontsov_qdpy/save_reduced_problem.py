@@ -22,9 +22,9 @@ config.update('jax_enable_x64', True)
 # new package in jax.numpy
 from qdpy_jax import jax_functions as jf
 from qdpy_jax import globalvars as gvar_jax
-from qdpy_jax import sparse_precompute as precompute
+from vorontsov_qdpy import sparse_precompute as precompute
 from vorontsov_qdpy import sparse_precompute_bkm as precompute_bkm
-from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
+from vorontsov_qdpy import build_hypermatrix_sparse as build_hm_sparse
 from vorontsov_qdpy import build_hypermatrix_bkm as build_hm_bkm
 
 from jax.lib import xla_bridge
@@ -48,6 +48,12 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
 
 GVARS_PATHS, GVARS_TR, __ = GVARS.get_all_GVAR()
 
+# length of data
+nc = GVARS.nc
+len_s = len(GVARS.s_arr)
+nmults = len(GVARS.n0_arr)
+
+
 eigvals_model = np.load("evals_model.npy")
 eigvals_model = jnp.asarray(eigvals_model)
 eigvals_sigma = jnp.asarray(np.load('eigvals_sigma.npy'))
@@ -67,21 +73,48 @@ noc_bkm, fixed_bkm, k_arr, p_arr = precompute_bkm.build_bkm_all_cenmults()
 num_k = int((np.unique(k_arr)>0).sum())
 
 # precomputing the supermatrix components
-noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr, sp_indices_all =\
-    precompute.build_hypmat_all_cenmults()
-
-# densifying fixed_hypmat to get dim_hyper
-fixed_hypmat_dense = sparse.coo_matrix((fixed_hypmat_all_sparse[0], sp_indices_all[0])).toarray()
-
-# length of data
-nc = GVARS.nc
+noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr, sparse_idx =\
+                                precompute.build_hypmat_all_cenmults()
 len_data = len(omega0_arr)
-len_s = len(GVARS.s_arr)
-nmults = len(GVARS.n0_arr)
+
+noc_hypmat_all_sparse = np.asarray(noc_hypmat_all_sparse)
+fixed_hypmat_all_sparse = np.asarray(fixed_hypmat_all_sparse)
+noc_bkm = np.asarray(noc_bkm)
+fixed_bkm = np.asarray(fixed_bkm)
+
+fixmat_shape = fixed_hypmat_all_sparse[0].shape
+max_nbs = fixmat_shape[1]
+len_mmax = fixmat_shape[2]
+len_s = noc_hypmat_all_sparse.shape[1]
+nc = noc_hypmat_all_sparse.shape[2]
+
+fixed_hypmat = np.reshape(fixed_hypmat_all_sparse,
+                          (nmults, max_nbs*max_nbs*len_mmax),
+                          order='F')
+fixed_bkm = np.reshape(fixed_bkm, (nmults, max_nbs*max_nbs*len_mmax), order='F')
+k_arr = np.reshape(k_arr, (nmults, max_nbs*max_nbs*len_mmax), order='F')
+p_arr = np.reshape(p_arr, (nmults, max_nbs*max_nbs*len_mmax), order='F')
+
+noc_hypmat = np.reshape(noc_hypmat_all_sparse,
+                        (nmults, len_s, nc, max_nbs*max_nbs*len_mmax),
+                        order='F')
+noc_bkm = np.reshape(noc_bkm,
+                     (nmults, len_s, nc, max_nbs*max_nbs*len_mmax),
+                     order='F')
+
+sparse_idxs_flat = np.zeros((nmults, max_nbs*max_nbs*len_mmax, 2), dtype=int)
+for i in range(nmults):
+    sparse_idxs_flat[i] = np.reshape(sparse_idx[i],
+                                     (max_nbs*max_nbs*len_mmax, 2),
+                                     order='F')
+
+fixed_hypmat_dense = sparse.coo_matrix((fixed_hypmat[0],
+                                        (sparse_idxs_flat[0, ..., 0],
+                                        sparse_idxs_flat[0, ..., 1]))).toarray()
 dim_hyper = fixed_hypmat_dense.shape[0]
 
-# functions to compute and correctly map the eigenvalues
 
+# functions to compute and correctly map the eigenvalues
 def eigval_sort_slice(eigval, eigvec):
     def body_func(i, ebs):
         return jidx_update(ebs, jidx[i], jnp.argmax(jnp.abs(eigvec[i])))
@@ -104,35 +137,31 @@ len_s = GVARS.wsr.shape[0]
 synth_supmat = np.zeros((nmults, dim_hyper, dim_hyper))
 synth_eigvals = jnp.array([])
 
-# converting from list to arrays
-noc_hypmat_all_sparse = np.asarray(noc_hypmat_all_sparse)
-fixed_hypmat_all_sparse = np.asarray(fixed_hypmat_all_sparse)
-
 
 for i in range(nmults):
-    synth_supmat_sparse = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
-                                                           fixed_hypmat_all_sparse[i],
+    synth_supmat_sparse = build_hm_sparse.build_hypmat_w_c(noc_hypmat[i],
+                                                           fixed_hypmat[i],
                                                            GVARS.ctrl_arr_dpt_clipped,
                                                            GVARS.nc, len_s)
     
     # densifying
-    synth_supmat[i] = sparse.coo_matrix((synth_supmat_sparse, sp_indices_all[i]),
-                                        shape = (dim_hyper, dim_hyper)).toarray()
+    synth_supmat[i] = sparse.coo_matrix((synth_supmat_sparse,
+                                         (sparse_idxs_flat[i, ..., 0],
+                                          sparse_idxs_flat[i, ..., 1])),
+                                        shape=(dim_hyper, dim_hyper)).toarray()
+
     # supmat in muHz
     synth_supmat[i] *= 1.0/2./omega0_arr[i]*GVARS.OM*1e6
+
 
 # testing the difference with eigvals_model
 # np.testing.assert_array_almost_equal(synth_eigvals, eigvals_model, decimal=12)
 
 ############ COMPARING AGAINST supmat_qdpt.npy ######################## 
-len_hyper_arr = fixed_hypmat_all_sparse.shape[-1]
-
-# converting to array and changing the axes to nmult X element_idx X xy-identifier
-hypmat_idx = np.array(sp_indices_all, dtype=int)
-hypmat_idx = np.moveaxis(hypmat_idx, 1, -1)
+len_hyper_arr = fixed_hypmat.shape[-1]
 
 fixed_hypmat_sparse = np.zeros((nmults, len_hyper_arr))
-fixed_bkm_sparse = np.zeros((nmults, num_k, dim_hyper))
+fixed_bkm_sparse = np.zeros((nmults, len_hyper_arr))
 
 cmax = jnp.array(1.1 * GVARS.ctrl_arr_dpt_clipped)
 cmin = jnp.array(0.9 * GVARS.ctrl_arr_dpt_clipped)
@@ -161,8 +190,8 @@ for sind in range(smin_ind, smax_ind+1):
 
 # this is the fixed part of the supermatrix
 for i in range(nmults):
-    _fixmat = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
-                                               fixed_hypmat_all_sparse[i],
+    _fixmat = build_hm_sparse.build_hypmat_w_c(noc_hypmat[i],
+                                               fixed_hypmat[i],
                                                c_fixed, nc, len_s)
 
     _fixmat_bkm = build_hm_bkm.build_hypmat_w_c(noc_bkm[i],
@@ -177,24 +206,23 @@ param_coeff = np.zeros((len_s,
                         nmults,
                         len_hyper_arr))
 
-param_coeff_bkm = np.zeros((nmults,
-                            num_k,
-                            len_s,
+param_coeff_bkm = np.zeros((len_s,
                             len(cind_arr),
-                            dim_hyper))
+                            nmults,
+                            len_hyper_arr))
 
 
 for i in range(nmults):
     for si in range(len_s):
         for ci, cind in enumerate(cind_arr):
-            param_coeff[si, ci, i, :] = noc_hypmat_all_sparse[i, si, cind, :]
-            param_coeff_bkm[i, :, si, ci, :] = noc_bkm[i, :, si, cind, :]
+            param_coeff[si, ci, i, :] = noc_hypmat[i, si, cind, :]
+            param_coeff_bkm[si, ci, i, :] = noc_bkm[i, si, cind, :]
 
 # saving the supermatrix components
 np.savetxt('.dimhyper', np.array([dim_hyper]), fmt='%d')
 np.save('fixed_part.npy', fixed_hypmat_sparse)
 np.save('param_coeff.npy', param_coeff)
-np.save('sparse_idx.npy', hypmat_idx)
+np.save('sparse_idx.npy', sparse_idxs_flat)
 np.save('omega0_arr.npy', omega0_arr)
 np.save('dom_dell_arr.npy', GVARS.dom_dell)
 np.save('ell0_arr.npy', ell0_arr)
