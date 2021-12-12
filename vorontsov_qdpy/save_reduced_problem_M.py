@@ -97,7 +97,7 @@ fixed_hypmat_dense = sparse.coo_matrix((fixed_hypmat[0],
                                         sparse_idxs_flat[0, ..., 1]))).toarray()
 dim_hyper = fixed_hypmat_dense.shape[0]
 len_hyper_arr = fixed_hypmat.shape[-1]
-fixed_hypmat_sparse = np.zeros((nmults, len_hyper_arr))
+fixed_hypmat_sparse = np.zeros((nmults, max_nbs, max_nbs, len_mmax))
 
 cmax = jnp.array(1.1 * GVARS.ctrl_arr_dpt_clipped)
 cmin = jnp.array(0.9 * GVARS.ctrl_arr_dpt_clipped)
@@ -114,20 +114,22 @@ for sind in range(smin_ind, smax_ind+1):
 
 # this is the fixed part of the supermatrix
 for i in range(nmults):
-    _fixmat = build_hm_sparse.build_hypmat_w_c(noc_hypmat[i],
-                                               fixed_hypmat[i],
+    _fixmat = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
+                                               fixed_hypmat_all_sparse[i],
                                                c_fixed, nc, len_s)
-    fixed_hypmat_sparse[i, :] = _fixmat
+    fixed_hypmat_sparse[i, ...] = _fixmat
 
 param_coeff = np.zeros((len_s,
                         len(cind_arr),
                         nmults,
-                        len_hyper_arr))
+                        max_nbs,
+                        max_nbs,
+                        len_mmax))
 
 for i in range(nmults):
     for si in range(len_s):
         for ci, cind in enumerate(cind_arr):
-            param_coeff[si, ci, i, :] = noc_hypmat[i, si, cind, :]
+            param_coeff[si, ci, i, ...] = noc_hypmat_all_sparse[i, si, cind, ...]
 
 # saving the sueprmatrix components
 print(f"param_coeff = {param_coeff.shape}")

@@ -69,7 +69,7 @@ for sind in range(smin_ind, smax_ind+1):
         true_params[sind-1, ci] = GVARS.ctrl_arr_dpt_clipped[sind, cind]
 
 # precomputing the V11 bkm components
-noc_bkm, fixed_bkm, k_arr, p_arr = precompute_bkm.build_bkm_all_cenmults()
+noc_bkm_sparse, fixed_bkm_sparse, k_arr, p_arr = precompute_bkm.build_bkm_all_cenmults()
 num_k = int((np.unique(k_arr)>0).sum())
 
 # precomputing the supermatrix components
@@ -79,8 +79,8 @@ len_data = len(omega0_arr)
 
 noc_hypmat_all_sparse = np.asarray(noc_hypmat_all_sparse)
 fixed_hypmat_all_sparse = np.asarray(fixed_hypmat_all_sparse)
-noc_bkm = np.asarray(noc_bkm)
-fixed_bkm = np.asarray(fixed_bkm)
+noc_bkm = np.asarray(noc_bkm_sparse)
+fixed_bkm = np.asarray(fixed_bkm_sparse)
 
 fixmat_shape = fixed_hypmat_all_sparse[0].shape
 max_nbs = fixmat_shape[1]
@@ -91,14 +91,12 @@ nc = noc_hypmat_all_sparse.shape[2]
 fixed_hypmat = np.reshape(fixed_hypmat_all_sparse,
                           (nmults, max_nbs*max_nbs*len_mmax),
                           order='F')
-fixed_bkm = np.reshape(fixed_bkm, (nmults, max_nbs*max_nbs*len_mmax), order='F')
-k_arr = np.reshape(k_arr, (nmults, max_nbs*max_nbs*len_mmax), order='F')
-p_arr = np.reshape(p_arr, (nmults, max_nbs*max_nbs*len_mmax), order='F')
+fixed_bkm = np.reshape(fixed_bkm_sparse, (nmults, max_nbs*max_nbs*len_mmax), order='F')
 
 noc_hypmat = np.reshape(noc_hypmat_all_sparse,
                         (nmults, len_s, nc, max_nbs*max_nbs*len_mmax),
                         order='F')
-noc_bkm = np.reshape(noc_bkm,
+noc_bkm = np.reshape(noc_bkm_sparse,
                      (nmults, len_s, nc, max_nbs*max_nbs*len_mmax),
                      order='F')
 
@@ -160,8 +158,8 @@ for i in range(nmults):
 ############ COMPARING AGAINST supmat_qdpt.npy ######################## 
 len_hyper_arr = fixed_hypmat.shape[-1]
 
-fixed_hypmat_sparse = np.zeros((nmults, len_hyper_arr))
-fixed_bkm_sparse = np.zeros((nmults, len_hyper_arr))
+fixed_hypmat_sparse = np.zeros((nmults, max_nbs, max_nbs, len_mmax))
+fixed_bkm_sparse = np.zeros((nmults, max_nbs, max_nbs, len_mmax))
 
 cmax = jnp.array(1.1 * GVARS.ctrl_arr_dpt_clipped)
 cmin = jnp.array(0.9 * GVARS.ctrl_arr_dpt_clipped)
@@ -190,33 +188,37 @@ for sind in range(smin_ind, smax_ind+1):
 
 # this is the fixed part of the supermatrix
 for i in range(nmults):
-    _fixmat = build_hm_sparse.build_hypmat_w_c(noc_hypmat[i],
-                                               fixed_hypmat[i],
+    _fixmat = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
+                                               fixed_hypmat_all_sparse[i],
                                                c_fixed, nc, len_s)
 
-    _fixmat_bkm = build_hm_bkm.build_hypmat_w_c(noc_bkm[i],
-                                                fixed_bkm[i],
+    _fixmat_bkm = build_hm_bkm.build_hypmat_w_c(noc_bkm_sparse[i],
+                                                fixed_bkm_sparse[i],
                                                 c_fixed, nc, len_s)
 
-    fixed_hypmat_sparse[i, :] = _fixmat
+    fixed_hypmat_sparse[i, ...] = _fixmat
     fixed_bkm_sparse[i, ...] = _fixmat_bkm
 
 param_coeff = np.zeros((len_s,
                         len(cind_arr),
                         nmults,
-                        len_hyper_arr))
+                        max_nbs,
+                        max_nbs,
+                        len_mmax))
 
 param_coeff_bkm = np.zeros((len_s,
                             len(cind_arr),
                             nmults,
-                            len_hyper_arr))
+                            max_nbs,
+                            max_nbs,
+                            len_mmax))
 
 
 for i in range(nmults):
     for si in range(len_s):
         for ci, cind in enumerate(cind_arr):
-            param_coeff[si, ci, i, :] = noc_hypmat[i, si, cind, :]
-            param_coeff_bkm[si, ci, i, :] = noc_bkm[i, si, cind, :]
+            param_coeff[si, ci, i, ...] = noc_hypmat_all_sparse[i, si, cind, ...]
+            param_coeff_bkm[si, ci, i, ...] = noc_bkm_sparse[i, si, cind, ...]
 
 # saving the supermatrix components
 np.savetxt('.dimhyper', np.array([dim_hyper]), fmt='%d')
