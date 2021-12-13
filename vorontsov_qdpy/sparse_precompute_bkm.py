@@ -44,6 +44,7 @@ GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx =\
                     prune_multiplets_V11.get_pruned_attributes(GVARS,
                                                                GVARS_ST,
+                                                               # getnt4cenmult)
                                                                getnt4cenmult_bkm)
 
 lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
@@ -181,8 +182,6 @@ def get_sparse_idx():
 max_lmax, max_nbs, sparse_idx = get_sparse_idx()
 
 
-
-
 def build_bkm_nonint_n_fxd_1cnm(CNM_AND_NBS_bkm, k_arr, p_arr, s):
     """Computes elements in the hypermatrix excluding the
     integral part.
@@ -202,6 +201,7 @@ def build_bkm_nonint_n_fxd_1cnm(CNM_AND_NBS_bkm, k_arr, p_arr, s):
     # filling in the non-m part using the masks
     # k =  +/1 or k = +/2 are arranged one after another.
     # So, we can conveniently take steps of 2
+    # for i in range(2, num_nbs, 2):
     for i in range(0, num_nbs, 2):
         j = i+1   # the index for the coupling multiplet
         
@@ -332,6 +332,7 @@ def build_bkm_all_cenmults():
         # loop in s
         for sind, s in enumerate(GVARS.s_arr):
             # computing the unshaped bkm (noc and fixed)
+            # build_bkm_nonint_n_fxd_1cnm(CNM_AND_NBS,
             noc_bkm, fixed_bkm, k_arr_local, p_arr_local = \
                 build_bkm_nonint_n_fxd_1cnm(CNM_AND_NBS_bkm,
                                             k_arr_local,

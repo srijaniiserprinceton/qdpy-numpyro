@@ -167,6 +167,22 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
     return SUBMAT_DICT
 
 
+def build_hypmat_freqdiag(CNM_AND_NBS, SUBMAT_DICT, dim_hyper):
+    # initializing with an absurd value that will define the shape of the matrix
+    nl_nbs = CNM_AND_NBS.nl_nbs
+    num_nbs = len(CNM_AND_NBS.omega_nbs)
+    freqdiag = np.zeros((max_nbs, max_nbs, 2*max_lmax+1))
+    omegaref = CNM_AND_NBS.omega_nbs[0]
+    ell_0 = nl_nbs[0, 1]
+    dom_dell = GVARS.dom_dell[0]
+    for i in range(0, num_nbs):
+        ell_i = nl_nbs[i, 1]
+        p = ell_i - ell_0
+        dm = max_lmax - ell_i
+        sidx, eidx = dm, -dm+1
+        freqdiag[i, i, sidx:eidx] = p*dom_dell
+    return freqdiag
+
 
 def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, CNM_AND_NBS_M,
                                SUBMAT_DICT, sparse_idx_local, dim_hyper, s):
@@ -324,6 +340,10 @@ def build_hypmat_all_cenmults():
         SUBMAT_DICT = build_SUBMAT_INDICES(CENMULT_AND_NBS)
         omegaref_nmults.append(CENMULT_AND_NBS.omega_nbs[0])
 
+        freqdiag = build_hypmat_freqdiag(CENMULT_AND_NBS,
+                                         SUBMAT_DICT,
+                                         dim_hyper)
+
         # building the cenmult for the M matrix computation
         # Here, we need the attributes to the correctly shaped
         CENMULT_AND_NBS_M = getnt4cenmult_M(CENMULT_AND_NBS, GVARS_ST,
@@ -349,13 +369,12 @@ def build_hypmat_all_cenmults():
             else:
                 fixed_hypmat_this_mult += fixed_hypmat_s
 
-        # ?? NO FREQDIAG ADDED IN ORIGINAL CODE??
         # adding the freqdiag to the fixed_hypmat
-        fixed_plus_freqdiag = fixed_hypmat_this_mult# + freqdiag*0.0
-        fixed_hypmat_all_sparse.append(fixed_plus_freqdiag)
+        fixed_plus_freqdiag = fixed_hypmat_this_mult + freqdiag
         sparse_idx[i] = sparse_idx_local
 
         # appending the list of sparse matrices in s to the list in cenmults
+        fixed_hypmat_all_sparse.append(fixed_plus_freqdiag)
         noc_hypmat_all_sparse.append(noc_hypmat_this_s)
 
         # storing the sparse indices for the particular central multiplet

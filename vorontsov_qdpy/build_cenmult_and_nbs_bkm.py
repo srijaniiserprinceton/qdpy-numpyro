@@ -57,11 +57,11 @@ def getnt4cenmult(n0, ell0, GVARS):
     nl_list = list(map(list, GVARS.nl_all))
 
     # masking the other radial orders
-    mask_n = abs(nl_arr[:,0] - n0) == 0 
+    mask_n = abs(nl_arr[:, 0] - n0) == 0 
     
     # masking the ells in the k band. V11 Eqn. (33)
     smax = GVARS.s_arr[-1]
-    mask_k_width = abs(nl_arr[:,1] - ell0) <= (smax-1)//2
+    mask_k_width = abs(nl_arr[:, 1] - ell0) <= (smax-1)//2
 
     # creating the final mask accounting for all of the masks above
     mask_nb_k = mask_n * mask_k_width

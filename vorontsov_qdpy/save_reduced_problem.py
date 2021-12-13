@@ -224,7 +224,7 @@ for i in range(nmults):
 np.savetxt('.dimhyper', np.array([dim_hyper]), fmt='%d')
 np.save('fixed_part.npy', fixed_hypmat_sparse)
 np.save('param_coeff.npy', param_coeff)
-np.save('sparse_idx.npy', sparse_idxs_flat)
+np.save('sparse_idx.npy', sparse_idx)
 np.save('omega0_arr.npy', omega0_arr)
 np.save('dom_dell_arr.npy', GVARS.dom_dell)
 np.save('ell0_arr.npy', ell0_arr)

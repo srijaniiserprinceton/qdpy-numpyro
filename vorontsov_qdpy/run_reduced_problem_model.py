@@ -145,7 +145,7 @@ fixed_part_M = jnp.asarray(fixed_part_M)
 param_coeff_bkm = jnp.asarray(param_coeff_bkm)
 fixed_part_bkm = jnp.asarray(fixed_part_bkm)
 k_arr = jnp.asarray(k_arr)
-p_arr = jnp.asarray(p_arr)
+p_arr = jnp.asarray(p_arr[:, :, 0, :]) # removing dummy index
 
 acoeffs_sigma = jnp.asarray(acoeffs_sigma)
 Pjl_norm = jnp.asarray(Pjl_norm)
@@ -210,14 +210,13 @@ def get_clp(bkm):
     tvals = jnp.linspace(0, jnp.pi, 25)
     integrand = jnp.zeros((bkm.shape[0],
                            bkm.shape[1],
-                           bkm.shape[2],
-                           bkm.shape[3],
+                           bkm.shape[-1],
                            len(tvals)))
 
     def true_func(i, intg):
         term2 = 2*bkm*jnp.sin(k_arr*tvals[i])/k_arr_denom
-        term2 = term2.sum(axis=(1, 2))[:, NAX, NAX, :]
-        intg = jidx_update(intg, jidx[:, :, :, :, i], jnp.cos(p_arr*tvals[i] - term2))
+        term2 = term2.sum(axis=(1, 2))[:, NAX, :]
+        intg = jidx_update(intg, jidx[:, :, :, i], jnp.cos(p_arr*tvals[i] - term2))
         return intg
 
     integrand = foril(0, len(tvals), true_func, integrand)
@@ -228,8 +227,8 @@ def get_clp(bkm):
 def get_eig_corr(clp, z1):
     # return jnp.ones_like(clp)
     # return clp.conj() * (z1 @ clp)
-    cZc = clp.conj() * z1 * clp
-    return cZc.sum(axis=(0, 1))
+    cZc = clp.conj() * ((z1 * clp[:, NAX, :]).sum(axis=0))
+    return cZc.sum(axis=0)
 
 
 
@@ -249,7 +248,7 @@ def compare_model():
 
     def loop_in_mults(mult_ind, pred_acoeff):
         ell0 = ell0_arr_jax[mult_ind]
-        z0mult = z0[mult_ind]/dom_dell_jax[mult_ind]
+        z0mult = -1.0*z0[mult_ind]/dom_dell_jax[mult_ind]
         z1mult = zfull[mult_ind] - z0mult
         omegaref = omega0_arr_jax[mult_ind]
         # z1_sparse = sparse.BCOO((z1mult, sparse_idx[mult_ind]),
@@ -269,7 +268,7 @@ def compare_model():
         return pred_acoeff
 
     pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
-    return pred_acoeffs/2.
+    return pred_acoeffs
 
 compare_model_ = jax.jit(compare_model)
 

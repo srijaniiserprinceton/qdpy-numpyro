@@ -161,11 +161,12 @@ def build_hypmat_freqdiag(CNM_AND_NBS, SUBMAT_DICT, dim_hyper):
     num_nbs = len(CNM_AND_NBS.omega_nbs)
     freqdiag = np.zeros((max_nbs, max_nbs, 2*max_lmax+1))
     omegaref = CNM_AND_NBS.omega_nbs[0]
-    for i in range(num_nbs):
+    for i in range(1, num_nbs):
         omega_nl = CNM_AND_NBS.omega_nbs[i]
-        startx = SUBMAT_DICT.startx_arr[i]
-        endx = SUBMAT_DICT.endx_arr[i]
-        freqdiag[i, i, :] = omega_nl**2 - omegaref**2
+        mmax_i = nl_nbs[i, 1]
+        dm = max_lmax - mmax_i
+        sidx, eidx = dm, -dm+1
+        freqdiag[i, i, sidx:eidx] = omega_nl**2 - omegaref**2
     return freqdiag
 
 
