@@ -109,10 +109,9 @@ def model():
                                      sparse_idxs_flat[i, ..., 1])),
                                    shape=(dim_hyper, dim_hyper)).toarray()
 
-        print(i, np.diag(hypmat))
-
-        # solving the eigenvalue problem and mapping eigenvalues
+        # # solving the eigenvalue problem and mapping eigenvalues
         ell0 = ell0_arr[i]
+        # hypmat = np.load(f"supmat_qdpt_{ell0}.npy")
         omegaref = omega0_arr[i]
         eigval_qdpt_mult = get_eigs(hypmat)[:2*ell0+1]/2./omegaref
         # eigval_qdpt_mult = np.diag(hypmat)[:2*ell0+1]/2./omegaref
@@ -165,23 +164,28 @@ def get_eigvals_sigma(len_evals_true):
 
 
 def compare_hypmat():
-    hypmat_sparse = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[-1],
-                                                     fixed_hypmat_all_sparse[-1],
-                                                     GVARS.ctrl_arr_dpt_clipped,
-                                                     GVARS.nc, len_s)
-    hypmat_flat = np.reshape(hypmat_sparse, max_nbs*max_nbs*len_mmax, order='F')
+    for i in range(nmults):
+        hypmat_sparse = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
+                                                        fixed_hypmat_all_sparse[i],
+                                                        GVARS.ctrl_arr_dpt_clipped,
+                                                        GVARS.nc, len_s)
+        hypmat_flat = np.reshape(hypmat_sparse, max_nbs*max_nbs*len_mmax, order='F')
 
-    # converting to dense
-    hypmat = sparse.coo_matrix((hypmat_flat,
-                                (sparse_idxs_flat[-1, ..., 0],
-                                 sparse_idxs_flat[-1, ..., 1])),
-                                shape=(dim_hyper, dim_hyper)).toarray()
+        # converting to dense
+        hypmat = sparse.coo_matrix((hypmat_flat,
+                                    (sparse_idxs_flat[i, ..., 0],
+                                    sparse_idxs_flat[i, ..., 1])),
+                                    shape=(dim_hyper, dim_hyper)).toarray()
 
-    supmat_qdpt = np.load(f"supmat_qdpt_200.npy")
-    matsize = supmat_qdpt.shape[0]
-    supmat_model = hypmat[:matsize, :matsize]
-    diff = supmat_model - supmat_qdpt
-    print(f"Max diff = {abs(diff).max()}")
+        ell0 = ell0_arr[i]
+        try:
+            supmat_qdpt = np.load(f"supmat_qdpt_{ell0}.npy")
+        except FileNotFoundError:
+            continue
+        matsize = supmat_qdpt.shape[0]
+        supmat_model = hypmat[:matsize, :matsize]
+        diff = supmat_model - supmat_qdpt
+        print(f"[{ell0}] Max diff = {abs(diff).max()}")
     return supmat_qdpt, supmat_model
 
 

@@ -1,7 +1,8 @@
 import os
 import time
-num_chains = 4
+num_chains = 2
 os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
+
 import matplotlib.pyplot as plt
 import numpy as np
 import arviz as az
@@ -27,7 +28,6 @@ import numpyro.distributions as dist
 from numpyro.infer import NUTS, MCMC, SA
 
 print(jax.devices()) # printing JAX devices
-
 from qdpy_jax import globalvars as gvar_jax
 from qdpy_jax import jax_functions as jf
 from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
@@ -130,11 +130,17 @@ Pjl_norm = np.zeros((nmults, Pjl.shape[1]))
 for mult_ind in range(nmults):
     Pjl_norm[mult_ind] = np.diag(Pjl[mult_ind] @ Pjl[mult_ind].T)
 
-#############################################################
+ellmax_pjl = int(Pjl_read.shape[-1]//2)
+dell = max_lmax - ellmax_pjl
+Pjl = np.array(Pjl)
+for i in range(nmults):
+    dell2 = ellmax_pjl - ell0_arr[i]
+    Pjl[i, ...] = np.roll(Pjl[i, ...], dell+dell2, axis=-1)
+Pjl = jnp.asarray(Pjl)
 
+#############################################################
 # converting to device array
 Pjl = jnp.asarray(Pjl)
-# data = jnp.asarray(data)
 true_params = jnp.asarray(true_params)
 param_coeff = jnp.asarray(param_coeff)
 fixed_part = jnp.asarray(fixed_part)
@@ -153,33 +159,7 @@ ell0_arr_jax = jnp.asarray(GVARS.ell0_arr)
 omega0_arr_jax = jnp.asarray(omega0_arr)
 dom_dell_jax = jnp.asarray(dom_dell_arr)
 
-######################## making the data_acoeffs ########################
-data_acoeffs = jnp.zeros(num_j*nmults)
-ell0_arr = jnp.array(GVARS.ell0_arr)
-
-def loop_in_mults(mult_ind, data_acoeff):
-    ell0 = ell0_arr[mult_ind]
-    data_omega = jdc(eigvals_true, (mult_ind*dim_hyper,), (len_mmax,))
-    Pjl_local = Pjl[mult_ind]
-    data_acoeff = jdc_update(data_acoeff,
-                             (Pjl_local @ data_omega)/Pjl_norm[mult_ind],
-                             (mult_ind * num_j,))
-    
-    return data_acoeff
-
-data_acoeffs = foril(0, nmults, loop_in_mults, data_acoeffs)
-
-
-ellmax_pjl = int(Pjl_read.shape[-1]//2)
-dell = max_lmax - ellmax_pjl
-Pjl = np.array(Pjl)
-for i in range(nmults):
-    dell2 = ellmax_pjl - ell0_arr[i]
-    Pjl[i, ...] = np.roll(Pjl[i, ...], dell+dell2, axis=-1)
-Pjl = jnp.asarray(Pjl)
-
 ########################################################################
-
 # reshaping true_params and param_coeff
 
 true_params = jnp.reshape(true_params, (nc * len_s,), 'F')
@@ -251,21 +231,17 @@ def compare_model():
     clp = get_clp(bkm)
 
     def loop_in_mults(mult_ind, pred_acoeff):
-        omegaref = omega0_arr_jax[mult_ind]
         ell0 = ell0_arr_jax[mult_ind]
+        omegaref = omega0_arr_jax[mult_ind]
+
         z0mult = z0[mult_ind]
         z1mult = zfull[mult_ind]/2./omegaref - z0mult
-        # z1_sparse = sparse.BCOO((z1mult, sparse_idx[mult_ind]),
-        #                        shape=(dim_hyper, dim_hyper))
-        # z0_sparse = sparse.BCOO((z0mult, sparse_idx[mult_ind]),
-        #                        shape=(dim_hyper, dim_hyper))
-        _eigval0mult = get_eig_corr(clp[mult_ind], z0mult)*GVARS.OM*1e6#/2./omegaref
-        _eigval1mult = get_eig_corr(clp[mult_ind], z1mult)*GVARS.OM*1e6#/2./omegaref
+
+        _eigval0mult = get_eig_corr(clp[mult_ind], z0mult)*GVARS.OM*1e6
+        _eigval1mult = get_eig_corr(clp[mult_ind], z1mult)*GVARS.OM*1e6
         _eigval_mult = _eigval0mult + _eigval1mult
+
         Pjl_local = Pjl[mult_ind]
-        # pred_acoeff = (Pjl_local @ _eigval_mult[:2*ell0+1])/Pjl_norm[i]                  
-        # eigvals_acoeffs = jnp.append(eigvals_acoeffs, pred_acoeff)                    
-        # eigvals_compute = jnp.append(eigvals_compute, _eigval_mult)                     
         pred_acoeff = jdc_update(pred_acoeff,
                                  (Pjl_local @ _eigval_mult)/Pjl_norm[mult_ind],
                                  (mult_ind * num_j,))
@@ -276,30 +252,44 @@ def compare_model():
 
 compare_model_ = jax.jit(compare_model)
 
+
 def model():
     c_arr = numpyro.sample(f'c_arr', dist.Uniform(cmin, cmax))
     pred_acoeffs = jnp.zeros(num_j * nmults)
-    pred = (c_arr*true_params) @ param_coeff + fixed_part
+    c_params = c_arr * true_params
+
+    def scale_bkm(mult_idx, bkm_full):
+        bkm_full = jidx_update(bkm_full,
+                               jidx[i, :, :, :],
+                               -1.0*bkm_full[mult_idx, ...]/dom_dell_jax[mult_idx])
+        return bkm_full
+
+    z0 = param_coeff_M @ c_params + fixed_part_M
+    zfull = param_coeff @ c_params + fixed_part
+    bkm = param_coeff_bkm @ c_params + fixed_part_bkm
+    bkm = foril(0, nmults, scale_bkm, bkm)
+    clp = get_clp(bkm)
 
     def loop_in_mults(mult_ind, pred_acoeff):
         ell0 = ell0_arr_jax[mult_ind]
         omegaref = omega0_arr_jax[mult_ind]
-        pred_dense = sparse.bcoo_todense(pred[mult_ind], sparse_idx[mult_ind],
-                                         shape=(dim_hyper, dim_hyper))
-        _eigval_mult = get_eigs(pred_dense)/2./omegaref*GVARS.OM*1e6
+
+        z0mult = z0[mult_ind]
+        z1mult = zfull[mult_ind]/2./omegaref - z0mult
+
+        _eigval0mult = get_eig_corr(clp[mult_ind], z0mult)*GVARS.OM*1e6
+        _eigval1mult = get_eig_corr(clp[mult_ind], z1mult)*GVARS.OM*1e6
+        _eigval_mult = _eigval0mult + _eigval1mult
+
         Pjl_local = Pjl[mult_ind]
-        # pred_acoeff = (Pjl_local @ _eigval_mult[:2*ell0+1])/Pjl_norm[i]                 
-        # eigvals_acoeffs = jnp.append(eigvals_acoeffs, pred_acoeff)                      
-        # eigvals_compute = jnp.append(eigvals_compute, _eigval_mult)                     
-        
         pred_acoeff = jdc_update(pred_acoeff,
                                  (Pjl_local @ _eigval_mult)/Pjl_norm[mult_ind],
                                  (mult_ind * num_j,))
         return pred_acoeff
 
-    pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
 
-    misfit_acoeffs = (pred_acoeffs - data_acoeffs)/acoeffs_sigma
+    pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
+    misfit_acoeffs = (pred_acoeffs[7:] - acoeffs_true[7:])/acoeffs_sigma[7:]
     return numpyro.factor('obs', dist.Normal(0.0, 1.0).log_prob(misfit_acoeffs))
 
 
@@ -328,7 +318,7 @@ def print_summary(samples, ctrl_arr):
     return None
 
 
-if __name__ == "__main__":
+def test_setup():
     acoeffs_model = compare_model_()
     diff = acoeffs_model - acoeffs_true
     len_acoeffs = len(acoeffs_model)
@@ -357,21 +347,22 @@ if __name__ == "__main__":
         count += _temp.sum()/N
     t2 = time.time()
     print(f"Total time taken for {nmults} modes = {(t2-t1)/N:.3e} seconds")
-    sys.exit()
 
+
+if __name__ == "__main__":
+    test_setup()
     # Start from this source of randomness. We will split keys for subsequent operations.
     seed = int(123 + 100*np.random.rand())
     rng_key = random.PRNGKey(seed)
     rng_key, rng_key_ = random.split(rng_key)
     # sys.exit()
 
-    # kernel = SA(model, adapt_state_size=200)
-    kernel = NUTS(model, max_tree_depth=(5, 1),
+    kernel = NUTS(model, max_tree_depth=(5, 4),
                   find_heuristic_step_size=True)
     mcmc = MCMC(kernel,
                 num_warmup=PARSED_ARGS.warmup,
                 num_samples=PARSED_ARGS.maxiter,
-                num_chains=1)  
+                num_chains=num_chains)  
     mcmc.run(rng_key_, extra_fields=('potential_energy',))
     pe = mcmc.get_extra_fields()['potential_energy']
 
@@ -425,3 +416,4 @@ if __name__ == "__main__":
     plt.tight_layout()
     plt.savefig(f'{GVARS.scratch_dir}/corner-reduced-{PARSED_ARGS.chain_num:03d}.png')
 
+    sys.exit()
