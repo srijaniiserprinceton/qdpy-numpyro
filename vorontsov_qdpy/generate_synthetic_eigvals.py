@@ -192,7 +192,6 @@ def compare_hypmat():
 
 if __name__ == "__main__":
     # model_ = jit(model)
-    sm_qdpt, sm_model = compare_hypmat()
     RL_poly = np.load('RL_poly.npy')
     smin = min(GVARS.s_arr)
     smax = max(GVARS.s_arr)
@@ -210,3 +209,4 @@ if __name__ == "__main__":
     np.save('eigvals_sigma.npy', eigvals_sigma)
     np.save('acoeffs_sigma.npy', GVARS.acoeffs_sigma)
     np.save('acoeffs_true.npy', acoeffs_true)
+    sm_qdpt, sm_model = compare_hypmat()
