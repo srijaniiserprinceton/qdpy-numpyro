@@ -350,7 +350,8 @@ def build_hypmat_all_cenmults():
                                             return_shaped=True)
 
         noc_hypmat_this_s = []
-        sparse_idx_local = np.zeros((max_nbs, max_nbs, 2*max_lmax+1, 2), dtype=int)
+        sparse_idx_local = np.ones((max_nbs, max_nbs, 2*max_lmax+1, 2), dtype=int)
+        sparse_idx_local *= dim_hyper - 1
         
         for s_ind, s in enumerate(GVARS.s_arr):
             # shape (dim_hyper x dim_hyper) but sparse form

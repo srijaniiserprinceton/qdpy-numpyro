@@ -238,192 +238,56 @@ np.save('noc_bkm.npy', param_coeff_bkm)
 np.save('fixed_bkm.npy', fixed_bkm_sparse)
 np.save('k_arr.npy', k_arr)
 np.save('p_arr.npy', p_arr)
-sys.exit()
-# sys.exit()
 
-# we just need to save the noc_diag corresponding to the two ctrl_pts set to zero
-noc_hypmat_sparse = np.zeros((len(GVARS.s_arr),
-                              len(cind_arr),
-                              nmults,
-                              9*dim_hyper))
-noc_hypmat_idx = np.zeros((len(GVARS.s_arr),
-                           len(cind_arr),
-                           nmults,
-                           9*dim_hyper, 2),
-                          dtype=int)
+def compute_acoeffs():
 
-for i in range(nmults):
-    for sind in range(smin_ind, smax_ind+1):
-        for cind in cind_arr:
-            _noc_sp = noc_hypmat_all_sparse[i][sind][cind]
-            _noc_hypmat_sp = jsparse.BCOO.fromdense(_noc_sp.todense())
-            _data = _noc_hypmat_sp.data
-            _idx = _noc_hypmat_sp.indices
-            _lendata = len(_data)
-            noc_hypmat_sparse[sind, cind, i, :_lendata] = _data
-            noc_hypmat_idx[sind, cind, i, :_lendata, :] = _idx
-
-np.save('param_coeff.npy', noc_hypmat_sparse)
-np.save('param_coeff_idx.npy', noc_hypmat_idx)
-np.save('data_model.npy', eigvals_model)
-np.save('cind_arr.npy', cind_arr)
-np.save('sind_arr.npy', sind_arr)
-np.save('true_params.npy', true_params)
-sys.exit()
+    def eigval_sort_slice(eigval, eigvec):
+        eigbasis_sort = np.zeros(len(eigval), dtype=int)
+        for i in range(len(eigval)):
+            eigbasis_sort[i] = np.argmax(abs(eigvec[i]))
+        return eigval[eigbasis_sort]
 
 
-# checks if the forward problem is working fine
-def get_delta_omega():
-    eigval_all = np.array([])
+    RL_poly = np.load('RL_poly.npy')
+    smin = min(GVARS.s_arr)
+    smax = max(GVARS.s_arr)
+    Pjl = RL_poly[:, smin:smax+1:2, :]
+
+    Pjl_norm = np.zeros((Pjl.shape[0],
+                         Pjl.shape[1]))
+    for mult_ind in range(Pjl.shape[0]):
+        Pjl_norm[mult_ind] = np.diag(Pjl[mult_ind] @ Pjl[mult_ind].T)
+
+    len_s = true_params.shape[0]
+    nc = true_params.shape[1]
+    tparams = np.reshape(true_params, (nc * len_s,), 'F')
+    pcoeff = param_coeff[smin_ind:smax_ind+1, ...]
+    pcoeff = np.reshape(pcoeff, (nc * len_s, nmults,
+                                 max_nbs*max_nbs*len_mmax), 'F')
+    fixed_part = np.reshape(fixed_hypmat_sparse, (nmults,
+                                                  max_nbs*max_nbs*len_mmax))
+    pcoeff = np.moveaxis(pcoeff, 0, -1)
+    zfull = pcoeff @ tparams + fixed_part
+
+    acoeffs_true = np.array([])
+
+    print(zfull.shape)
+    print(sparse_idxs_flat.shape)
+
     for i in range(nmults):
-        diag_evals = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
-                                                    fixed_hypmat_all_sparse[i],
-                                                    GVARS.ctrl_arr_dpt_clipped, nc, len_s)
-                                                    # true_params, nc, len_s)
-        ell0 = GVARS.ell0_arr[i]
-        eigval_compute = np.diag(diag_evals.todense())/2./omega0_arr[i]*GVARS.OM*1e6
-        eigval_compute = eigval_compute[:2*ell0+1]
-        eigval_all = np.append(eigval_all, eigval_compute)
-    return eigval_all
+        ell0 = ell0_arr[i]
+        omegaref = omega0_arr[i]
+        z_dense = jsparse.BCOO((zfull[i], sparse_idxs_flat[i, ...]),
+                               shape=(dim_hyper, dim_hyper)).todense()
+        eigvals, eigvecs = jnp.linalg.eigh(z_dense)
+        eigvals = np.array(eigvals)
+        eigvecs = np.array(eigvecs)
+        eigvals = eigval_sort_slice(eigvals, eigvecs)
+        eigvals = eigvals[:2*ell0+1]/2./omegaref*GVARS.OM*1e6
+        acoeffs = (Pjl[i][:, :2*ell0+1] @ eigvals)/Pjl_norm[i]
+        acoeffs_true = np.append(acoeffs_true, acoeffs)
 
-pred = get_delta_omega()
-# checking if the forward problem works with the above components
-print(f"Pred - Data: {abs(pred - eigvals_model).max():.6e}")
+    print(acoeffs_true)
+    return acoeffs_true
 
-
-############################################################################################
-"""
-def get_posterior_grid(cind, sind, N):
-    # array containing the factors for the param space
-    fac = jnp.linspace(0.01, 2.0, N)
-    
-    # misfit as a function of scaling param
-    misfit_model_arr = jnp.zeros(N)
-    
-    # looping over factors
-    def loop_facind(facind, misfits):
-        misfit_mod_arr = misfits
-        cdpt = GVARS.ctrl_arr_dpt_clipped*1.0
-        cdpt = jidx_update(cdpt, jidx[sind, cind],
-                           ctrl_arr_dpt[sind, cind] * fac[facind])
-
-        diag_evals = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse,
-                                                  fixed_hypmat_all_sparse,
-                                                  cdpt, nc, len_s)
-        delta_omega = diag_evals.todense()/2./omega0_arr*GVARS.OM*1e6
-        delta_omega_model = delta_omega - eigvals_model
-
-        # delta_omega_model /= eigvals_sigma
-        misfit_mod = -0.5*np.sum(delta_omega_model**2)/len_data
-        misfit_mod_arr = jidx_update(misfit_mod_arr, jidx[facind], misfit_mod)
-
-        return misfit_mod_arr
-    
-    return fac, foril(0, N, loop_facind, misfit_model_arr)
-
-# jitting the function
-_get_posterior_grid = jax.jit(get_posterior_grid, static_argnums=(2,))
-
-N = 100
-
-# the misfit array of shape (s x ctrl_pts x N)
-misfit_arr_all = jnp.zeros((smax_ind - smin_ind + 1, len(cind_arr), N))
-
-for sind in range(smin_ind, smax_ind+1):
-    for ci, cind in enumerate(cind_arr):
-        fac, misfit_cs = _get_posterior_grid(cind, sind, N)
-
-        misfit_arr_all = jidx_update(misfit_arr_all,
-                                     jidx[sind-1, ci, :],
-                                     misfit_cs)
-
-print(f"delta_omega = {get_delta_omega()}")
-
-# 1D plot of the misfit as we scan across the terrain
-
-fig, axs = plt.subplots(smax_ind-smin_ind+1,
-                        ind_max-ind_min+1,
-                        figsize=(12, 8), sharex=True)
-axs = np.reshape(axs, (smax_ind - smin_ind + 1, ind_max-ind_min+1))
-
-for si in range(smin_ind, smax_ind+1):
-    for j, ci in enumerate(cind_arr):
-        axs[si-1, j].plot(fac, np.exp(misfit_arr_all[si-1,j]), 'k', label='model')
-        axs[si-1, j].set_title('$c_{%i}^{%i}$'%(ci, 2*si+1))
-
-plt.tight_layout()
-
-plt.savefig('model_vs_data_minfunc.png')
-############################################################################################
-
-
-################# generating the 2D pdfs #########################
-
-true_params_flat = true_params.flatten(order='F')
-num_params = len(true_params_flat)
-noc_diag = np.asarray(noc_diag)
-noc_diag = np.reshape(noc_diag, (num_params, -1), order='F')
-noc_diag = jnp.asarray(noc_diag)
-true_params_flat = jnp.asarray(true_params_flat)
-
-def get_posterior_grid2d(pc1, pc2):
-    fac = jnp.linspace(0.1, 1.9, N)
-    misfit_arr = jnp.zeros((N, N))
-    
-    fac_nonpc = jnp.ones(num_params)
-    fac_nonpc = jidx_update(fac_nonpc, jidx[pc1], 0.0)
-    fac_nonpc = jidx_update(fac_nonpc, jidx[pc2], 0.0)
-    fac = jnp.linspace(0.01, 1.9, N)
-    
-    fac_params_nonpc = fac_nonpc * true_params_flat
-
-    # {{{ def true_func_i(i, misfits):
-    def true_func_i(i, misfits):
-        def true_func_j(j, misfits):
-            pred = diag_evals_fixed +\
-                   noc_diag[pc1] * true_params_flat[pc1] * fac[i] +\
-                   noc_diag[pc2] * true_params_flat[pc2] * fac[j] +\
-                   fac_params_nonpc @ noc_diag
-            pred = jax.lax.cond(pc1==pc2,
-                                lambda __: pred - noc_diag[pc2] *\
-                                true_params_flat[pc2] * fac[j],
-                                lambda __: pred, 
-                                operand=None)
-            misfits = jidx_update(misfits, jidx[i, j], 
-                    -0.5*np.sum((eigvals_model - pred)**2)/len_data)
-            return misfits
-
-        return foril(0, N, true_func_j, misfits)
-    # }}} true_func_i(i, misfits)
-
-    misfits = foril(0, N, true_func_i, misfit_arr)
-    return fac, misfits
-
-# jitting the function
-_get_posterior_grid2d = jax.jit(get_posterior_grid2d)
-
-# plotting
-fig, axs = plt.subplots(nrows=num_params, 
-                        ncols=num_params, 
-                        figsize=(10, 10))
-for i in range(num_params):
-    for j in range(i+1, num_params):
-        thaxs = axs[j, i]
-        fac, misfit_2d = _get_posterior_grid2d(i, j)
-        facmin = fac.min()
-        facmax = fac.max()
-        plotval = np.exp(misfit_2d)
-
-        im = thaxs.imshow(plotval, extent=[facmin*true_params_flat[i],
-                                           facmax*true_params_flat[i],
-                                           facmin*true_params_flat[j],
-                                           facmax*true_params_flat[j]],
-                          aspect=abs(true_params_flat[i]/true_params_flat[j]))
-        thaxs.plot(true_params_flat[i], true_params_flat[j], 'xr')
-        plt.colorbar(im, ax=thaxs)
-        thaxs.set_title(f"c{i}-c{j}")
-
-fig.tight_layout()
-plt.savefig('2D_pdf.png')
-
-"""
+acoeffs_true = compute_acoeffs()

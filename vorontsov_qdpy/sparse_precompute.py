@@ -166,7 +166,8 @@ def build_hypmat_freqdiag(CNM_AND_NBS, SUBMAT_DICT, dim_hyper):
         mmax_i = nl_nbs[i, 1]
         dm = max_lmax - mmax_i
         sidx, eidx = dm, -dm+1
-        freqdiag[i, i, sidx:eidx] = omega_nl**2 - omegaref**2
+        freqdiag[i, i, sidx:eidx] = (omega_nl**2 - omegaref**2)#/2/omegaref
+        # V11 convention of dividing by 2omegaref
     return freqdiag
 
 
@@ -230,9 +231,9 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, sparse_idx_local,
             gamma_prod = jax_gamma_(ell1) * jax_gamma_(ell2) * jax_gamma_(s) 
             Omega_prod = jax_Omega_(ell1, 0) * jax_Omega_(ell2, 0)
             
-            # also including 8 pi * omega_ref
+            # also including 4 pi (excluding 2 * omega_ref; V11 convention)
             ell1_ell2_fac = gamma_prod * Omega_prod *\
-                            8 * np.pi * omegaref *\
+                            4 * np.pi * 2 * omegaref *\
                             (1 - jax_minus1pow_vec(ell1 + ell2 + s))
 
             # parameters for calculating the integrated part
@@ -322,7 +323,8 @@ def build_hypmat_all_cenmults():
                                          dim_hyper)
         
         noc_hypmat_this_s = []
-        sparse_idx_local = np.zeros((max_nbs, max_nbs, 2*max_lmax+1, 2), dtype=int)
+        sparse_idx_local = np.ones((max_nbs, max_nbs, 2*max_lmax+1, 2), dtype=int)
+        sparse_idx_local *= dim_hyper - 1
         
         for s_ind, s in enumerate(GVARS.s_arr):
             # shape (dim_hyper x dim_hyper) but sparse form

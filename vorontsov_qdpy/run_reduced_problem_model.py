@@ -68,7 +68,7 @@ acoeffs_sigma = np.load('acoeffs_sigma.npy')
 
 ell0_arr = np.load('ell0_arr.npy')
 omega0_arr = np.load('omega0_arr.npy')
-dom_dell_arr = np.load('dom_dell_arr.npy')
+dom_dell_arr = np.load('dom_dell_arr.npy').flatten()
 
 cind_arr = np.load('cind_arr.npy')
 smin_ind, smax_ind = np.load('sind_arr.npy')
@@ -145,7 +145,6 @@ fixed_part_M = jnp.asarray(fixed_part_M)
 param_coeff_bkm = jnp.asarray(param_coeff_bkm)
 fixed_part_bkm = jnp.asarray(fixed_part_bkm)
 k_arr = jnp.asarray(k_arr)
-p_arr = jnp.asarray(p_arr[:, :, 0, :]) # removing dummy index
 
 acoeffs_sigma = jnp.asarray(acoeffs_sigma)
 Pjl_norm = jnp.asarray(Pjl_norm)
@@ -175,7 +174,8 @@ ellmax_pjl = int(Pjl_read.shape[-1]//2)
 dell = max_lmax - ellmax_pjl
 Pjl = np.array(Pjl)
 for i in range(nmults):
-    Pjl[i, ...] = np.roll(Pjl[i, ...], dell, axis=-1)
+    dell2 = ellmax_pjl - ell0_arr[i]
+    Pjl[i, ...] = np.roll(Pjl[i, ...], dell+dell2, axis=-1)
 Pjl = jnp.asarray(Pjl)
 
 ########################################################################
@@ -196,8 +196,8 @@ param_coeff_M = jnp.moveaxis(param_coeff_M, 0, -1)
 param_coeff_bkm = jnp.moveaxis(param_coeff_bkm, 0, -1)
 
 # setting the prior limits
-cmin = 0.8 * jnp.ones_like(true_params)# / 1e-3
-cmax = 1.2 * jnp.ones_like(true_params)# / 1e-3
+cmin = 0.8 * jnp.ones_like(true_params)
+cmax = 1.2 * jnp.ones_like(true_params)
 
 ctrl_limits = {}
 ctrl_limits['cmin'] = cmin
@@ -216,7 +216,8 @@ def get_clp(bkm):
     def true_func(i, intg):
         term2 = 2*bkm*jnp.sin(k_arr*tvals[i])/k_arr_denom
         term2 = term2.sum(axis=(1, 2))[:, NAX, :]
-        intg = jidx_update(intg, jidx[:, :, :, i], jnp.cos(p_arr*tvals[i] - term2))
+        intg = jidx_update(intg, jidx[:, :, :, i], jnp.cos(p_arr[:, :, NAX]*tvals[i]
+                                                           - term2))
         return intg
 
     integrand = foril(0, len(tvals), true_func, integrand)
@@ -231,32 +232,35 @@ def get_eig_corr(clp, z1):
     return cZc.sum(axis=0)
 
 
-
 def compare_model():
     # predicted a-coeficients                                                             
     eigvals_compute = jnp.array([])
     eigvals_acoeffs = jnp.array([])
     pred_acoeffs = jnp.zeros(num_j * nmults)
 
+    def scale_bkm(mult_idx, bkm_full):
+        bkm_full = jidx_update(bkm_full,
+                               jidx[i, :, :, :],
+                               -1.0*bkm_full[mult_idx, ...]/dom_dell_jax[mult_idx])
+        return bkm_full
+
     z0 = param_coeff_M @ true_params + fixed_part_M
     zfull = param_coeff @ true_params + fixed_part
     bkm = param_coeff_bkm @ true_params + fixed_part_bkm
+    bkm = foril(0, nmults, scale_bkm, bkm)
     clp = get_clp(bkm)
-    # clp = jnp.ones_like(bkm[:, 0, :])
-
-    # z1 = zfull - z0
 
     def loop_in_mults(mult_ind, pred_acoeff):
-        ell0 = ell0_arr_jax[mult_ind]
-        z0mult = -1.0*z0[mult_ind]/dom_dell_jax[mult_ind]
-        z1mult = zfull[mult_ind] - z0mult
         omegaref = omega0_arr_jax[mult_ind]
+        ell0 = ell0_arr_jax[mult_ind]
+        z0mult = z0[mult_ind]
+        z1mult = zfull[mult_ind]/2./omegaref - z0mult
         # z1_sparse = sparse.BCOO((z1mult, sparse_idx[mult_ind]),
         #                        shape=(dim_hyper, dim_hyper))
         # z0_sparse = sparse.BCOO((z0mult, sparse_idx[mult_ind]),
         #                        shape=(dim_hyper, dim_hyper))
-        _eigval0mult = get_eig_corr(clp[mult_ind], z0mult)/2./omegaref*GVARS.OM*1e6
-        _eigval1mult = get_eig_corr(clp[mult_ind], z1mult)/2./omegaref*GVARS.OM*1e6
+        _eigval0mult = get_eig_corr(clp[mult_ind], z0mult)*GVARS.OM*1e6#/2./omegaref
+        _eigval1mult = get_eig_corr(clp[mult_ind], z1mult)*GVARS.OM*1e6#/2./omegaref
         _eigval_mult = _eigval0mult + _eigval1mult
         Pjl_local = Pjl[mult_ind]
         # pred_acoeff = (Pjl_local @ _eigval_mult[:2*ell0+1])/Pjl_norm[i]                  
@@ -274,7 +278,6 @@ compare_model_ = jax.jit(compare_model)
 
 def model():
     c_arr = numpyro.sample(f'c_arr', dist.Uniform(cmin, cmax))
-
     pred_acoeffs = jnp.zeros(num_j * nmults)
     pred = (c_arr*true_params) @ param_coeff + fixed_part
 
@@ -327,10 +330,24 @@ def print_summary(samples, ctrl_arr):
 
 if __name__ == "__main__":
     acoeffs_model = compare_model_()
-    print(f"acoeffs model = \n {acoeffs_model}")
-    print(f"acoeffs true = \n {acoeffs_true}")
-    print(f"\n diff = \n {acoeffs_model - acoeffs_true}")
-    print(f"\n diff/sigma = \n {(acoeffs_model - acoeffs_true)/acoeffs_sigma}")
+    diff = acoeffs_model - acoeffs_true
+    len_acoeffs = len(acoeffs_model)
+    print(f"{'ell':^6}   |" +
+          f"{'Model':^12}   |" +
+          f"{'True':^12}   |" +
+          f"{'Diff':^12}   |" +
+          f"{'Diff/sigma':^12}\n" + 
+          f"-----------------------------------------------------------------------")
+    mult_idx = 0
+    for i in range(len_acoeffs):
+        print(f"{ell0_arr_jax[mult_idx]:^6}   |" +
+              f"{acoeffs_model[i]*1e3:12.5f}   |" +
+              f"{acoeffs_true[i]*1e3:12.5f}   |" +
+              f"{diff[i]*1e3:12.5f}   |" +
+              f"{diff[i]/acoeffs_sigma[i]:12.5f}")
+        if (i+1)%3==0:
+          print(f"-------------------------------------------------------------------")
+          mult_idx += 1
 
     t1 = time.time()
     N = 50

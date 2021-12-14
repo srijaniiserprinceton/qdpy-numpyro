@@ -92,21 +92,24 @@ dim_hyper = fixed_hypmat_dense.shape[0]
 
 def model():
     eigval_model = jnp.array([])
+    acoeff_model = jnp.array([])
     
     for i in range(nmults):
         eigval_mult = np.zeros(dim_hyper)
-        hypmat_sparse = build_hm_sparse.build_hypmat_w_c(noc_hypmat[i],
-                                                         fixed_hypmat[i],
+        hypmat_sparse = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
+                                                         fixed_hypmat_all_sparse[i],
                                                          GVARS.ctrl_arr_dpt_clipped,
                                                          GVARS.nc, len_s)
 
+        hypmat_flat = np.reshape(hypmat_sparse, max_nbs*max_nbs*len_mmax, order='F')
+
         # converting to dense
-        hypmat = sparse.coo_matrix((hypmat_sparse,
+        hypmat = sparse.coo_matrix((hypmat_flat,
                                     (sparse_idxs_flat[i, ..., 0],
                                      sparse_idxs_flat[i, ..., 1])),
                                    shape=(dim_hyper, dim_hyper)).toarray()
 
-        print(i, hypmat.shape)
+        print(i, np.diag(hypmat))
 
         # solving the eigenvalue problem and mapping eigenvalues
         ell0 = ell0_arr[i]
@@ -116,10 +119,14 @@ def model():
         eigval_qdpt_mult *= GVARS.OM*1e6
         eigval_mult[:len(eigval_qdpt_mult)] = eigval_qdpt_mult
 
+        Pjl_local = Pjl[i][:, :2*ell0+1]
+        qdpt_acoeff = (Pjl_local @ eigval_qdpt_mult)/Pjl_norm[i]
+
         # storing the correct order of nmult
         eigval_model = jnp.append(eigval_model, eigval_mult)
+        acoeff_model = jnp.append(acoeff_model, qdpt_acoeff)
 
-    return eigval_model
+    return eigval_model, acoeff_model
 
 def eigval_sort_slice(eigval, eigvec):
     def body_func(i, ebs):
@@ -156,13 +163,46 @@ def get_eigvals_sigma(len_evals_true):
 
     return eigvals_sigma
 
+
+def compare_hypmat():
+    hypmat_sparse = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[-1],
+                                                     fixed_hypmat_all_sparse[-1],
+                                                     GVARS.ctrl_arr_dpt_clipped,
+                                                     GVARS.nc, len_s)
+    hypmat_flat = np.reshape(hypmat_sparse, max_nbs*max_nbs*len_mmax, order='F')
+
+    # converting to dense
+    hypmat = sparse.coo_matrix((hypmat_flat,
+                                (sparse_idxs_flat[-1, ..., 0],
+                                 sparse_idxs_flat[-1, ..., 1])),
+                                shape=(dim_hyper, dim_hyper)).toarray()
+
+    supmat_qdpt = np.load(f"supmat_qdpt_200.npy")
+    matsize = supmat_qdpt.shape[0]
+    supmat_model = hypmat[:matsize, :matsize]
+    diff = supmat_model - supmat_qdpt
+    print(f"Max diff = {abs(diff).max()}")
+    return supmat_qdpt, supmat_model
+
+
+
 if __name__ == "__main__":
     # model_ = jit(model)
-    # eigvals_true = compare_hypmat()
-    eigvals_true = model()
+    sm_qdpt, sm_model = compare_hypmat()
+    RL_poly = np.load('RL_poly.npy')
+    smin = min(GVARS.s_arr)
+    smax = max(GVARS.s_arr)
+    Pjl = RL_poly[:, smin:smax+1:2, :]
+
+    Pjl_norm = np.zeros((Pjl.shape[0],
+                         Pjl.shape[1]))
+    for mult_ind in range(Pjl.shape[0]):
+        Pjl_norm[mult_ind] = np.diag(Pjl[mult_ind] @ Pjl[mult_ind].T)
+
+    eigvals_true, acoeffs_true = model()
     eigvals_sigma = get_eigvals_sigma(len(eigvals_true))
     print(f"num elements = {len(eigvals_true)}")
     np.save("evals_model.npy", eigvals_true) 
     np.save('eigvals_sigma.npy', eigvals_sigma)
     np.save('acoeffs_sigma.npy', GVARS.acoeffs_sigma)
-    np.save('acoeffs_true.npy', GVARS.acoeffs_true)
+    np.save('acoeffs_true.npy', acoeffs_true)

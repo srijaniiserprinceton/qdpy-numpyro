@@ -182,7 +182,7 @@ def get_sparse_idx():
 max_lmax, max_nbs, sparse_idx = get_sparse_idx()
 
 
-def build_bkm_nonint_n_fxd_1cnm(CNM_AND_NBS_bkm, k_arr, p_arr, s):
+def build_bkm_nonint_n_fxd_1cnm(CNM_AND_NBS, CNM_AND_NBS_bkm, k_arr, p_arr, s):
     """Computes elements in the hypermatrix excluding the
     integral part.
     """
@@ -194,9 +194,9 @@ def build_bkm_nonint_n_fxd_1cnm(CNM_AND_NBS_bkm, k_arr, p_arr, s):
 
     # extracting attributes from CNM_AND_NBS
     num_nbs = len(CNM_AND_NBS_bkm.omega_nbs)
-    nl_nbs = CNM_AND_NBS_bkm.nl_nbs
+    nl_nbs_bkm = CNM_AND_NBS_bkm.nl_nbs
+    nl_nbs = CNM_AND_NBS.nl_nbs
 
-    ell0 = nl_nbs[0, 1]
 
     # filling in the non-m part using the masks
     # k =  +/1 or k = +/2 are arranged one after another.
@@ -205,7 +205,7 @@ def build_bkm_nonint_n_fxd_1cnm(CNM_AND_NBS_bkm, k_arr, p_arr, s):
     for i in range(0, num_nbs, 2):
         j = i+1   # the index for the coupling multiplet
         
-        ell1, ell2 = nl_nbs[i, 1], nl_nbs[j, 1]
+        ell1, ell2 = nl_nbs_bkm[i, 1], nl_nbs_bkm[j, 1]
         kval = ell2 - ell1
         ellmin = min(ell1, ell2)
 
@@ -258,16 +258,11 @@ def build_bkm_nonint_n_fxd_1cnm(CNM_AND_NBS_bkm, k_arr, p_arr, s):
         fixed_b_k_m[i, j, sidx:eidx] = f_integral
         k_arr[i, j, sidx:eidx] = kval
 
-
+    num_nbs = len(CNM_AND_NBS.omega_nbs)
+    ell0 = nl_nbs[0, 1]
     for i in range(num_nbs):
-        for j in range(num_nbs):
-            ell1, ell2 = nl_nbs[i, 1], nl_nbs[j, 1]
-            ellmin = min(ell1, ell2)
-
-            sidx = max_lmax - ellmin
-            eidx = max_lmax + ellmin + 1
-            pval = ell1 - ell0
-            p_arr[i, j, sidx:eidx] = pval
+        ell1 = nl_nbs[i, 1]
+        p_arr[i] = ell1 - ell0
 
     return noc_b_k_m, fixed_b_k_m, k_arr, p_arr
 
@@ -313,7 +308,7 @@ def build_bkm_all_cenmults():
     # to make it convenient to perform explicit k-dependent operations
     # to make it convenient to perform explicit p-dependent operations
     k_arr_shaped = np.zeros_like(fixed_bkm_shaped)
-    p_arr_shaped = np.zeros_like(fixed_bkm_shaped)
+    p_arr_shaped = np.zeros((nmults, max_nbs))
     
     # looping over cenmtral multipelts
     for i in range(nmults):
@@ -327,14 +322,15 @@ def build_bkm_all_cenmults():
         # list of arrays for different s
         noc_bkm_this_mult = []
         k_arr_local = np.zeros((max_nbs, max_nbs, 2*max_lmax+1))
-        p_arr_local = np.zeros((max_nbs, max_nbs, 2*max_lmax+1))
+        p_arr_local = np.zeros(max_nbs)
 
         # loop in s
         for sind, s in enumerate(GVARS.s_arr):
             # computing the unshaped bkm (noc and fixed)
             # build_bkm_nonint_n_fxd_1cnm(CNM_AND_NBS,
             noc_bkm, fixed_bkm, k_arr_local, p_arr_local = \
-                build_bkm_nonint_n_fxd_1cnm(CNM_AND_NBS_bkm,
+                build_bkm_nonint_n_fxd_1cnm(CNM_AND_NBS,
+                                            CNM_AND_NBS_bkm,
                                             k_arr_local,
                                             p_arr_local,
                                             s)
@@ -345,92 +341,3 @@ def build_bkm_all_cenmults():
         p_arr_shaped[i, ...] = p_arr_local
 
     return noc_bkm_shaped, fixed_bkm_shaped, k_arr_shaped, p_arr_shaped
-
-
-
-"""
-def build_bkm_all_cenmults():
-    # number of multiplets used
-    nmults = len(GVARS.n0_arr)
-    dim_hyper = get_dim_hyper()
-
-    # number of k's which are valid. See Vorontsov Eqn (33), (34)
-    # smax=5 can couple a max of dell = 4 (needs to be even). 
-    # (ell+k/2, ell-k/2) get coupled. So, coupling for k = 2, 4 only.
-    num_k = (GVARS.smax - 1)//2
-    len_s = len(GVARS.s_arr)
-    # storing the arrays in dim_hyper length
-    # to facilitate easy c_l_p construction and 
-    # eigenvalue calculation later.
-    
-    noc_bkm_shaped = np.zeros((nmults, num_k, len_s,
-                               GVARS.nc, max_nbs, max_nbs, 2*max_lmax+1))
-    fixed_bkm_shaped = np.zeros((nmults, num_k, max_nbs, max_nbs, 2*max_lmax+1))
-    
-    # to make it convenient to perform explicit k-dependent operations
-    k_arr_shaped = np.zeros_like(fixed_bkm_shaped)
-    # to make it convenient to perform explicit p-dependent operations
-    p_arr_shaped = np.zeros((nmults, dim_hyper))
-    
-    # looping over cenmtral multipelts
-    for i in range(nmults):
-        n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
-        
-        # namedtuple for the central multiplet and its neighbours (V11) +
-        # namedtuple for the central multiplet and its neighbours (supermatrix)
-        CNM_AND_NBS_bkm = getnt4cenmult_bkm(n0, ell0, GVARS_ST)
-        CNM_AND_NBS = getnt4cenmult(n0, ell0, GVARS_ST)
-        
-        # list of arrays for different s
-        noc_bkm_this_mult = []
-
-        # loop in s
-        for sind, s in enumerate(GVARS.s_arr):
-            # computing the unshaped bkm (noc and fixed)
-            noc_bkm, fixed_bkm = build_bkm_nonint_n_fxd_1cnm(CNM_AND_NBS_bkm, s)
-            # to keep the start indiex of the global m dimension
-            start_global_m = int(0)
-
-            for pind, ellp in enumerate(CNM_AND_NBS.nl_nbs[:, 1]):
-                m_ellp = 2 * ellp + 1
-                # global_m start and end indices depending on ellp
-                end_global_m = start_global_m + m_ellp
-
-                # looping over k
-                for kind in range(num_k):
-                    len_m_unshaped = len(fixed_bkm[kind])
-                    
-                    # defines if there will be zero pads in the local 
-                    # m array corresponding to ellp
-                    local_dem = np.abs(m_ellp - len_m_unshaped)//2
-                    
-                    # local_m start and end slices depending on k
-                    start_local_slice, end_local_slice = 0, len_m_unshaped
-                    
-                    # the global_m start and end slices depending on k
-                    start_global_slice = start_global_m * 1
-                    end_global_slice = end_global_m * 1
-
-                    # indices to slice the shaped and unshaped m arrays
-                    if(m_ellp > len_m_unshaped):
-                        start_global_slice += local_dem
-                        end_global_slice -= local_dem
-                    else:
-                        start_local_slice += local_dem
-                        end_local_slice -= local_dem
-
-                    noc_bkm_shaped[i, kind, sind, :, start_global_slice:end_global_slice] =\
-                                        noc_bkm[kind][:, start_local_slice:end_local_slice]
-                    fixed_bkm_shaped[i, kind, start_global_slice:end_global_slice] +=\
-                                        fixed_bkm[kind][start_local_slice:end_local_slice]
-                        
-                    # since k = 2, 4, ... for kind = 0, 1, ...
-                    k_arr_shaped[i, kind, start_global_slice:end_global_slice] = 2*(kind+1)
-                    p_arr_shaped[i, start_global_slice:end_global_slice] = ellp-ell0
-                    
-
-                # updating the start_global_m
-                start_global_m = end_global_m
-
-    return noc_bkm_shaped, fixed_bkm_shaped, k_arr_shaped, p_arr_shaped
-"""
