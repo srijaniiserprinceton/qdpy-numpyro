@@ -88,8 +88,6 @@ dim_hyper = fixed_hypmat_dense.shape[0]
 
 
 # converting to numpy ndarrays from lists
-
-
 def model():
     eigval_model = jnp.array([])
     acoeff_model = jnp.array([])
@@ -209,5 +207,6 @@ if __name__ == "__main__":
     np.save("evals_model.npy", eigvals_true) 
     np.save('eigvals_sigma.npy', eigvals_sigma)
     np.save('acoeffs_sigma.npy', GVARS.acoeffs_sigma)
-    np.save('acoeffs_true.npy', acoeffs_true)
-    sm_qdpt, sm_model = compare_hypmat()
+    # np.save('acoeffs_true.npy', acoeffs_true)
+    np.save('acoeffs_true.npy', GVARS.acoeffs_true)
+    # sm_qdpt, sm_model = compare_hypmat()
