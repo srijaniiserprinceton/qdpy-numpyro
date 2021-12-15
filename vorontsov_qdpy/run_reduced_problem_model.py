@@ -1,6 +1,6 @@
 import os
 import time
-num_chains = 20
+num_chains = 1
 os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
 
 import matplotlib.pyplot as plt
