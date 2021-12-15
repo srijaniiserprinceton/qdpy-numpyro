@@ -193,27 +193,39 @@ def get_clp(bkm):
                            bkm.shape[-1],
                            len(tvals)))
 
-    def true_func(i, intg):
+    def t_func(i, intg):
+
+        # def p_func(j, intg2):
+        #     intg2 = jidx_update(intg2,
+        #                         jidx[:, j, :, i],
+        #                         jnp.cos(p_arr[:, j]*tvals[i] - term2))
+        #     return intg2
         term2 = 2*bkm*jnp.sin(k_arr*tvals[i])/k_arr_denom
         term2 = term2.sum(axis=(1, 2))[:, NAX, :]
         intg = jidx_update(intg, jidx[:, :, :, i], jnp.cos(p_arr[:, :, NAX]*tvals[i]
                                                            - term2))
+        # intg = foril(0, max_nbs, p_func, intg)
         return intg
 
-    integrand = foril(0, len(tvals), true_func, integrand)
+    integrand = foril(0, len(tvals), t_func, integrand)
     integral = jnp.trapz(integrand, axis=-1, x=tvals)/jnp.pi
     return integral
 
 
 def get_eig_corr(clp, z1):
-    # return jnp.ones_like(clp)
-    # return clp.conj() * (z1 @ clp)
+    # cZc = jnp.zeros(z1.shape[-1])
+    # def m_func(idx, czcm):
+    #     czcm = jidx_update(czcm,
+    #                        jidx[idx],
+    #                        clp.conj()[:, idx] @ (z1[:, :, idx] @ clp[:, idx]))
+    #     return czcm
+    # return foril(0, len(cZc), m_func, cZc)
     cZc = clp.conj() * ((z1 * clp[:, NAX, :]).sum(axis=0))
     return cZc.sum(axis=0)
 
 
 def compare_model():
-    # predicted a-coeficients                                                             
+    # predicted a-coeficients
     eigvals_compute = jnp.array([])
     eigvals_acoeffs = jnp.array([])
     pred_acoeffs = jnp.zeros(num_j * nmults)
@@ -351,6 +363,7 @@ def test_setup():
 
 if __name__ == "__main__":
     test_setup()
+
     # Start from this source of randomness. We will split keys for subsequent operations.
     seed = int(123 + 100*np.random.rand())
     rng_key = random.PRNGKey(seed)
