@@ -4,7 +4,7 @@
 #PBS -e qderr.04.log
 #PBS -l select=1:ncpus=32:mem=60gb
 #PBS -l walltime=45:00:00
-#PBS -q small
+#PBS -q clx
 cd $PBS_O_WORKDIR
 cd ..
 PYTHON=/home/g.samarth/.conda/envs/jaxpyro/bin/python

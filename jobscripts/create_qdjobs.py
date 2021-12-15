@@ -1,6 +1,6 @@
 import subprocess
-import os
 import argparse
+import os
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--numchains", help="Total number of chains",
