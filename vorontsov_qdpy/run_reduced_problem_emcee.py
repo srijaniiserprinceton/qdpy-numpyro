@@ -35,13 +35,15 @@ def log_likelihood(theta, y, yerr):
 
 
 def log_prior(theta):
-    tval = True
+    logpr = 0
+    cmax = 1.2
+    cmin = 0.8
     for i in range(num_params):
-        if 0.80 < theta[i] < 1.20:
-            tval *= True
+        if cmin < theta[i] < cmax:
+            logpr += -np.log(cmax-cmin)
         else:
-            return -np.inf
-    return 0.0
+            logpr += -np.inf
+    return logpr
 
 
 def log_probability(theta, y, yerr):

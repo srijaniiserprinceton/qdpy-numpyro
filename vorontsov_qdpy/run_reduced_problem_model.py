@@ -219,8 +219,7 @@ def get_eig_corr(clp, z1):
     #                        clp.conj()[:, idx] @ (z1[:, :, idx] @ clp[:, idx]))
     #     return czcm
     # return foril(0, len(cZc), m_func, cZc)
-    cZc = clp.conj() * ((z1 * clp[:, NAX, :]).sum(axis=0))
-    return cZc.sum(axis=0)
+    return (clp.conj() * ((z1 * clp[:, NAX, :]).sum(axis=0))).sum(axis=0)
 
 
 def compare_model():
@@ -248,8 +247,16 @@ def compare_model():
         z0mult = z0[mult_ind]
         z1mult = zfull[mult_ind]/2./omegaref - z0mult
 
-        _eigval0mult = get_eig_corr(clp[mult_ind], z0mult)*GVARS.OM*1e6
-        _eigval1mult = get_eig_corr(clp[mult_ind], z1mult)*GVARS.OM*1e6
+        # _eigval0mult = get_eig_corr(clp[mult_ind], z0mult)*GVARS.OM*1e6
+        # _eigval1mult = get_eig_corr(clp[mult_ind], z1mult)*GVARS.OM*1e6
+
+        # _eigval0mult = (clp[mult_ind].conj() * ((z0mult *
+        #                             clp[mult_ind, :, NAX, :]).sum(axis=0))).sum(axis=0)
+        # _eigval1mult = (clp[mult_ind].conj() * ((z1mult *
+        #                             clp[mult_ind, :, NAX, :]).sum(axis=0))).sum(axis=0)
+
+        _eigval0mult = jnp.ones(z0mult.shape[-1])
+        _eigval1mult = jnp.ones(z0mult.shape[-1])
         _eigval_mult = _eigval0mult + _eigval1mult
 
         Pjl_local = Pjl[mult_ind]
@@ -297,7 +304,6 @@ def model():
                                  (Pjl_local @ _eigval_mult)/Pjl_norm[mult_ind],
                                  (mult_ind * num_j,))
         return pred_acoeff
-
 
     pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
     misfit_acoeffs = (pred_acoeffs[7:] - acoeffs_true[7:])/acoeffs_sigma[7:]
