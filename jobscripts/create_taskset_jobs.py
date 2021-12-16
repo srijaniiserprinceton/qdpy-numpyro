@@ -23,6 +23,7 @@ _pythonpath = subprocess.check_output("which python",
 pythonpath = _pythonpath.decode("utf-8").split("\n")[0]
 jobname = f"sgk.tsqd.{numchains}"
 execpath = f"{package_dir}/vorontsov_qdpy/run_reduced_problem_model.py"
+bashpath = f"{package_dir}/jobscripts/run_v11jobs.sh"
 logdir = f"{package_dir}/jobscripts/logs"
 
 job_str = \
@@ -36,25 +37,34 @@ f"""#!/bin/bash
 echo \"Starting at \"`date`
 cd $PBS_O_WORKDIR
 cd ..
+BASHFILE={bashpath}
+$BASHFILE
+"""
+job_str = job_str + "echo \"Finished at \"`date`"
+
+with open(f"{package_dir}/jobscripts/gnup_taskset.pbs", "w") as f:
+    f.write(job_str)
+
+bash_str = \
+f"""#!/bin/bash
 PYTHONPATH={pythonpath}
 EXECPATH={execpath}
 LOGDIR={logdir}
 """
+
 for i in range(numchains):
     ipjobs_str = f"taskset -c {i:3d} $PYTHONPATH $EXECPATH "
     job_args = f"--warmup {warmup} --maxiter {maxiter} --chain_num {i:3d}"
     outfile = f" >$LOGDIR/qd.{i:03d}.out"
-    errfile = f" 2>$LOGDIR/qd.{i:03d}.err &;"
-    pidlog = f" pids[{i}]=$!;\n"
-    job_str = job_str + ipjobs_str + job_args + outfile + errfile + pidlog
+    errfile = f" 2>$LOGDIR/qd.{i:03d}.err & \n"
+    pidlog = f"pids[$!]=$! \n"
+    bash_str = bash_str + ipjobs_str + job_args + outfile + errfile + pidlog
 
-job_str = job_str + \
+bash_str = bash_str + \
 """for pid in ${pids[*]}; do
     wait $pid
 done\n
 """
 
-job_str = job_str + "echo \"Finished at \"`date`"
-
-with open(f"{package_dir}/jobscripts/gnup_taskset.pbs", "w") as f:
-    f.write(job_str)
+with open(f"{bashpath}", "w") as f:
+    f.write(bash_str)
