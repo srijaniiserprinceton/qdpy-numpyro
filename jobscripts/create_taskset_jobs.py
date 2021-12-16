@@ -44,8 +44,14 @@ for i in range(numchains):
     ipjobs_str = f"taskset -c {i:3d} $PYTHONPATH $EXECPATH "
     job_args = f"--warmup {warmup} --maxiter {maxiter} --chain_num {i:3d}"
     outfile = f" >$LOGDIR/qd.{i:03d}.out"
-    errfile = f" 2>$LOGDIR/qd.{i:03d}.err"
-    job_str = job_str + ipjobs_str + job_args + outfile + errfile + "\n"
+    errfile = f" 2>$LOGDIR/qd.{i:03d}.err &;"
+    pidlog = f" pids[{i}]=$!;\n"
+    job_str = job_str + ipjobs_str + job_args + outfile + errfile + pidlog
+
+job_str = job_str + \
+f"""for pid in ${pids[*]}; do
+    wait $pid
+done"""
 
 job_str = job_str + "echo \"Finished at \"`date`"
 
