@@ -49,9 +49,10 @@ for i in range(numchains):
     job_str = job_str + ipjobs_str + job_args + outfile + errfile + pidlog
 
 job_str = job_str + \
-f"""for pid in ${pids[*]}; do
+"""for pid in ${pids[*]}; do
     wait $pid
-done"""
+done\n
+"""
 
 job_str = job_str + "echo \"Finished at \"`date`"
 
