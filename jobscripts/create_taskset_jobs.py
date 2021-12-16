@@ -21,7 +21,7 @@ package_dir = os.path.dirname(current_dir)
 _pythonpath = subprocess.check_output("which python",
                                         shell=True)
 pythonpath = _pythonpath.decode("utf-8").split("\n")[0]
-jobname = f"sgk.qdpt.{numchains}"
+jobname = f"sgk.tsqd.{numchains}"
 execpath = f"{package_dir}/vorontsov_qdpy/run_reduced_problem_model.py"
 logdir = f"{package_dir}/jobscripts/logs"
 
@@ -30,7 +30,7 @@ f"""#!/bin/bash
 #PBS -N {jobname}
 #PBS -o out-{jobname}.log
 #PBS -e err-{jobname}.log
-#PBS -l select=1:ncpus={numchains}:mem={2*numchains}gb
+#PBS -l select=1:ncpus={numchains+2}:mem={2*numchains+4}gb
 #PBS -l walltime=45:00:00
 #PBS -q clx
 echo \"Starting at \"`date`
