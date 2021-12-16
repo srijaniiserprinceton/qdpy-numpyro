@@ -98,7 +98,6 @@ p_arr = np.load('p_arr.npy')
 k_arr_denom = k_arr*1
 k_arr_denom[k_arr==0] = 1
 
-
 #################################################################
 # number of central multiplets
 nmults = len(GVARS.ell0_arr)

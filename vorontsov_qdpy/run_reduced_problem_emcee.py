@@ -33,10 +33,11 @@ def log_likelihood(theta, y, yerr):
     sigma2 = yerr ** 2 
     return -0.5 * np.sum((y - itereigs) ** 2 / sigma2)
 
+
 def log_prior(theta):
     tval = True
     for i in range(num_params):
-        if 0.90 < theta[i] < 1.10:
+        if 0.80 < theta[i] < 1.20:
             tval *= True
         else:
             return -np.inf
@@ -69,7 +70,6 @@ def get_clp(bkm):
 def get_eig_corr(clp, z1):
     cZc = clp.conj() * ((z1 * clp[:, NAX, :]).sum(axis=0))
     return cZc.sum(axis=0)
-
 
 
 
@@ -240,7 +240,6 @@ if __name__ == "__main__":
     # setting the prior limits
     cmin = 0.8 * np.ones_like(true_params)
     cmax = 1.2 * np.ones_like(true_params)
-
 
     ############################################################################
     # number of s and c to fit
