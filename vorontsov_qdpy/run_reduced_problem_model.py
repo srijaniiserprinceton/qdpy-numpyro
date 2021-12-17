@@ -262,9 +262,9 @@ def compare_model():
 
 compare_model_ = jax.jit(compare_model)
 
-
 def model():
-    c_arr = numpyro.sample(f'c_arr', dist.Uniform(cmin, cmax))
+    # c_arr = numpyro.sample(f'c_arr', dist.Uniform(cmin, cmax))
+    c_arr = jnp.ones_like(true_params)
     pred_acoeffs = jnp.zeros(num_j * nmults)
     c_params = c_arr * true_params
 
@@ -293,9 +293,9 @@ def model():
         return pred_acoeff
 
     pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
-    misfit_acoeffs = (pred_acoeffs[7:] - acoeffs_true[7:])/acoeffs_sigma[7:]
-    return numpyro.factor('obs', dist.Normal(0.0, 1.0).log_prob(misfit_acoeffs))
-
+    # misfit_acoeffs = (pred_acoeffs - acoeffs_true)/acoeffs_sigma
+    # return numpyro.factor('obs', dist.Normal(0.0, 1.0).log_prob(misfit_acoeffs))
+    return pred_acoeffs
 
 def model_old():
     c_arr = numpyro.sample(f'c_arr', dist.Uniform(cmin, cmax))
@@ -332,7 +332,7 @@ def model_old():
         return pred_acoeff
 
     pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
-    misfit_acoeffs = (pred_acoeffs[7:] - acoeffs_true[7:])/acoeffs_sigma[7:]
+    misfit_acoeffs = (pred_acoeffs - acoeffs_true)/acoeffs_sigma
     return numpyro.factor('obs', dist.Normal(0.0, 1.0).log_prob(misfit_acoeffs))
 
 
@@ -391,6 +391,8 @@ def test_setup():
     t2 = time.time()
     print(f"Total time taken for {nmults} modes = {(t2-t1)/N:.3e} seconds")
 
+
+sys.exit()
 
 if __name__ == "__main__":
     test_setup()
