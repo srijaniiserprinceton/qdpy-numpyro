@@ -274,7 +274,7 @@ def model():
                                -1.0*bkm_full[mult_idx, ...]/dom_dell_jax[mult_idx])
         return bkm_full
 
-    zfull = (param_coeff @ c_params + fixed_part)/2./omegaref
+    zfull = param_coeff @ c_params + fixed_part
     bkm = param_coeff_bkm @ c_params + fixed_part_bkm
     bkm = foril(0, nmults, scale_bkm, bkm)
     clp = get_clp(bkm)
@@ -282,8 +282,9 @@ def model():
     def loop_in_mults(mult_ind, pred_acoeff):
         ell0 = ell0_arr_jax[mult_ind]
         omegaref = omega0_arr_jax[mult_ind]
+        z_mult = zfull[mult_ind]/2./omegaref
         _eigval_mult = get_eig_corr(clp[mult_ind],
-                                    zfull[mult_ind])*GVARS.OM*1e6
+                                    z_mult)*GVARS.OM*1e6
 
         Pjl_local = Pjl[mult_ind]
         pred_acoeff = jdc_update(pred_acoeff,
