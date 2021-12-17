@@ -247,16 +247,8 @@ def compare_model():
         z0mult = z0[mult_ind]
         z1mult = zfull[mult_ind]/2./omegaref - z0mult
 
-        # _eigval0mult = get_eig_corr(clp[mult_ind], z0mult)*GVARS.OM*1e6
-        # _eigval1mult = get_eig_corr(clp[mult_ind], z1mult)*GVARS.OM*1e6
-
-        # _eigval0mult = (clp[mult_ind].conj() * ((z0mult *
-        #                             clp[mult_ind, :, NAX, :]).sum(axis=0))).sum(axis=0)
-        # _eigval1mult = (clp[mult_ind].conj() * ((z1mult *
-        #                             clp[mult_ind, :, NAX, :]).sum(axis=0))).sum(axis=0)
-
-        _eigval0mult = jnp.ones(z0mult.shape[-1])
-        _eigval1mult = jnp.ones(z0mult.shape[-1])
+        _eigval0mult = get_eig_corr(clp[mult_ind], z0mult)*GVARS.OM*1e6
+        _eigval1mult = get_eig_corr(clp[mult_ind], z1mult)*GVARS.OM*1e6
         _eigval_mult = _eigval0mult + _eigval1mult
 
         Pjl_local = Pjl[mult_ind]
@@ -272,6 +264,39 @@ compare_model_ = jax.jit(compare_model)
 
 
 def model():
+    c_arr = numpyro.sample(f'c_arr', dist.Uniform(cmin, cmax))
+    pred_acoeffs = jnp.zeros(num_j * nmults)
+    c_params = c_arr * true_params
+
+    def scale_bkm(mult_idx, bkm_full):
+        bkm_full = jidx_update(bkm_full,
+                               jidx[i, :, :, :],
+                               -1.0*bkm_full[mult_idx, ...]/dom_dell_jax[mult_idx])
+        return bkm_full
+
+    zfull = (param_coeff @ c_params + fixed_part)/2./omegaref
+    bkm = param_coeff_bkm @ c_params + fixed_part_bkm
+    bkm = foril(0, nmults, scale_bkm, bkm)
+    clp = get_clp(bkm)
+
+    def loop_in_mults(mult_ind, pred_acoeff):
+        ell0 = ell0_arr_jax[mult_ind]
+        omegaref = omega0_arr_jax[mult_ind]
+        _eigval_mult = get_eig_corr(clp[mult_ind],
+                                    zfull[mult_ind])*GVARS.OM*1e6
+
+        Pjl_local = Pjl[mult_ind]
+        pred_acoeff = jdc_update(pred_acoeff,
+                                 (Pjl_local @ _eigval_mult)/Pjl_norm[mult_ind],
+                                 (mult_ind * num_j,))
+        return pred_acoeff
+
+    pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
+    misfit_acoeffs = (pred_acoeffs[7:] - acoeffs_true[7:])/acoeffs_sigma[7:]
+    return numpyro.factor('obs', dist.Normal(0.0, 1.0).log_prob(misfit_acoeffs))
+
+
+def model_old():
     c_arr = numpyro.sample(f'c_arr', dist.Uniform(cmin, cmax))
     pred_acoeffs = jnp.zeros(num_j * nmults)
     c_params = c_arr * true_params
