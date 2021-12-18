@@ -121,6 +121,7 @@ class GlobalVars():
 
         self.fwindow = qdPars.fwindow
         self.wsr = -1.0*np.loadtxt(f'{self.datadir}/w_s/w.dat')
+        # self.wsr = np.loadtxt(f'{self.datadir}/w_s/w_hmi.dat')
         self.wsr_extend()
 
         # rth = r threshold beyond which the profiles are updated. 

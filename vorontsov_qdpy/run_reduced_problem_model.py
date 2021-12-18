@@ -121,7 +121,14 @@ Pjl_read = RL_poly[:, smin:smax+1:2, :]
 Pjl = np.zeros((Pjl_read.shape[0],
                 Pjl_read.shape[1],
                 len_mmax))
+Pjl_hyper = np.zeros((Pjl_read.shape[0],
+                      Pjl_read.shape[1],
+                      dim_hyper))
 Pjl[:, :, :Pjl_read.shape[2]] = Pjl_read
+
+for i in range(nmults):
+    ell0 = ell0_arr[i]
+    Pjl_hyper[i, :, :2*ell0+1] = Pjl_read[i, :, :2*ell0+1]
 
 # calculating the normalization for Pjl apriori
 # shape (nmults, num_j)
@@ -135,11 +142,14 @@ Pjl = np.array(Pjl)
 for i in range(nmults):
     dell2 = ellmax_pjl - ell0_arr[i]
     Pjl[i, ...] = np.roll(Pjl[i, ...], dell+dell2, axis=-1)
-Pjl = jnp.asarray(Pjl)
 
 #############################################################
 # converting to device array
 Pjl = jnp.asarray(Pjl)
+Pjl_norm = jnp.asarray(Pjl_norm)
+Pjl_hyper = jnp.asarray(Pjl_hyper)
+
+acoeffs_sigma = jnp.asarray(acoeffs_sigma)
 true_params = jnp.asarray(true_params)
 param_coeff = jnp.asarray(param_coeff)
 fixed_part = jnp.asarray(fixed_part)
@@ -151,8 +161,6 @@ param_coeff_bkm = jnp.asarray(param_coeff_bkm)
 fixed_part_bkm = jnp.asarray(fixed_part_bkm)
 k_arr = jnp.asarray(k_arr)
 
-acoeffs_sigma = jnp.asarray(acoeffs_sigma)
-Pjl_norm = jnp.asarray(Pjl_norm)
 sparse_idx = jnp.asarray(sparse_idx)
 ell0_arr_jax = jnp.asarray(GVARS.ell0_arr)
 omega0_arr_jax = jnp.asarray(omega0_arr)
@@ -227,6 +235,7 @@ def compare_model():
     eigvals_compute = jnp.array([])
     eigvals_acoeffs = jnp.array([])
     pred_acoeffs = jnp.zeros(num_j * nmults)
+    pred_ac_dpt = jnp.zeros(num_j * nmults)
 
     def scale_bkm(mult_idx, bkm_full):
         bkm_full = jidx_update(bkm_full,
@@ -257,8 +266,25 @@ def compare_model():
                                  (mult_ind * num_j,))
         return pred_acoeff
 
+    def loop_dpt(mult_ind, pred_ac_dpt):
+        ell0 = ell0_arr_jax[mult_ind]
+        omegaref = omega0_arr_jax[mult_ind]
+        zmult = zfull[mult_ind]/2./omegaref
+        zm_flat = jnp.reshape(zmult, (max_nbs*max_nbs*len_mmax), order='F')
+        sidx_flat = jnp.reshape(sparse_idx[mult_ind],
+                                (max_nbs*max_nbs*len_mmax, 2), order='F')
+        zmult_dense = sparse.BCOO((zm_flat, sidx_flat),
+                                  shape=(dim_hyper, dim_hyper)).todense()
+        _eigvalmult = jnp.diag(zmult_dense)*GVARS.OM*1e6
+        Pjl_local = Pjl_hyper[mult_ind]
+        pred_ac_dpt = jdc_update(pred_ac_dpt,
+                                 (Pjl_local @ _eigvalmult)/Pjl_norm[mult_ind],
+                                 (mult_ind * num_j,))
+        return pred_ac_dpt
+
     pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
-    return pred_acoeffs
+    pred_ac_dpt = foril(0, nmults, loop_dpt, pred_ac_dpt)
+    return pred_acoeffs, pred_ac_dpt
 
 compare_model_ = jax.jit(compare_model)
 
@@ -362,8 +388,8 @@ def print_summary(samples, ctrl_arr):
 
 
 def test_setup():
-    acoeffs_model = compare_model_()
-    diff = acoeffs_model - acoeffs_true
+    acoeffs_model, acoeffs_dpt = compare_model()
+    diff = acoeffs_dpt - acoeffs_true
     len_acoeffs = len(acoeffs_model)
     print(f"{'ell':^6}   |" +
           f"{'Model':^12}   |" +
@@ -374,7 +400,7 @@ def test_setup():
     mult_idx = 0
     for i in range(len_acoeffs):
         print(f"{ell0_arr_jax[mult_idx]:^6}   |" +
-              f"{acoeffs_model[i]*1e3:12.5f}   |" +
+              f"{acoeffs_dpt[i]*1e3:12.5f}   |" +
               f"{acoeffs_true[i]*1e3:12.5f}   |" +
               f"{diff[i]*1e3:12.5f}   |" +
               f"{diff[i]/acoeffs_sigma[i]:12.5f}")
