@@ -1,7 +1,6 @@
 import argparse
 import numpy as np
 from scipy import sparse
-import matplotlib.pyplot as plt
 
 from jax import jit
 import jax.numpy as jnp
@@ -24,9 +23,9 @@ parser.add_argument("--lmin", help="min angular degree",
 parser.add_argument("--lmax", help="max angular degree",
                     type=int, default=200)
 parser.add_argument("--rth", help="threshold radius",
-                    type=float, default=0.98)
+                    type=float, default=0.97)
 parser.add_argument("--knot_num", help="number of knots beyond rth",
-                    type=int, default=10)
+                    type=int, default=5)
 parser.add_argument("--load_mults", help="load mults from file",
                     type=int, default=0)
 ARGS = parser.parse_args()
@@ -39,7 +38,7 @@ with open(".n0-lmin-lmax.dat", "w") as f:
             f"{ARGS.knot_num}" + "\n" +
             f"{ARGS.load_mults}")
 
-# importing local package 
+# importing from local packages
 from qdpy_jax import jax_functions as jf
 from qdpy_jax import globalvars as gvar_jax
 from vorontsov_qdpy import sparse_precompute as precompute
@@ -109,21 +108,20 @@ def model():
         hypmat_flat = np.reshape(hypmat_sparse, max_nbs*max_nbs*len_mmax, order='F')
 
         # converting to dense
-        '''
         hypmat = sparse.coo_matrix((hypmat_flat,
                                     (sparse_idxs_flat[i, ..., 0],
                                      sparse_idxs_flat[i, ..., 1])),
                                    shape=(dim_hyper, dim_hyper)).toarray()
-        '''
+        
         # # # solving the eigenvalue problem and mapping eigenvalues
         ell0 = ell0_arr[i]
-        hypmat = np.load(f"supmat_qdpt_{ell0}.npy")
         omegaref = omega0_arr[i]
         eigval_qdpt_mult = get_eigs(hypmat)[:2*ell0+1]/2./omegaref
-        # eigval_qdpt_mult = np.diag(hypmat)[:2*ell0+1]/2./omegaref
+        
         eigval_qdpt_mult *= GVARS.OM*1e6
         eigval_mult[:len(eigval_qdpt_mult)] = eigval_qdpt_mult
 
+        # building polynomials for finding a-coeffs
         Pjl_local = Pjl[i][:, :2*ell0+1]
         qdpt_acoeff = (Pjl_local @ eigval_qdpt_mult)/Pjl_norm[i]
 
@@ -224,6 +222,6 @@ if __name__ == "__main__":
     np.save("evals_model.npy", eigvals_true) 
     np.save('eigvals_sigma.npy', eigvals_sigma)
     np.save('acoeffs_sigma.npy', GVARS.acoeffs_sigma)
-    # np.save('acoeffs_true.npy', acoeffs_true)
-    np.save('acoeffs_true.npy', GVARS.acoeffs_true)
+    np.save('acoeffs_true.npy', acoeffs_true)
+    # np.save('acoeffs_true.npy', GVARS.acoeffs_true)
     # sm_qdpt, sm_model = compare_hypmat()
