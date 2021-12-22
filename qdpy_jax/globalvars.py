@@ -91,7 +91,6 @@ class GlobalVars():
         self.progdir = self.local_dir
         self.hmidata = np.loadtxt(f"{self.snrnmais_dir}/data_files/hmi.6328.36")
 
-        datadir = f"{self.snrnmais_dir}/data_files"
         qdPars = qdParams(lmin=lmin, lmax=lmax, n0=n0, rth=rth)
 
         # Frequency unit conversion factor (in Hz (cgs))
@@ -102,10 +101,11 @@ class GlobalVars():
         self.OM = np.sqrt(4*np.pi*R_sol*B_0**2/M_sol) 
 
         # self.rho = np.loadtxt(f"{self.datadir}/rho.dat")
-        self.r = np.loadtxt(f"{datadir}/r.dat").astype('float')
-        self.nl_all = np.loadtxt(f"{datadir}/nl.dat").astype('int')
-        self.nl_all_list = np.loadtxt(f"{datadir}/nl.dat").astype('int').tolist()
-        self.omega_list = np.loadtxt(f"{datadir}/muhz.dat").astype('float')
+        self.r = np.loadtxt(f"{self.datadir}/r.dat").astype('float')
+        self.nl_all = np.loadtxt(f"{self.datadir}/nl.dat").astype('int')
+        self.nl_all = tuple(map(tuple, self.nl_all))
+        # self.nl_all_list = np.loadtxt(f"{self.datadir}/nl.dat").astype('int').tolist()
+        self.omega_list = np.loadtxt(f"{self.datadir}/muhz.dat").astype('float')
         self.omega_list *= 1e-6 / self.OM
 
         self.rmin = qdPars.rmin
@@ -185,7 +185,6 @@ class GlobalVars():
         # converting necessary arrays to tuples
         self.s_arr = tuple(self.s_arr)
         self.omega_list= tuple(self.omega_list)
-        self.nl_all = tuple(map(tuple, self.nl_all))
 
         # if preplot is True, plot the various things for
         # ensuring everything is working properly
@@ -208,11 +207,13 @@ class GlobalVars():
         dom_dell = []
 
         for i in range(len(ell0arr)):
-            omega1 = self.findfreq(ell0arr[i]+1, n0arr[i],
-                                np.array([0]), fullfreq=True)[0]
-            if omega1 == 0:
-                omega1 = self.findfreq(ell0arr[i]-1, n0arr[i],
-                                    np.array([0]), fullfreq=True)[0]
+            mult_ind = self.nl_all.index((n0arr[i], ell0arr[i]+1))
+            omega1 = self.omega_list[mult_ind]
+            
+            if(omega1 == 0):
+                mult_ind = self.nl_all.index((n0arr[i], ell0arr[i]-1))
+                omega1 = self.omega_list[mult_ind]
+                         
             omega0 = self.omega0_arr[i]
             dom_dell.append(abs(omega1 - omega0))
         return np.array(dom_dell)
@@ -368,10 +369,8 @@ class GlobalVars():
             mults = np.load('qdpy_multiplets.npy').astype('int')
             n_arr, ell_arr = mults[:, 0], mults[:, 1]
             for i in range(len(n_arr)):
-                omega0_arr.append(self.findfreq(ell_arr[i],
-                                                n_arr[i],
-                                                np.array([0]),
-                                                fullfreq=True)[0])
+                mult_ind = self.nl_all.index((n_arr[i], ell_arr[i]))
+                omega0_arr.append(self.omega_list[mult_ind])
 
         # creating the arrays when the ells are continuous in each radial orders
         else:
@@ -380,8 +379,8 @@ class GlobalVars():
                 for ell in range(ell_min, ell_max+1):
                     n_arr = np.append(n_arr, n)
                     ell_arr = np.append(ell_arr, ell)
-                    omega0_arr.append(self.findfreq(ell, n, np.array([0]),
-                                                    fullfreq=True)[0])
+                    mult_ind = self.nl_all.index((n, ell))
+                    omega0_arr.append(self.omega_list[mult_ind])
 
         return n_arr, ell_arr, np.array(omega0_arr)
 

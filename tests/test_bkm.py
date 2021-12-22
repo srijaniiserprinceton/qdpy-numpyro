@@ -347,6 +347,32 @@ def build_bkm_all_cenmults():
 
     return noc_bkm_shaped, fixed_bkm_shaped, k_arr_shaped, p_arr_shaped
 
+def plot_compare_bkm(bkm_jax):
+    # comparing with the bkm from Woordard13
+    bkm_W13_dpt = np.load('bkm_dpt.npy')
+    
+    # plotting
+    fig, ax = plt.subplots(2, 3, figsize=(10,6))
+    
+    # ells to be plotted
+    ell_plot = np.array([203, 202, 201, 200, 199, 198])
+    
+    ell_count = 0
+    
+    for row in range(2):
+        for col in range(3):
+            ell = ell_plot[ell_count]
+            
+            ax[row,col].plot(bkm_jax[ell_count, 0, max_lmax:-(max_lmax-(ell-1))], 'r', label='bkm_jax')
+            ax[row,col].plot(bkm_W13_dpt[ell-194, 0, 6:-(215-6-ell)], '--k', label='bkm_W13_dpt')
+            
+            ell_count += 1
+        
+    plt.legend()
+    
+    plt.savefig('compare_bkm.png')
+    
+    plt.close()
 
 noc_bkm, fixed_bkm, k_arr, p_arr = build_bkm_all_cenmults()
 
@@ -357,30 +383,6 @@ true_params = GVARS.ctrl_arr_dpt_clipped
 bkm = np.sum(noc_bkm * true_params[NAX, :, :, NAX, NAX], axis=(1,2)) + fixed_bkm
 dom_dell = GVARS.dom_dell
 
-bkm_scaled = -1.0 * bkm / dom_dell[:,0, NAX, NAX]
+bkm_scaled = -1.0 * bkm / dom_dell[:, NAX, NAX]
 
-# comparing with the bkm from Woordard13
-bkm_W13_dpt = np.load('bkm_dpt.npy')
-
-# plotting
-fig, ax = plt.subplots(2, 3, figsize=(10,6))
-
-# ells to be plotted
-ell_plot = np.array([203, 202, 201, 200, 199, 198])
-
-ell_count = 0
-
-for row in range(2):
-    for col in range(3):
-        ell = ell_plot[ell_count]
-        
-        ax[row,col].plot(bkm_scaled[ell_count, 0, max_lmax:-(max_lmax-(ell-1))] * GVARS.OM * 1e6, 'r', label='bkm_jax')
-        ax[row,col].plot(bkm_W13_dpt[ell-194, 0, 6:-(215-6-ell)], '--k', label='bkm_W13_dpt')
-
-        ell_count += 1
-
-plt.legend()
-
-plt.savefig('compare_bkm.png')
-
-plt.close()
+plot_compare_bkm(bkm_scaled)
