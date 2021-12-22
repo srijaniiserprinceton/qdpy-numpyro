@@ -1,4 +1,4 @@
-import sys
+Bimport sys
 import argparse
 import numpy as np
 from tqdm import tqdm
@@ -31,7 +31,7 @@ from jax.lib import xla_bridge
 print('JAX using:', xla_bridge.get_backend().platform)
 
 # the indices of ctrl points that we want to investigate
-ind_min, ind_max = 0, 3
+ind_min, ind_max = 0, 1
 cind_arr = np.arange(ind_min, ind_max + 1)
 
 smin, smax = 3, 5

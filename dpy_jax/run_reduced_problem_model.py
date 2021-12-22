@@ -1,5 +1,5 @@
 import os
-num_chains = 4
+num_chains = 20
 os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
 import numpy as np
 import jax
@@ -123,14 +123,17 @@ pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
 
 # these arrays should be very close
 np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
-
+sys.exit()
 ######################################################
+
+# changing to the HMI acoeffs if doing this for real data 
+# data_acoeffs = GVARS.acoeffs_true
 
 num_params = len(cind_arr)
 
 # setting the prior limits
-cmin = 0.95 * np.ones_like(true_params.flatten())# / 1e-3
-cmax = 1.05 * np.ones_like(true_params.flatten())# / 1e-3
+cmin = 0.5 * np.ones_like(true_params.flatten())# / 1e-3
+cmax = 1.5 * np.ones_like(true_params.flatten())# / 1e-3
 #param_coeff *= 1e-3
 
 
@@ -187,13 +190,13 @@ rng_key, rng_key_ = random.split(rng_key)
 init_strat = numpyro.infer.init_to_value(values=init_params)
 
 kernel = NUTS(model,
-              max_tree_depth=(10, 4),
+              max_tree_depth=(20, 5))
               # adapt_step_size=False,
               # step_size=1e-3,
-              init_strategy=init_strat)
+              # init_strategy=init_strat)
 mcmc = MCMC(kernel,
-            num_warmup=1000,
-            num_samples=1000,
+            num_warmup=5000,
+            num_samples=5000,
             num_chains=num_chains)  
 mcmc.run(rng_key_,
          extra_fields=('potential_energy',))
