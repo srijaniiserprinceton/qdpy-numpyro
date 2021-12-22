@@ -29,7 +29,7 @@ def getnt4cenmult(n0, ell0, GVARS):
     def nl_idx(n0, ell0):
         """Find the index for given n0, ell0"""
         try:
-            idx = nl_list.index([n0, ell0])
+            idx = GVARS.nl_all.index((n0, ell0))
         except ValueError:
             idx = None
             logger.error('Mode not found')
@@ -54,7 +54,6 @@ def getnt4cenmult(n0, ell0, GVARS):
 
     omega_list = np.asarray(GVARS.omega_list)
     nl_arr = np.asarray(GVARS.nl_all)
-    nl_list = list(map(list, GVARS.nl_all))
 
     # masking the other radial orders
     mask_n = abs(nl_arr[:, 0] - n0) == 0 

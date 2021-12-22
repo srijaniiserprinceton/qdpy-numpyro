@@ -30,7 +30,7 @@ def getnt4cenmult(CNM_AND_NBS, GVARS, return_shaped=False):
     def nl_idx(n0, ell0):
         """Find the index for given n0, ell0"""
         try:
-            idx = nl_list.index([n0, ell0])
+            idx = GVARS.nl_all.index((n0, ell0))
         except ValueError:
             idx = None
             logger.error('Mode not found')
@@ -55,7 +55,6 @@ def getnt4cenmult(CNM_AND_NBS, GVARS, return_shaped=False):
 
     omega_list = np.asarray(GVARS.omega_list)
     nl_arr = np.asarray(GVARS.nl_all)
-    nl_list = list(map(list, GVARS.nl_all))
 
     # here it makes the couplings needed in V11 Eqn.(26)
     n0, ell0 = CNM_AND_NBS.nl_nbs[0, :]  

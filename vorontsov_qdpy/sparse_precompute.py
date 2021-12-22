@@ -164,10 +164,9 @@ def build_hypmat_freqdiag(CNM_AND_NBS, SUBMAT_DICT, dim_hyper):
     for i in range(1, num_nbs):
         omega_nl = CNM_AND_NBS.omega_nbs[i]
         mmax_i = nl_nbs[i, 1]
-        dm = max_lmax - mmax_i
-        sidx, eidx = dm, -dm+1
-        freqdiag[i, i, sidx:eidx] = (omega_nl**2 - omegaref**2)#/2/omegaref
-        # V11 convention of dividing by 2omegaref
+        sidx = max_lmax - mmax_i
+        eidx = max_lmax + mmax_i + 1
+        freqdiag[i, i, sidx:eidx] = (omega_nl**2 - omegaref**2)
     return freqdiag
 
 
