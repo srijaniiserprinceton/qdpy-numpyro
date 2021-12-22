@@ -43,7 +43,6 @@ with open(".n0-lmin-lmax.dat", "w") as f:
 from qdpy_jax import jax_functions as jf
 from qdpy_jax import globalvars as gvar_jax
 from vorontsov_qdpy import sparse_precompute as precompute
-#from vorontsov_qdpy import build_hypermatrix_sparse as build_hm_sparse
 from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
 
 GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
