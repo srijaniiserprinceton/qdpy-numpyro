@@ -192,15 +192,10 @@ def compare_hypmat():
         # qdPy supermatrix
         matsize = supmat_qdpt.shape[0]
         supmat_model = hypmat[:matsize, :matsize]
-        diff = supmat_model - supmat_qdpt
-        print(f"[{ell0}] Max diff = {abs(diff).max()}")
-        diff_diag = jnp.diag(supmat_model) - jnp.diag(supmat_qdpt)
-        plt.figure()
-        plt.plot(diff_diag)
-        plt.savefig(f'diag_diff_{ell0}.png')
-        plt.close()
-    return supmat_qdpt, supmat_model
-
+        
+        # testing is arrays are the same
+        np.testing.assert_array_almost_equal(supmat_model, supmat_qdpt)
+        print(f"[{ell0}] Passed test.")
 
 
 if __name__ == "__main__":
@@ -218,7 +213,6 @@ if __name__ == "__main__":
 
     eigvals_true, acoeffs_true = model()
     eigvals_sigma = get_eigvals_sigma()
-    print(f"num elements = {len(eigvals_true)}")
     np.save("evals_model.npy", eigvals_true) 
     np.save('eigvals_sigma.npy', eigvals_sigma)
     np.save('acoeffs_sigma.npy', GVARS.acoeffs_sigma)
