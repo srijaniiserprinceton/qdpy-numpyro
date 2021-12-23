@@ -1,5 +1,6 @@
 import numpy as np   
-from qdpy_jax import jax_functions as jf
+from qdpy_jax import misc_functions
+from qdpy_jax import cenmult_functions
 
 def getnt4cenmult(CNM_AND_NBS, GVARS, return_shaped=False):
     """Function that returns the name tuple for the
@@ -27,31 +28,9 @@ def getnt4cenmult(CNM_AND_NBS, GVARS, return_shaped=False):
     --------
     CENMULT_AND_NBS - namedtuple containing 'nl_nbs', 'nl_nbs_idx', 'omega_nbs'
     """
-    def nl_idx(n0, ell0):
-        """Find the index for given n0, ell0"""
-        try:
-            idx = GVARS.nl_all.index((n0, ell0))
-        except ValueError:
-            idx = None
-            logger.error('Mode not found')
-        return idx
-
-    def nl_idx_vec(nl_neighbours):
-        """Find the index for given n0, ell0"""
-        nlnum = nl_neighbours.shape[0]
-        nlidx = np.zeros(nlnum, dtype='int32')
-        for i in range(nlnum):
-            nlidx[i] = nl_idx(nl_neighbours[i][0],
-                              nl_neighbours[i][1])
-        return nlidx
-
-    def get_omega_neighbors(nl_idx):
-        """Get omega of the neighbours of central multiplet"""
-        nlnum = len(nl_idx)
-        omega_neighbors = np.zeros(nlnum)
-        for i in range(nlnum):
-            omega_neighbors[i] = GVARS.omega_list[nl_idx[i]]
-        return omega_neighbors
+    
+    # initializing class containing functions needed for cenmult                             
+    cnm_funcs = cenmult_functions.cenmult_functions(GVARS)
 
     omega_list = np.asarray(GVARS.omega_list)
     nl_arr = np.asarray(GVARS.nl_all)
@@ -77,8 +56,8 @@ def getnt4cenmult(CNM_AND_NBS, GVARS, return_shaped=False):
     # this is necessary to pass this through the same ops
     # in prune_multiplets and load_multiplets. We reshape later on.
     nl_neighbours_M = np.reshape(M_couplings_nl, (num_nbs * num_nbs * 2, 2))
-    nl_neighbours_M_idx = nl_idx_vec(nl_neighbours_M)
-    omega_neighbours_M = get_omega_neighbors(nl_neighbours_M_idx)
+    nl_neighbours_M_idx = cnm_funcs.nl_idx_vec(nl_neighbours_M)
+    omega_neighbours_M = cnm_funcs.get_omega_neighbors(nl_neighbours_M_idx)
 
     if return_shaped:
         # reshaping to be used in the loop in sparse_precompute_M
@@ -86,12 +65,12 @@ def getnt4cenmult(CNM_AND_NBS, GVARS, return_shaped=False):
         nl_neighbours_M_idx = np.reshape(nl_neighbours_M_idx, (num_nbs, num_nbs, 2))
         omega_neighbours_M = np.reshape(omega_neighbours_M, (num_nbs, num_nbs, 2))
 
-    CENMULT_AND_NBS = jf.create_namedtuple('CENMULT_AND_NBS',
-                                           ['nl_nbs',
-                                            'nl_nbs_idx',
-                                            'omega_nbs'],
-                                           (nl_neighbours_M,
-                                            nl_neighbours_M_idx,
-                                            omega_neighbours_M))
+    CENMULT_AND_NBS = misc_functions.create_namedtuple('CENMULT_AND_NBS',
+                                                       ['nl_nbs',
+                                                        'nl_nbs_idx',
+                                                        'omega_nbs'],
+                                                       (nl_neighbours_M,
+                                                        nl_neighbours_M_idx,
+                                                        omega_neighbours_M))
 
     return CENMULT_AND_NBS
