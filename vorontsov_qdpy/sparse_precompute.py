@@ -355,5 +355,6 @@ def build_hypmat_all_cenmults():
 
     # list of shape (nmults x s x (nc x dim_hyper, dim_hyper))
     # the last bracket denotes matrices of that shape but in sparse form
-    return noc_hypmat_all_sparse, fixed_hypmat_all_sparse, \
+    return np.asarray(noc_hypmat_all_sparse),\
+        np.asarray(fixed_hypmat_all_sparse), \
         ell0_nmults, omegaref_nmults, sparse_idx

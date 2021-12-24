@@ -262,7 +262,7 @@ def build_bkm_nonint_n_fxd_1cnm(CNM_AND_NBS, CNM_AND_NBS_bkm, k_arr, p_arr, s):
     ell0 = nl_nbs[0, 1]
     for i in range(num_nbs):
         ell1 = nl_nbs[i, 1]
-        p_arr[i] = ell1 - ell0
+        p_arr[i, sidx:eidx] = ell1 - ell0
 
     return noc_b_k_m, fixed_b_k_m, k_arr, p_arr
 
@@ -284,9 +284,12 @@ def build_bkm_all_cenmults():
     fixed_bkm_shaped = np.zeros((nmults, num_k, 2*max_lmax+1))
     
     # to make it convenient to perform explicit k-dependent operations
-    # to make it convenient to perform explicit p-dependent operations
+    # k array should be of shape bkm to allow easy operations
     k_arr_shaped = np.zeros_like(fixed_bkm_shaped)
-    p_arr_shaped = np.zeros((nmults, max_nbs))
+
+    # to make it convenient to perform explicit p-dependent operations
+    # p array should be of shape similar to c_l_p_m
+    p_arr_shaped = np.zeros((nmults, max_nbs, 2*max_lmax+1))
     
     # looping over cenmtral multipelts
     for i in range(nmults):
@@ -300,7 +303,7 @@ def build_bkm_all_cenmults():
         # list of arrays for different s
         noc_bkm_this_mult = []
         k_arr_local = np.zeros((num_k, 2*max_lmax+1))
-        p_arr_local = np.zeros(max_nbs)
+        p_arr_local = np.zeros((max_nbs, 2*max_lmax+1))
 
         # loop in s
         for sind, s in enumerate(GVARS.s_arr):
@@ -318,4 +321,5 @@ def build_bkm_all_cenmults():
         k_arr_shaped[i, ...] = k_arr_local
         p_arr_shaped[i, ...] = p_arr_local
 
-    return noc_bkm_shaped, fixed_bkm_shaped, k_arr_shaped, p_arr_shaped
+    return np.asarray(noc_bkm_shaped), np.asarray(fixed_bkm_shaped),\
+        k_arr_shaped, p_arr_shaped

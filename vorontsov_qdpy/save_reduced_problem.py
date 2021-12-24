@@ -29,13 +29,17 @@ from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
 
 NAX = np.newaxis
 
+#-------------------------------------------------------------#
 # the indices of ctrl points that we want to investigate
 ind_min, ind_max = 0, 1
 cind_arr = np.arange(ind_min, ind_max + 1)
 
+# the angular degree s that we want to investigate 
 smin, smax = 3, 5
 smin_ind, smax_ind = (smin-1)//2, (smax-1)//2
-sind_arr = np.array([smin_ind, smax_ind])
+sind_arr = np.arange(smin_ind, smax_ind+1)
+
+#-------------------------------------------------------------#
 
 ARGS = np.loadtxt(".n0-lmin-lmax.dat")
 GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
@@ -44,7 +48,6 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             rth=ARGS[3],
                             knot_num=int(ARGS[4]),
                             load_from_file=int(ARGS[5]))
-
 GVARS_PATHS, GVARS_TR, __ = GVARS.get_all_GVAR()
 
 eigvals_model = np.load("evals_model.npy")
@@ -53,13 +56,11 @@ eigvals_sigma = jnp.asarray(np.load('eigvals_sigma.npy'))
 acoeffs_sigma = jnp.asarray(np.load('acoeffs_sigma.npy'))
 num_eigvals = len(eigvals_model)
 
-# generating the true parameters
+#-------------------------generating the true parameters-------------------#
 true_params = np.zeros((smax_ind - smin_ind + 1,
                         ind_max - ind_min + 1))
 
-for sind in range(smin_ind, smax_ind+1):
-    for ci, cind in enumerate(cind_arr):
-        true_params[sind-1, ci] = GVARS.ctrl_arr_dpt_clipped[sind, cind]
+true_params = GVARS.ctrl_arr_dpt_clipped[sind_arr][:, cind_arr]
 
 #------------------------------------ precomputing -------------------------#
 # precomputing the V11 bkm components
@@ -70,13 +71,8 @@ noc_bkm_all_sparse, fixed_bkm_all_sparse, k_arr, p_arr =\
 # precomputing the supermatrix components
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr, sparse_idx =\
                                 precompute.build_hypmat_all_cenmults()
-#---------------------------------------------------------------------------#
 
-noc_hypmat_all_sparse = np.asarray(noc_hypmat_all_sparse)
-fixed_hypmat_all_sparse = np.asarray(fixed_hypmat_all_sparse)
-noc_bkm = np.asarray(noc_bkm_all_sparse)
-fixed_bkm = np.asarray(fixed_bkm_all_sparse)
-
+#-----------------------initializing shape parameters-----------------------#
 nc = GVARS.nc
 len_s = len(GVARS.s_arr)
 len_s_fit = len(np.arange(smin_ind, smax_ind+1))
@@ -98,6 +94,7 @@ noc_hypmat = np.reshape(noc_hypmat_all_sparse,
 
 # flattened indices in sparse form for densification
 sparse_idxs_flat = np.zeros((nmults, max_nbs*max_nbs*len_mmax, 2), dtype=int)
+
 for i in range(nmults):
     sparse_idxs_flat[i] = np.reshape(sparse_idx[i],
                                      (max_nbs*max_nbs*len_mmax, 2),
@@ -125,46 +122,35 @@ fixed_hypmat_sparse = np.zeros((nmults, max_nbs, max_nbs, len_mmax))
 fixed_bkm_sparse = np.zeros((nmults, num_k, len_mmax))
 
 for i in range(nmults):
-    _fixmat = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
-                                               fixed_hypmat_all_sparse[i],
-                                               c_fixed, nc, len_s)
-
-    _fixmat_bkm = build_hm_sparse.build_hypmat_w_c(noc_bkm_all_sparse[i],
-                                                fixed_bkm_all_sparse[i],
-                                                c_fixed, nc, len_s)
-
-    fixed_hypmat_sparse[i, ...] = _fixmat
-    fixed_bkm_sparse[i, ...] = _fixmat_bkm
+    fixed_hypmat_sparse[i, ...] =\
+                build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
+                                                 fixed_hypmat_all_sparse[i],
+                                                 c_fixed, nc, len_s)
+    fixed_bkm_sparse[i, ...] =\
+                build_hm_sparse.build_hypmat_w_c(noc_bkm_all_sparse[i],
+                                                 fixed_bkm_all_sparse[i],
+                                                 c_fixed, nc, len_s)
 
 #------------------------------------------------------------------#
-param_coeff = np.zeros((smax_ind - smin_ind + 1,
-                        len(cind_arr),
-                        nmults,
-                        max_nbs,
-                        max_nbs,
-                        len_mmax))
+# moving axis to facilitate easy dot product later
+param_coeff = np.moveaxis(noc_hypmat_all_sparse, 0, 2)
+param_coeff_bkm = np.moveaxis(noc_bkm_all_sparse, 0, 2)
 
-param_coeff_bkm = np.zeros((smax_ind - smin_ind + 1,
-                            len(cind_arr),
-                            nmults,
-                            num_k,
-                            len_mmax))
+# retaining the appropriate s indices
+param_coeff = param_coeff[smin_ind: smax_ind + 1]
+param_coeff_bkm = param_coeff_bkm[smin_ind: smax_ind + 1]
 
-
-for i in range(nmults):
-    for si in range(smin_ind, smax_ind+1):
-        for ci, cind in enumerate(cind_arr):
-            param_coeff[si-1, ci, i, ...] = noc_hypmat_all_sparse[i, si, cind, ...]
-            param_coeff_bkm[si-1, ci, i, ...] = noc_bkm_all_sparse[i, si, cind, ...]
+# retaining the appropriate c indices
+param_coeff = param_coeff[:, cind_arr]
+param_coeff_bkm = param_coeff_bkm[:, cind_arr]
 
 #------------------------intermediate bkm test---------------------#                          
 #----------do this only for n=0, l between 194 and 208-------------#                       
-
 # constructing bkm full                                                                      
-bkm = np.sum(param_coeff_bkm * true_params[:, :, NAX, NAX, NAX], axis=(0,1)) \
-      + fixed_bkm_sparse                 
+bkm_jax = np.sum(param_coeff_bkm * true_params[:, :, NAX, NAX, NAX], axis=(0,1)) \
+          + fixed_bkm_sparse                 
 dom_dell = GVARS.dom_dell                                                                     
-bkm_scaled = -1.0 * bkm / dom_dell[:, NAX, NAX]                                               
+bkm_scaled = -1.0 * bkm_jax / dom_dell[:, NAX, NAX]                                           
 
 # loading precomputed benchmarked value                                                    
 bkm_test = np.load('../tests/bkm_test.npy')                                               
@@ -192,3 +178,27 @@ np.save('noc_bkm.npy', param_coeff_bkm)
 np.save('fixed_bkm.npy', fixed_bkm_sparse)
 np.save('k_arr.npy', k_arr)
 np.save('p_arr.npy', p_arr)
+
+
+# temporary test of clp
+def get_clp(bkm):
+    k_arr_denom = k_arr * 1
+    k_arr_denom[k_arr==0] = np.inf
+
+    tvals = np.linspace(0, jnp.pi, 25)
+
+    # integrand of shape (ell, p, m ,t)
+    integrand = np.zeros((p_arr.shape[0],
+                          p_arr.shape[1],
+                          p_arr.shape[2],
+                          len(tvals)))
+
+    for i in range(len(tvals)):
+        term2 = 2*bkm*np.sin(k_arr*tvals[i])/k_arr_denom
+        term2 = term2.sum(axis=1)
+        integrand[:,:,:,i] = np.cos(p_arr*tvals[i] - term2[:, NAX, :])
+
+    integral = np.trapz(integrand, axis=-1, x=tvals)/np.pi
+    return integral
+
+clp = get_clp(bkm_scaled)

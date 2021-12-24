@@ -96,7 +96,7 @@ k_arr = np.load('k_arr.npy')
 p_arr = np.load('p_arr.npy')
 
 k_arr_denom = k_arr*1
-k_arr_denom[k_arr==0] = 1
+k_arr_denom[k_arr==0] = np.inf
 
 #################################################################
 # number of central multiplets
@@ -187,22 +187,19 @@ supmat_jax = param_coeff @ true_params + fixed_part
 
 def get_clp(bkm):
     tvals = jnp.linspace(0, jnp.pi, 25)
-    integrand = jnp.zeros((bkm.shape[0],
-                           bkm.shape[1],
-                           bkm.shape[-1],
+    
+    # integrand of shape (ell, p, m ,t)
+    integrand = jnp.zeros((p_arr.shape[0],
+                           p_arr.shape[1],
+                           p_arr.shape[2],
                            len(tvals)))
 
     def t_func(i, intg):
-
-        # def p_func(j, intg2):
-        #     intg2 = jidx_update(intg2,
-        #                         jidx[:, j, :, i],
-        #                         jnp.cos(p_arr[:, j]*tvals[i] - term2))
-        #     return intg2
-        term2 = 2*bkm*jnp.sin(k_arr*tvals[i])/k_arr_denom
-        term2 = term2.sum(axis=(1, 2))[:, NAX, :]
-        intg = jidx_update(intg, jidx[:, :, :, i], jnp.cos(p_arr[:, :, NAX]*tvals[i]
-                                                           - term2))
+        term2 = 2. * bkm * jnp.sin(k_arr*tvals[i]) / k_arr_denom
+        term2 = term2.sum(axis=1)
+        intg = jidx_update(intg,
+                           jidx[:, :, :, i],
+                           jnp.cos(p_arr * tvals[i] - term2[:, NAX, :]))
         # intg = foril(0, max_nbs, p_func, intg)
         return intg
 
