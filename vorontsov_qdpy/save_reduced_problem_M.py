@@ -24,8 +24,11 @@ config.update('jax_enable_x64', True)
 from qdpy_jax import jax_functions as jf
 from qdpy_jax import globalvars as gvar_jax
 from qdpy_jax import sparse_precompute as precompute
+from qdpy_jax import build_cenmult_and_nbs as build_cnm
 from vorontsov_qdpy import sparse_precompute_M as precompute_M
 from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
+
+NAX = np.newaxis
 
 #-------------------------------------------------------------#
 # the indices of ctrl points that we want to investigate
@@ -112,12 +115,24 @@ param_coeff = param_coeff[smin_ind: smax_ind + 1]
 # retaining the appropriate c indices                                                       
 param_coeff = param_coeff[:, cind_arr]
 
+#-----------generating the p * domega/dell factor----------------#
+p_dom_dell = np.zeros_like(fixed_hypmat_sparse)
+
+for i in range(nmults):
+    CNM_AND_NBS = build_cnm.getnt4cenmult(GVARS.n0_arr[i],GVARS.ell0_arr[i],GVARS)
+    ell0 = CNM_AND_NBS.nl_nbs[0,1]
+    for j in range(max_nbs):
+        p_dom_dell[i,j,j,:] = CNM_AND_NBS.nl_nbs[j,1] - ell0
+
+# scaling with inverse of domega/dell
+p_dom_dell *= GVARS.dom_dell[:,NAX,NAX,NAX]
+
 #---------------saving the supermatrix components-----------------#
 print(f"param_coeff = {param_coeff.shape}")
 print(f"cind_arr = {cind_arr}")
 np.save('fixed_part_M.npy', fixed_hypmat_sparse)
 np.save('param_coeff_M.npy', param_coeff)
-
+np.save('p_dom_dell.npy', p_dom_dell)
 sys.exit()
 
 #--------------------testing M with qdPy submatrices------------------------#
