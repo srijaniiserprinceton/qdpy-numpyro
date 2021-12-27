@@ -67,7 +67,7 @@ noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr, sparse_idx
 noc_hypmat_all_sparse = np.asarray(noc_hypmat_all_sparse)
 fixed_hypmat_all_sparse = np.asarray(fixed_hypmat_all_sparse)
 
-#-----------------------initializing shape parameters-----------------------#                
+#-----------------------initializing shape parameters-------------------------#                
 nc = GVARS.nc
 len_s = len(GVARS.s_arr)
 len_s_fit = len(np.arange(smin_ind, smax_ind+1))
@@ -76,9 +76,8 @@ fixmat_shape = fixed_hypmat_all_sparse[0].shape
 max_nbs = fixmat_shape[1]
 len_mmax = fixmat_shape[2]
 len_data = len(omega0_arr)
-num_k = int((np.unique(k_arr)>0).sum())
 
-#-----------------------------------------------------------------#
+#-----------------------------------------------------------------------------#
 fixed_hypmat = np.reshape(fixed_hypmat_all_sparse,
                           (nmults, max_nbs*max_nbs*len_mmax),
                           order='F')
@@ -92,21 +91,13 @@ for i in range(nmults):
                                      (max_nbs*max_nbs*len_mmax, 2),
                                      order='F')
 
-fixed_hypmat_dense = sparse.coo_matrix((fixed_hypmat[0],
-                                        (sparse_idxs_flat[0, ..., 0],
-                                        sparse_idxs_flat[0, ..., 1]))).toarray()
-
-fixed_hypmat_sparse = np.zeros((nmults, max_nbs, max_nbs, len_mmax))
-
-#------------------------------------------------------------------# 
+#----------------------------------------------------------------------------# 
 c_fixed = np.zeros_like(GVARS.ctrl_arr_dpt_clipped)
 c_fixed = GVARS.ctrl_arr_dpt_clipped.copy()
 
 # making the c_fixed coeffs for the variable params zero
-for sind in range(smin_ind, smax_ind+1):
-    for cind in cind_arr:
-        c_fixed[sind, cind] = 0.0
-        c_fixed[sind, cind] = 0.0
+for sind in sind_arr:
+    c_fixed[sind, cind_arr] = 0.0
 
 # this is the fixed part of the hypermatrix
 fixed_hypmat_sparse = np.zeros((nmults, max_nbs, max_nbs, len_mmax))
@@ -127,11 +118,21 @@ param_coeff = param_coeff[smin_ind: smax_ind + 1]
 # retaining the appropriate c indices                                                       
 param_coeff = param_coeff[:, cind_arr]
 
-#-----------------------------------------------------------------#
-
-# saving the sueprmatrix components
+#---------------saving the supermatrix components-----------------#
 print(f"param_coeff = {param_coeff.shape}")
 print(f"cind_arr = {cind_arr}")
 np.save('fixed_part_M.npy', fixed_hypmat_sparse)
 np.save('param_coeff_M.npy', param_coeff)
 np.save('sparse_idx_M.npy', sparse_idxs_flat)
+
+sys.exit()
+
+#--------------------testing M with qdPy submatrices------------------------#
+
+fixed_hypmat_dense = sparse.coo_matrix((fixed_hypmat[0],
+                                        (sparse_idxs_flat[0, ..., 0],
+                                        sparse_idxs_flat[0, ..., 1]))).toarray()
+
+#-----------------------------------------------------------------# 
+
+

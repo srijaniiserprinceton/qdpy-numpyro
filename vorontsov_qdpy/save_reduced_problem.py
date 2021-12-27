@@ -112,10 +112,8 @@ c_fixed = GVARS.ctrl_arr_dpt_clipped.copy()
 
 # making the c_fixed coeffs for the variable params zero
 for sind in range(smin_ind, smax_ind+1):
-    for cind in cind_arr:
-        c_fixed[sind, cind] = 0.0
-        c_fixed[sind, cind] = 0.0
-
+    c_fixed[sind, cind_arr] = 0.0
+        
 #------------------------------------------------------------------#
 # this is the fixed part of the supermatrix
 fixed_hypmat_sparse = np.zeros((nmults, max_nbs, max_nbs, len_mmax))
