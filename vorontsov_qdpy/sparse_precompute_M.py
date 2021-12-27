@@ -45,7 +45,7 @@ nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx =\
                                                            GVARS_ST,
                                                            getnt4cenmult)
 
-# we only need the unique prunedm multiplets
+# we only need the unique pruned multiplets
 nl_idx_pruned, unique_idx = np.unique(nl_idx_pruned, return_index=True)
 nl_pruned = np.asarray(nl_pruned)[unique_idx]
 omega_pruned = np.asarray(omega_pruned)[unique_idx]
@@ -78,7 +78,6 @@ def get_bsp_basis_elements(x):
 
     # looping over the basis elements for each control point
     for c_ind in range(GVARS.nc):
-        # c = np.zeros(GVARS.ctrl_arr_dpt.shape[1])
         c = np.zeros_like(GVARS.ctrl_arr_dpt_full[0, :])
         c[GVARS.knot_ind_th + c_ind] = 1.0
         basis_elements[c_ind, :] = splev(x, (t, c, k))
@@ -126,21 +125,6 @@ def integrate_fixed_wsr(eig_idx1, eig_idx2, ell1, ell2, s):
     return post_integral
 
 
-def get_dim_hyper():
-    """Returns the dimension of the hypermatrix
-    dim_hyper = max(dim_super)
-    """
-    dim_hyper = 0
-    nmults = len(GVARS.n0_arr)
-
-    for i in range(nmults):
-        n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
-        CENMULT_AND_NBS = getnt4cenmult(n0, ell0, GVARS_ST)
-        dim_super_local = np.sum(2*CENMULT_AND_NBS.nl_nbs[:, 1] + 1)
-        if (dim_super_local > dim_hyper): dim_hyper = dim_super_local
-    return dim_hyper
-
-
 def build_SUBMAT_INDICES(CNM_AND_NBS):
     # supermatix can be tiled with submatrices corresponding to
     # (l, n) - (l', n') coupling. The dimensions of the submatrix
@@ -167,25 +151,9 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
     return SUBMAT_DICT
 
 
-def build_hypmat_freqdiag(CNM_AND_NBS, SUBMAT_DICT, dim_hyper):
-    # initializing with an absurd value that will define the shape of the matrix
-    nl_nbs = CNM_AND_NBS.nl_nbs
-    num_nbs = len(CNM_AND_NBS.omega_nbs)
-    freqdiag = np.zeros((max_nbs, max_nbs, 2*max_lmax+1))
-    omegaref = CNM_AND_NBS.omega_nbs[0]
-    ell_0 = nl_nbs[0, 1]
-    dom_dell = GVARS.dom_dell[0]
-    for i in range(0, num_nbs):
-        ell_i = nl_nbs[i, 1]
-        p = ell_i - ell_0
-        dm = max_lmax - ell_i
-        sidx, eidx = dm, -dm+1
-        freqdiag[i, i, sidx:eidx] = p*dom_dell
-    return freqdiag
-
 
 def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, CNM_AND_NBS_M,
-                               SUBMAT_DICT, sparse_idx_local, dim_hyper, s):
+                               SUBMAT_DICT, s):
     """Computes elements in the hypermatrix excluding the
     integral part.
     """
@@ -202,34 +170,21 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, CNM_AND_NBS_M,
     # extracting attributes from SUBMAT_DICT
     startx_arr, endx_arr = SUBMAT_DICT.startx_arr, SUBMAT_DICT.endx_arr
     # filling in the non-m part using the masks
-    for i in range(num_nbs):
-        # filling only Upper Triangle
-        # for j in range(i, num_nbs):
-        # omega_nl = CNM_AND_NBS.omega_nbs[i]
-        
+    for i in range(num_nbs):        
         for j in range(num_nbs):
             # nl_nbs contains the two ells that gets coupled
             # in the shape (num_nbs, num_nbs, 2, 2)
             ell1 = CNM_AND_NBS_M.nl_nbs[i, j, 0, 1]
             ell2 = CNM_AND_NBS_M.nl_nbs[i, j, 1, 1]
             ellmin = min(ell1, ell2)
-            dell = ell1 - ell2
+            # dell = ell1 - ell2
             
             # the true ells in the supermatrix (without Taylor exp)
             ell1_true, ell2_true = nl_nbs[i, 1], nl_nbs[j, 1]
             ellmin_true = min(ell1_true, ell2_true)
-            m_arr_true = np.arange(-ellmin_true, ellmin_true+1)
 
-            dellx, delly = 0, 0
-            dellx_true, delly_true = 0, 0
-
-            # padding inside each submatrix
-            dellx = abs(ell1_true - ellmin)
-            delly = abs(ell2_true - ellmin)
-
-            # padding for masked matrix
-            dellx_true = abs(ell1_true - ellmin_true)
-            delly_true = abs(ell2_true - ellmin_true)
+            # the effective ellmin to be used is the smaller of the two
+            ellmin_pad = min(ellmin, ellmin_true)
             
             # submat tiling indices
             startx, endx = startx_arr[i], endx_arr[i]
@@ -239,7 +194,7 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, CNM_AND_NBS_M,
             wigidx1ij = np.searchsorted(wig_idx, wig1_idx)
             wigval1 = fac1 * wig_list[wigidx1ij]
 
-            m_arr = np.arange(-ellmin, ellmin+1)
+            m_arr = np.arange(-ellmin_pad, ellmin_pad+1)
             lenm = len(m_arr)
             wig_idx_i, fac = _find_idx(ell1, s, ell2, m_arr)
             wigidx_for_s = np.searchsorted(wig_idx, wig_idx_i)
@@ -251,7 +206,6 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, CNM_AND_NBS_M,
             gamma_prod = jax_gamma_(ell1) * jax_gamma_(ell2) * jax_gamma_(s) 
             Omega_prod = jax_Omega_(ell1, 0) * jax_Omega_(ell2, 0)
             
-            # also including 8 pi * omega_ref
             ell1_ell2_fac = gamma_prod * Omega_prod *\
                             4 * np.pi *\
                             (1 - jax_minus1pow_vec(ell1 + ell2 + s))
@@ -271,8 +225,8 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, CNM_AND_NBS_M,
             wigvalm *= (jax_minus1pow_vec(m_arr) * ell1_ell2_fac)
             wigprod = wigvalm * wigval1
 
-            sidx = max_lmax - ellmin
-            eidx = max_lmax + ellmin + 1
+            sidx = max_lmax - ellmin_pad
+            eidx = max_lmax + ellmin_pad + 1
 
             for c_ind in range(GVARS.nc):
                 # non-ctrl points submat
@@ -284,16 +238,11 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, CNM_AND_NBS_M,
             f_integral = fixed_integral * wigprod
             fixed_hypmat[i, j, sidx:eidx] = f_integral
 
-            sparse_idx_local[i, j, sidx:eidx, 0] = np.arange(startx+dellx,
-                                                             startx+dellx+lenm)
-            sparse_idx_local[i, j, sidx:eidx, 1] = np.arange(starty+delly,
-                                                             starty+delly+lenm)
+    return non_c_hypmat_arr, fixed_hypmat 
 
-    return non_c_hypmat_arr, fixed_hypmat, sparse_idx_local
-
-def get_sparse_idx():
+def get_lmax_and_max_nbs():
     nmults = len(GVARS.n0_arr)
-    dim_hyper = get_dim_hyper()
+    # dim_hyper = get_dim_hyper()
     max_nbs = 0
     max_lmax = 0
     for i in range(nmults):
@@ -304,17 +253,13 @@ def get_sparse_idx():
         max_nbs = max(num_nbs, max_nbs)
         max_lmax = max(max_lmax, max(CENMULT_AND_NBS.nl_nbs[:, 1]))
 
-    sparse_idx = np.zeros((nmults, max_nbs, max_nbs, 2*max_lmax+1, 2), dtype=int)
-    return max_lmax, max_nbs, sparse_idx
+    return max_lmax, max_nbs
 
-
-max_lmax, max_nbs, sparse_idx = get_sparse_idx()
-
+max_lmax, max_nbs = get_lmax_and_max_nbs()
 
 def build_hypmat_all_cenmults():
     # number of multiplets used
     nmults = len(GVARS.n0_arr)
-    dim_hyper = get_dim_hyper()
 
     # storing as a list of sparse matrices
     # the fixed hypat (the part of hypermatrix that does not
@@ -330,7 +275,7 @@ def build_hypmat_all_cenmults():
     # going over the cenmults in a reverse order
     # this is to ensure that the largest is fileld first
     # to fill the rest in the same max shape
-    for i in tqdm(range(nmults), desc='nmult'):#-1, -1, -1):
+    for i in tqdm(range(nmults), desc='nmult'):
         # looping over all the central multiplets                                      
         n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
         ell0_nmults.append(ell0)
@@ -340,26 +285,19 @@ def build_hypmat_all_cenmults():
         SUBMAT_DICT = build_SUBMAT_INDICES(CENMULT_AND_NBS)
         omegaref_nmults.append(CENMULT_AND_NBS.omega_nbs[0])
 
-        freqdiag = build_hypmat_freqdiag(CENMULT_AND_NBS,
-                                         SUBMAT_DICT,
-                                         dim_hyper)
-
         # building the cenmult for the M matrix computation
         # Here, we need the attributes to the correctly shaped
         CENMULT_AND_NBS_M = getnt4cenmult_M(CENMULT_AND_NBS, GVARS_ST,
                                             return_shaped=True)
 
         noc_hypmat_this_s = []
-        sparse_idx_local = np.ones((max_nbs, max_nbs, 2*max_lmax+1, 2), dtype=int)
-        sparse_idx_local *= dim_hyper - 1
         
         for s_ind, s in enumerate(GVARS.s_arr):
             # shape (dim_hyper x dim_hyper) but sparse form
-            noc_hypmat, fixed_hypmat_s, sparse_idx_local =\
+            noc_hypmat, fixed_hypmat_s =\
                     build_hm_nonint_n_fxd_1cnm(CENMULT_AND_NBS,
                                                CENMULT_AND_NBS_M,
-                                               SUBMAT_DICT, sparse_idx_local,
-                                               dim_hyper, s)
+                                               SUBMAT_DICT, s)
 
             # appending the different m part in the list
             noc_hypmat_this_s.append(noc_hypmat)
@@ -370,19 +308,11 @@ def build_hypmat_all_cenmults():
             else:
                 fixed_hypmat_this_mult += fixed_hypmat_s
 
-        # adding the freqdiag to the fixed_hypmat
-        fixed_plus_freqdiag = fixed_hypmat_this_mult + freqdiag
-        sparse_idx[i] = sparse_idx_local
-
         # appending the list of sparse matrices in s to the list in cenmults
-        fixed_hypmat_all_sparse.append(fixed_plus_freqdiag)
+        fixed_hypmat_all_sparse.append(fixed_hypmat_this_mult)
         noc_hypmat_all_sparse.append(noc_hypmat_this_s)
-
-        # storing the sparse indices for the particular central multiplet
-        # if(i == nmults-1): continue
-        if(i == 0): continue
 
     # list of shape (nmults x s x (nc x dim_hyper, dim_hyper))
     # the last bracket denotes matrices of that shape but in sparse form
     return noc_hypmat_all_sparse, fixed_hypmat_all_sparse, \
-        ell0_nmults, omegaref_nmults, sparse_idx
+        ell0_nmults, omegaref_nmults

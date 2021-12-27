@@ -62,7 +62,7 @@ true_params = GVARS.ctrl_arr_dpt_clipped[sind_arr][:, cind_arr]
 
 
 # precomputing the M supermatrix components
-noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr, sparse_idx =\
+noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr =\
                                 precompute_M.build_hypmat_all_cenmults()
 noc_hypmat_all_sparse = np.asarray(noc_hypmat_all_sparse)
 fixed_hypmat_all_sparse = np.asarray(fixed_hypmat_all_sparse)
@@ -84,12 +84,6 @@ fixed_hypmat = np.reshape(fixed_hypmat_all_sparse,
 noc_hypmat = np.reshape(noc_hypmat_all_sparse,
                         (nmults, len_s, nc, max_nbs*max_nbs*len_mmax),
                         order='F')
-
-sparse_idxs_flat = np.zeros((nmults, max_nbs*max_nbs*len_mmax, 2), dtype=int)
-for i in range(nmults):
-    sparse_idxs_flat[i] = np.reshape(sparse_idx[i],
-                                     (max_nbs*max_nbs*len_mmax, 2),
-                                     order='F')
 
 #----------------------------------------------------------------------------# 
 c_fixed = np.zeros_like(GVARS.ctrl_arr_dpt_clipped)
@@ -123,7 +117,6 @@ print(f"param_coeff = {param_coeff.shape}")
 print(f"cind_arr = {cind_arr}")
 np.save('fixed_part_M.npy', fixed_hypmat_sparse)
 np.save('param_coeff_M.npy', param_coeff)
-np.save('sparse_idx_M.npy', sparse_idxs_flat)
 
 sys.exit()
 
