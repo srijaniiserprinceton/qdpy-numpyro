@@ -65,7 +65,7 @@ true_params = GVARS.ctrl_arr_dpt_clipped[sind_arr][:, cind_arr]
 
 
 # precomputing the M supermatrix components
-noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr =\
+noc_hypmat_all_sparse, fixed_hypmat_all_sparse, p_dom_dell, ell0_arr, omega0_arr =\
                                 precompute_M.build_hypmat_all_cenmults()
 noc_hypmat_all_sparse = np.asarray(noc_hypmat_all_sparse)
 fixed_hypmat_all_sparse = np.asarray(fixed_hypmat_all_sparse)
@@ -114,18 +114,6 @@ param_coeff = param_coeff[smin_ind: smax_ind + 1]
 
 # retaining the appropriate c indices                                                       
 param_coeff = param_coeff[:, cind_arr]
-
-#-----------generating the p * domega/dell factor----------------#
-p_dom_dell = np.zeros_like(fixed_hypmat_sparse)
-
-for i in range(nmults):
-    CNM_AND_NBS = build_cnm.getnt4cenmult(GVARS.n0_arr[i],GVARS.ell0_arr[i],GVARS)
-    ell0 = CNM_AND_NBS.nl_nbs[0,1]
-    for j in range(max_nbs):
-        p_dom_dell[i,j,j,:] = CNM_AND_NBS.nl_nbs[j,1] - ell0
-
-# scaling with inverse of domega/dell
-p_dom_dell *= GVARS.dom_dell[:,NAX,NAX,NAX]
 
 #---------------saving the supermatrix components-----------------#
 print(f"param_coeff = {param_coeff.shape}")

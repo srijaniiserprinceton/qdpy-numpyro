@@ -159,6 +159,8 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, s):
     non_c_hypmat_arr = np.zeros((GVARS.nc, max_nbs, max_nbs, 2*max_lmax+1))
     fixed_hypmat = np.zeros((max_nbs, max_nbs, 2*max_lmax+1))
 
+    freq_diag_this_mult = np.zeros_like(fixed_hypmat)
+
     # extracting attributes from CNM_AND_NBS
     num_nbs = len(CNM_AND_NBS.omega_nbs)
     nl_nbs = CNM_AND_NBS.nl_nbs
@@ -225,7 +227,12 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, s):
             f_integral = fixed_integral * wigprod
             fixed_hypmat[i, j, sidx:eidx] = f_integral
 
-    return non_c_hypmat_arr, fixed_hypmat 
+            # filling in the freq diag to be added later
+            if(i==j):
+                freq_diag_this_mult[i,i,sidx:eidx] =\
+                            (CNM_AND_NBS.omega_nbs[i]**2 - omegaref**2)/(2*omegaref)
+
+    return non_c_hypmat_arr, fixed_hypmat, freq_diag_this_mult
 
 def get_lmax_and_max_nbs():
     nmults = len(GVARS.n0_arr)
@@ -253,6 +260,7 @@ def build_hypmat_all_cenmults():
     # change across iterations)
     fixed_hypmat_all_sparse = []
     noc_hypmat_all_sparse = []
+    freq_diag = []
     omegaref_nmults = []
     ell0_nmults = []
 
@@ -273,7 +281,7 @@ def build_hypmat_all_cenmults():
         
         for s_ind, s in enumerate(GVARS.s_arr):
             # shape (dim_hyper x dim_hyper) but sparse form
-            noc_hypmat, fixed_hypmat_s =\
+            noc_hypmat, fixed_hypmat_s, freq_diag_this_mult =\
                     build_hm_nonint_n_fxd_1cnm(CENMULT_AND_NBS,
                                                SUBMAT_DICT, s)
 
@@ -289,8 +297,10 @@ def build_hypmat_all_cenmults():
         # appending the list of sparse matrices in s to the list in cenmults
         fixed_hypmat_all_sparse.append(fixed_hypmat_this_mult)
         noc_hypmat_all_sparse.append(noc_hypmat_this_s)
+        freq_diag.append(freq_diag_this_mult)
+            
 
     # list of shape (nmults x s x (nc x dim_hyper, dim_hyper))
     # the last bracket denotes matrices of that shape but in sparse form
-    return noc_hypmat_all_sparse, fixed_hypmat_all_sparse, \
+    return noc_hypmat_all_sparse, fixed_hypmat_all_sparse, freq_diag,\
         ell0_nmults, omegaref_nmults

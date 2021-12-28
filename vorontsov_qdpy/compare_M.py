@@ -1,4 +1,4 @@
-Bimport numpy as np
+import numpy as np
 import sys
 
 from qdpy_jax import globalvars as gvar_jax
@@ -8,17 +8,17 @@ NAX = np.newaxis
 GVARS = gvar_jax.GlobalVars()
 
 # getting the omega0 corresponding to 199 and 200
-ind_202 = GVARS.nl_all.index((0,202))
-ind_203 = GVARS.nl_all.index((0,203))
+ind_200 = GVARS.nl_all.index((0,200))
+ind_199 = GVARS.nl_all.index((0,199))
 
 # frequencies in non-dimensional units
-omega_202 = GVARS.omega_list[ind_202]
-omega_203 = GVARS.omega_list[ind_203]
+omega_200 = GVARS.omega_list[ind_200]
+omega_199 = GVARS.omega_list[ind_199]
 
 # loading the necessary files
-ell1_arr = np.load('ell1_arr_203.npy')
-ell2_arr = np.load('ell2_arr_203.npy')
-cvec_arr = np.load('cvec_arr_203.npy', allow_pickle=True)
+ell1_arr = np.load('ell1_arr.npy')
+ell2_arr = np.load('ell2_arr.npy')
+cvec_arr = np.load('cvec_arr.npy', allow_pickle=True)
 
 
 # slicing the Cvec array
@@ -27,13 +27,13 @@ def get_Cvec(ell1, ell2):
     Cvec_ell1_ell2 = cvec_arr[index_mask]
 
     # scaling by 2*omegaref for comparison with supmat_qdpt
-    if(ell1 % 2 == 0): Cvec_ell1_ell2 /= (2 * omega_202)
-    else: Cvec_ell1_ell2 /= (2 * omega_203)
+    if(ell1 % 2 == 0): Cvec_ell1_ell2 /= (2 * omega_200)
+    else: Cvec_ell1_ell2 /= (2 * omega_199)
 
     return Cvec_ell1_ell2 
 
 ell_nbs = np.array([200, 202, 198, 204, 196], dtype='int')
-ell_nbs += 3
+# ell_nbs += 3
 ell0 = ell_nbs[0]
 
 # initializing the supermatrix
@@ -118,4 +118,4 @@ def make_qdpy_M_shaped():
 M = make_qdpy_M_shaped()
 
 # comparing the M_200
-np.testing.assert_array_almost_equal(z0[-5], M)
+np.testing.assert_array_almost_equal(z0[-2], M)

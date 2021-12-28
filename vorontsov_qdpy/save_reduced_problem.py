@@ -70,7 +70,7 @@ noc_bkm_all_sparse, fixed_bkm_all_sparse, k_arr, p_arr =\
                                 precompute_bkm.build_bkm_all_cenmults()
 
 # precomputing the supermatrix components
-noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr =\
+noc_hypmat_all_sparse, fixed_hypmat_all_sparse, freq_diag, ell0_arr, omega0_arr =\
                                 precompute.build_hypmat_all_cenmults()
 
 #-----------------------initializing shape parameters-----------------------#
@@ -84,30 +84,6 @@ len_mmax = fixmat_shape[2]
 len_data = len(omega0_arr)
 num_k = int((np.unique(k_arr)>0).sum())
 
-#-----------------------------------------------------------------#
-# flattening exact qdPy hypmat to facilitate densification
-'''
-fixed_hypmat = np.reshape(fixed_hypmat_all_sparse,
-                          (nmults, max_nbs*max_nbs*len_mmax),
-                          order='F')
-noc_hypmat = np.reshape(noc_hypmat_all_sparse,
-                        (nmults, len_s, nc, max_nbs*max_nbs*len_mmax),
-                        order='F')
-
-# flattened indices in sparse form for densification
-sparse_idxs_flat = np.zeros((nmults, max_nbs*max_nbs*len_mmax, 2), dtype=int)
-
-for i in range(nmults):
-    sparse_idxs_flat[i] = np.reshape(sparse_idx[i],
-                                     (max_nbs*max_nbs*len_mmax, 2),
-                                     order='F')
-
-# densifying qdPy fixed part to get dim_hyper
-fixed_hypmat_dense = sparse.coo_matrix((fixed_hypmat[0],
-                                        (sparse_idxs_flat[0, ..., 0],
-                                        sparse_idxs_flat[0, ..., 1]))).toarray()
-dim_hyper = fixed_hypmat_dense.shape[0]
-'''
 #------------------------------------------------------------------#
 c_fixed = np.zeros_like(GVARS.ctrl_arr_dpt_clipped)
 c_fixed = GVARS.ctrl_arr_dpt_clipped.copy()
@@ -158,23 +134,12 @@ bkm_test = np.load('../tests/bkm_test.npy')
 # testing against a benchmarked values stored                                                 
 np.testing.assert_array_almost_equal(bkm_scaled, bkm_test)                                  
 
-#-----------generating the p * domega/dell factor----------------#                           
-freq_diag = np.zeros_like(fixed_hypmat_sparse)
-
-for i in range(nmults):
-    CNM_AND_NBS = build_cnm.getnt4cenmult(GVARS.n0_arr[i],GVARS.ell0_arr[i],GVARS)
-    omega0 = CNM_AND_NBS.omega_nbs[0]
-    for j in range(max_nbs):
-        freq_diag[i,j,j,:] =\
-                (CNM_AND_NBS.omega_nbs[j]**2 - omega0**2)/(2*omega0)
-
 #-----------------------------------------------------------------# 
 
 # saving the supermatrix components
 # np.savetxt('.dimhyper', np.array([dim_hyper]), fmt='%d')
 np.save('fixed_part.npy', fixed_hypmat_sparse)
 np.save('param_coeff.npy', param_coeff)
-# np.save('sparse_idx.npy', sparse_idx)
 np.save('omega0_arr.npy', omega0_arr)
 np.save('dom_dell_arr.npy', GVARS.dom_dell)
 np.save('freq_diag.npy', freq_diag)

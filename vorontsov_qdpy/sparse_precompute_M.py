@@ -5,14 +5,6 @@ from scipy.interpolate import splev
 from scipy import sparse
 import sys
 
-'''
-from jax.experimental import sparse
-from jax.ops import index_update as jidx_update
-from jax.ops import index as jidx
-import jax.numpy as jnp
-from jax import jit
-'''
-
 from qdpy_jax import load_multiplets
 from vorontsov_qdpy import prune_multiplets_V11
 from qdpy_jax import jax_functions as jf
@@ -20,6 +12,8 @@ from qdpy_jax import wigner_map2 as wigmap
 from qdpy_jax import globalvars as gvar_jax
 from qdpy_jax import build_cenmult_and_nbs as build_cnm
 from vorontsov_qdpy import build_cenmult_and_nbs_M as build_cnm_M
+
+NAX = np.newaxis
 
 # defining functions used in multiplet functions in the script
 getnt4cenmult_M = build_cnm_M.getnt4cenmult
@@ -162,6 +156,9 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, CNM_AND_NBS_M,
     non_c_hypmat_arr = np.zeros((GVARS.nc, max_nbs, max_nbs, 2*max_lmax+1))
     fixed_hypmat = np.zeros((max_nbs, max_nbs, 2*max_lmax+1))
 
+    # storing the p * domega/dell factor
+    p_arr_domdell = np.zeros_like(fixed_hypmat)
+
     # extracting attributes from CNM_AND_NBS
     num_nbs = len(CNM_AND_NBS.omega_nbs)
     nl_nbs = CNM_AND_NBS.nl_nbs
@@ -238,7 +235,12 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, CNM_AND_NBS_M,
             f_integral = fixed_integral * wigprod
             fixed_hypmat[i, j, sidx:eidx] = f_integral
 
-    return non_c_hypmat_arr, fixed_hypmat 
+            # filling in only p for i=j for now
+            # for this condition, ell1_true = ell2_true
+            if(i == j):
+                p_arr_domdell[i,i,sidx:eidx] = ell1_true - CNM_AND_NBS.nl_nbs[0,1]
+
+    return non_c_hypmat_arr, fixed_hypmat, p_arr_domdell
 
 def get_lmax_and_max_nbs():
     nmults = len(GVARS.n0_arr)
@@ -266,6 +268,7 @@ def build_hypmat_all_cenmults():
     # change across iterations)
     fixed_hypmat_all_sparse = []
     noc_hypmat_all_sparse = []
+    p_dom_dell = []
     omegaref_nmults = []
     ell0_nmults = []
 
@@ -294,7 +297,7 @@ def build_hypmat_all_cenmults():
         
         for s_ind, s in enumerate(GVARS.s_arr):
             # shape (dim_hyper x dim_hyper) but sparse form
-            noc_hypmat, fixed_hypmat_s =\
+            noc_hypmat, fixed_hypmat_s, p_arr_domdell =\
                     build_hm_nonint_n_fxd_1cnm(CENMULT_AND_NBS,
                                                CENMULT_AND_NBS_M,
                                                SUBMAT_DICT, s)
@@ -311,8 +314,12 @@ def build_hypmat_all_cenmults():
         # appending the list of sparse matrices in s to the list in cenmults
         fixed_hypmat_all_sparse.append(fixed_hypmat_this_mult)
         noc_hypmat_all_sparse.append(noc_hypmat_this_s)
+        p_dom_dell.append(p_arr_domdell)
+
+    # finally scaling the p_dom_dell by deomga/dell
+    p_dom_dell *= GVARS.dom_dell[:, NAX, NAX, NAX]
 
     # list of shape (nmults x s x (nc x dim_hyper, dim_hyper))
     # the last bracket denotes matrices of that shape but in sparse form
-    return noc_hypmat_all_sparse, fixed_hypmat_all_sparse, \
+    return noc_hypmat_all_sparse, fixed_hypmat_all_sparse, p_dom_dell, \
         ell0_nmults, omegaref_nmults
