@@ -170,9 +170,9 @@ pred = diag_evals_fixed * 1.0
 
 # flattening for easy dot product
 true_params_flat = np.reshape(true_params,
-                              (len(sind_arr) * len(cind_arr)))
+                              (len(sind_arr) * len(cind_arr)), 'F')
 noc_diag_flat = np.reshape(noc_diag,
-                           (len(sind_arr) * len(cind_arr), -1))
+                           (len(sind_arr) * len(cind_arr), -1), 'F')
 
 # this is essentially the model function
 pred += true_params_flat @ noc_diag_flat
@@ -183,9 +183,9 @@ np.testing.assert_array_almost_equal(pred, eigvals_model)
 
 #-------------saving miscellaneous files-------------------#
 np.save('fixed_part.npy', diag_evals_fixed)
-np.save('param_coeff.npy', noc_diag)
+np.save('param_coeff_flat.npy', noc_diag_flat)
+np.save('true_params_flat.npy', true_params_flat)
 np.save('data_model.npy', eigvals_model)
-np.save('true_params.npy', true_params)
 np.save('cind_arr.npy', cind_arr)
 np.save('sind_arr.npy', sind_arr)
 

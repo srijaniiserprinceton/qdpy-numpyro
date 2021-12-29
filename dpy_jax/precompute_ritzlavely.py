@@ -1,5 +1,5 @@
 from ritzLavelyPy import rlclass as RLC
-from dpy_jax import globalvars as gvar_jax
+from qdpy_jax import globalvars as gvar_jax
 import numpy as np
 
 
