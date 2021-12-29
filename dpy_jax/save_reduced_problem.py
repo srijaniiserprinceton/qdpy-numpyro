@@ -1,44 +1,41 @@
-Bfrom jax.lib import xla_bridge
-print('JAX using:', xla_bridge.get_backend().platform)
-
 import argparse
-import jax
-from jax import random
 from tqdm import tqdm
 import numpy as np
-import jax.numpy as jnp
-from jax.config import config
-from jax.ops import index as jidx
-from jax.ops import index_update as jidx_update
-from jax.lax import fori_loop as foril
 import matplotlib.pyplot as plt
 import sys
 
+import jax.numpy as jnp
+from jax.config import config
+import jax
+from jax import random
+from jax.ops import index as jidx
+from jax.ops import index_update as jidx_update
+from jax.lax import fori_loop as foril
+from jax.lib import xla_bridge
+print('JAX using:', xla_bridge.get_backend().platform)
 config.update("jax_log_compiles", 1)
 config.update('jax_platform_name', 'gpu')
 config.update('jax_enable_x64', True)
 
-# new package in jax.numpy
-from dpy_jax import globalvars as gvar_jax
-from dpy_jax import jax_functions as jf
+#----------------------import custom packages------------------------#
+from qdpy_jax import globalvars as gvar_jax
+from dpy_jax import jax_functions_dpy as jf
 from dpy_jax import sparse_precompute_acoeff as precompute
-from dpy_jax import build_hypermatrix_sparse as build_hm_sparse
+from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
 
 from jax.lib import xla_bridge
 print('JAX using:', xla_bridge.get_backend().platform)
 
-
-######### parameters needed to be changed ###############
-
-# the indices of ctrl points that we want to investigate
+#-------------------parameters to be inverted for--------------------#
+# the indices of ctrl points that we want to invert for
 ind_min, ind_max = 0, 2
 cind_arr = np.arange(ind_min, ind_max + 1)
 
+# the angular degrees we want to invert for
 smin, smax = 3, 5
 smin_ind, smax_ind = (smin-1)//2, (smax-1)//2
 sind_arr = np.array([smin_ind, smax_ind])
- 
-#########################################################
+#---------------------------------------------------------------------#
 
 ARGS = np.loadtxt(".n0-lmin-lmax.dat")
 GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
@@ -49,57 +46,25 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             load_from_file=int(ARGS[5]))
 
 GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
-eigvals_model = np.load("evals_model.npy")
-eigvals_model = jnp.asarray(eigvals_model)
-eigvals_sigma = jnp.asarray(np.load('eigvals_sigma.npy'))
-acoeffs_sigma = jnp.asarray(np.load('acoeffs_sigma.npy'))
-num_eigvals = len(eigvals_model)
 
+#-----------------loading miscellaneous files--------------------------#
+eigvals_model = jnp.asarray(np.load('eigvals_model.npy'))
+eigvals_sigma_model = jnp.asarray(np.load('eigvals_sigma_model.npy'))
+acoeffs_HMI = jnp.asarray(np.load('acoeffs_HMI.npy'))
+acoeffs_sigma_HMI = jnp.asarray(np.load('acoeffs_sigma_HMI.npy'))
+#----------------------------------------------------------------------#
 
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse, omega0_arr =\
                                         precompute.build_hypmat_all_cenmults()
 
-# length of data
+#---------------computing miscellaneous shape parameters---------------# 
 len_data = len(omega0_arr)
-
+num_eigvals = len(eigvals_model)
 nc = GVARS.nc
 len_s = len(GVARS.s_arr)
 nmults = len(GVARS.n0_arr)
-
-cmax = jnp.asarray(GVARS.ctrl_arr_up)
-cmin = jnp.asarray(GVARS.ctrl_arr_lo)
-
-cmax = jnp.array(1.1 * GVARS.ctrl_arr_dpt_clipped)
-cmin = jnp.array(0.9 * GVARS.ctrl_arr_dpt_clipped)
-
-ctrl_arr_dpt = jnp.asarray(GVARS.ctrl_arr_dpt_clipped)
-
-ctrl_limits = {}
-ctrl_limits['cmin'] = {}
-ctrl_limits['cmax'] = {}
-
-for i in range(cmax.shape[1]-4):
-    ctrl_limits['cmin'][f'c1_{i}'] = cmin[0, i]
-    ctrl_limits['cmin'][f'c3_{i}'] = cmin[1, i]
-    ctrl_limits['cmin'][f'c5_{i}'] = cmin[2, i]
-    ctrl_limits['cmax'][f'c1_{i}'] = cmax[0, i]
-    ctrl_limits['cmax'][f'c3_{i}'] = cmax[1, i]
-    ctrl_limits['cmax'][f'c5_{i}'] = cmax[2, i]
-    
-
-# checks if the forward problem is working fine
-def get_delta_omega():
-    cdpt = GVARS.ctrl_arr_dpt_clipped
-
-    diag_evals = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse,
-                                                fixed_hypmat_all_sparse,
-                                                cdpt, nc, len_s)
-
-    delta_omega = diag_evals.todense()/2./omega0_arr*GVARS.OM*1e6
-    delta_omega -= eigvals_model
-    
-    return delta_omega
-
+#----------------------------------------------------------------------# 
+'''
 def get_posterior_grid(cind, sind, N):
     # array containing the factors for the param space
     fac = jnp.linspace(0.01, 2.0, N)
@@ -144,8 +109,6 @@ for sind in range(smin_ind, smax_ind+1):
                                      jidx[sind-1, ci, :],
                                      misfit_cs)
 
-print(f"delta_omega = {get_delta_omega()}")
-
 # 1D plot of the misfit as we scan across the terrain
 
 fig, axs = plt.subplots(smax_ind-smin_ind+1,
@@ -161,10 +124,12 @@ for si in range(smin_ind, smax_ind+1):
 plt.tight_layout()
 
 plt.savefig('model_vs_data_minfunc.png')
+'''
 
-#--------- SECTION TO STORE MATRICES FOR COLLAB PROBLEM ------------#
-
+#---------section to add some more ctrl points to fixed part------------#
+# array of ctrl points which aer non-zero for the fixed splines
 c_fixed = np.zeros_like(GVARS.ctrl_arr_dpt_clipped)
+# filling in with the dpt wsr by default
 c_fixed = GVARS.ctrl_arr_dpt_clipped.copy()
 
 # making the c_fixed coeffs for the variable params zero
@@ -173,17 +138,14 @@ for sind in range(smin_ind, smax_ind+1):
         c_fixed[sind, cind] = 0.0
         c_fixed[sind, cind] = 0.0
 
-noc_hypmat_all_sparse, fixed_hypmat_all_sparse, omega0_arr =\
-                                        precompute.build_hypmat_all_cenmults()
-
-
-
-fac_sig = 1./2./omega0_arr*GVARS.OM*1e6#/eigvals_sigma
+# scaling factor to get \delta\omega
+fac_sig = 1./2./omega0_arr*GVARS.OM*1e6
 
 # this is the fixed part of the diag
 diag_evals_fixed = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse,
                                                     fixed_hypmat_all_sparse,
                                                     c_fixed, nc, len_s).todense()
+# the \delta\omega in muHz
 diag_evals_fixed *= fac_sig
 
 # we just need to save the noc_diag corresponding to the two ctrl_pts set to zero
@@ -195,9 +157,14 @@ for sind in range(smin_ind, smax_ind+1):
         noc_diag_s.append(noc_hypmat_all_sparse[sind][cind].todense() * fac_sig)
     noc_diag.append(noc_diag_s)
 
-# scaling the data
-# eigvals_model *= 1./eigvals_sigma
+#---------storing the true parameters which are allowed to vary-------#
+true_params = np.zeros((smax_ind - smin_ind + 1, ind_max - ind_min + 1))
 
+for sind in range(smin_ind, smax_ind+1):
+    for ci, cind in enumerate(cind_arr):
+        true_params[sind-1, ci] = GVARS.ctrl_arr_dpt_clipped[sind, cind]
+
+#----------------------------------------------------------------------# 
 # checking if the forward problem works with the above components
 pred = diag_evals_fixed * 1.0
 
@@ -207,14 +174,11 @@ for sind in range(smin_ind, smax_ind+1):
         pred += GVARS.ctrl_arr_dpt_clipped[sind, cind] *\
                 noc_diag[sind-1][ci]
 
-true_params = np.zeros((smax_ind - smin_ind + 1, ind_max - ind_min + 1))
+# testing if the model still works after absorbing some ctrl points
+# into the fixed part.
+np.testing.assert_array_almost_equal(pred, eigvals_model)
 
-for sind in range(smin_ind, smax_ind+1):
-    for ci, cind in enumerate(cind_arr):
-        true_params[sind-1, ci] = GVARS.ctrl_arr_dpt_clipped[sind, cind]
-
-print('Pred - Data:\n', np.max(np.abs(pred - eigvals_model)))
-
+#-------------saving miscellaneous files-------------------#
 np.save('fixed_part.npy', diag_evals_fixed)
 np.save('param_coeff.npy', noc_diag)
 np.save('data_model.npy', eigvals_model)
@@ -223,7 +187,8 @@ np.save('cind_arr.npy', cind_arr)
 np.save('sind_arr.npy', sind_arr)
 
 sys.exit()
-################# generating the 2D pdfs #########################
+
+#-----------------generating the 2D pdfs-------------------#
 
 true_params_flat = true_params.flatten(order='F')
 num_params = len(true_params_flat)
