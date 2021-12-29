@@ -1,4 +1,4 @@
-import numpy as np
+Bimport numpy as np
 import matplotlib.pyplot as plt
 
 from qdpy_jax import globalvars as gvar_jax
@@ -49,7 +49,7 @@ def plot_compare():
                 count += 1
 
         plt.savefig(f'Z_compare_{i}.png')
-
+        plt.close()
         print(i)
 
 # plotting to compare the Z and Z0 and Z1 values
@@ -102,3 +102,63 @@ clp = get_clp(bkm_scaled)
 
 # computing omega1
 omega1 = np.sum(clp * np.sum(Z1 * clp[:,:,NAX,:], axis=1), axis=1)
+
+# reading off the omega0 from supmat_qdpt_200
+supmat_200 = np.load('supmat_qdpt_200.npy').real
+
+# finding the exact eigenvalues
+def eigval_sort_slice(eigval, eigvec):
+    eigbasis_sort = np.zeros(len(eigval), dtype=int)
+    for i in range(len(eigval)):
+        eigbasis_sort[i] = np.argmax(np.abs(eigvec[i]))
+
+    return eigval[eigbasis_sort]
+
+
+def get_eigs(mat):
+    eigvals, eigvecs = np.linalg.eigh(mat)
+    eigvals = eigval_sort_slice(eigvals, eigvecs)
+    return eigvals
+
+mult_ind = GVARS.nl_all.index((0, 200))
+omegaref = GVARS.omega_list[mult_ind]
+omega0 = np.diag(supmat_200)[:401]/(2*omegaref) * GVARS.OM * 1e9
+omega_exact = get_eigs(supmat_200)[:401]/(2*omegaref) * GVARS.OM * 1e9
+
+# converting the required omegas to nHz
+omega1 *= GVARS.OM * 1e9
+
+omega_V11 = omega0 + omega1[-2,8:-8]
+
+plt.figure()
+plt.plot((omega0-omega_exact)[2:-2],'r')
+plt.plot((omega_V11-omega_exact)[2:-2],'--k')
+plt.savefig('omega_comparison.png')
+plt.close()
+
+
+# loading the RL Poly
+RL_poly = np.load('RL_poly.npy')
+smin = min(GVARS.s_arr)
+smax = max(GVARS.s_arr)
+# Pjl = RL_poly[:, smin:smax+1:2, :401]
+Pjl = RL_poly[:, :, :401]
+
+# calculating the normalization for Pjl apriori                                              
+# shape (nmults, num_j)                                                                      
+nmults = Z.shape[0]
+Pjl_norm = np.zeros((nmults, Pjl.shape[1]))
+for mult_ind in range(nmults):
+    Pjl_norm[mult_ind] = np.diag(Pjl[mult_ind] @ Pjl[mult_ind].T)
+
+Pjl_local = Pjl[-2]
+
+acoeff_exact = (Pjl_local @ omega_exact)/Pjl_norm[-2]
+
+# temporary fix for edges
+omega_V11[:2] = omega_exact[:2]
+omega_V11[-2:] = omega_exact[-2:]
+
+acoeff_V11 = (Pjl_local @ omega_V11)/Pjl_norm[-2]
+
+acoeff_DPT = (Pjl_local @ omega0)/Pjl_norm[-2]
