@@ -34,7 +34,7 @@ cind_arr = np.arange(ind_min, ind_max + 1)
 # the angular degrees we want to invert for
 smin, smax = 3, 5
 smin_ind, smax_ind = (smin-1)//2, (smax-1)//2
-sind_arr = np.array([smin_ind, smax_ind])
+sind_arr = np.arange(smin_ind, smax_ind+1)
 #---------------------------------------------------------------------#
 
 ARGS = np.loadtxt(".n0-lmin-lmax.dat")
@@ -168,11 +168,14 @@ for sind in range(smin_ind, smax_ind+1):
 # checking if the forward problem works with the above components
 pred = diag_evals_fixed * 1.0
 
-# adding the contribution from the fitting part
-for sind in range(smin_ind, smax_ind+1):
-    for ci, cind in enumerate(cind_arr):
-        pred += GVARS.ctrl_arr_dpt_clipped[sind, cind] *\
-                noc_diag[sind-1][ci]
+# flattening for easy dot product
+true_params_flat = np.reshape(true_params,
+                              (len(sind_arr) * len(cind_arr)))
+noc_diag_flat = np.reshape(noc_diag,
+                           (len(sind_arr) * len(cind_arr), -1))
+
+# this is essentially the model function
+pred += true_params_flat @ noc_diag_flat
 
 # testing if the model still works after absorbing some ctrl points
 # into the fixed part.
