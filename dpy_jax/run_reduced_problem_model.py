@@ -118,27 +118,26 @@ pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
 
 # these arrays should be very close
 np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
-sys.exit()
-######################################################
+
+#----------------------------------------------------------------------#
 
 # changing to the HMI acoeffs if doing this for real data 
 # data_acoeffs = GVARS.acoeffs_true
 
-num_params = len(cind_arr)
-
 # setting the prior limits
-cmin = 0.5 * np.ones_like(true_params.flatten())# / 1e-3
-cmax = 1.5 * np.ones_like(true_params.flatten())# / 1e-3
+cmin = 0.5 * jnp.ones_like(true_params_flat)# / 1e-3
+cmax = 1.5 * jnp.ones_like(true_params_flat)# / 1e-3
 #param_coeff *= 1e-3
 
-
 init_params = {}
-init_params[f'c_arr'] = jnp.ones_like(true_params.flatten())
+init_params[f'c_arr'] = jnp.ones_like(true_params_flat)
 ip_nt = namedtuple('ip', init_params.keys())(*init_params.values())
 
+'''
 param_coeff = jnp.reshape(param_coeff, (nc*len_s, -1), 'F')
 true_params_flat = jnp.reshape(true_params, nc*len_s, 'F')
-
+'''
+sys.exit()
 
 def model():
     # predicted a-coefficients
@@ -148,7 +147,7 @@ def model():
     c_arr = numpyro.sample(f'c_arr', dist.Uniform(cmin, cmax))
     c_arr = c_arr * true_params_flat
 
-    pred = fixed_part + c_arr @ param_coeff
+    pred = fixed_part + c_arr @ param_coeff_flat
 
     def loop_in_mults(mult_ind, pred_acoeff):
         pred_omega = jdc(pred, (mult_ind*dim_hyper,), (dim_hyper,))
@@ -158,7 +157,7 @@ def model():
         return pred_acoeff
 
     pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
-    misfit_acoeffs = (pred_acoeffs - data_acoeffs)/acoeffs_sigma
+    misfit_acoeffs = (pred_acoeffs - data_acoeffs)/acoeffs_sigma_HMI
 
     return numpyro.factor('obs', dist.Normal(0.0, 1.0).log_prob(misfit_acoeffs))
 
