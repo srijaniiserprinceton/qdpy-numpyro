@@ -3,7 +3,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=40
 #SBATCH --mem=150G
-#SBATCH --time=02:00:00          # total run time limit (HH:MM:SS)
+#SBATCH --time=04:00:00          # total run time limit (HH:MM:SS)
 
 # commands commented out
 # SBATCH --cpus-per-task=40       # cpu-cores per task (>1 if multi-threaded tasks)

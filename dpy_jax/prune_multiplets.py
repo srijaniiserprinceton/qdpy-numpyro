@@ -1,8 +1,8 @@
 from jax import jit
 import numpy as np
 
-from qdpy_jax import wigner_map2 as wigmap
-from qdpy_jax import build_cenmult_and_nbs as build_cnm
+from dpy_jax import wigner_map2 as wigmap
+from dpy_jax import build_cenmults as build_cnm
 
 # jitting various functions
 getnt4cenmult_ = jit(build_cnm.getnt4cenmult, static_argnums = (0, 1, 2))
@@ -25,30 +25,24 @@ def get_pruned_multiplets(nl, omega, nl_all):
                                         nl[i, :].reshape(1, 2)), 0)
             omega_pruned.append(omega[i])
             nl_idx_pruned.append(nl_all.tolist().index([nl[i, 0], nl[i, 1]]))
+            
     return nl_pruned, nl_idx_pruned, omega_pruned
 
 
-def get_pruned_attributes(GVARS, GVARS_ST):
+def get_pruned_attributes(GVARS):
     wig_list = []
     wig_idx = []
     
-    for i in range(len(GVARS.n0_arr)):
-        n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
-        
-        # building the namedtuple for the central multiplet and its neighbours
-        CENMULT_AND_NBS = getnt4cenmult_(n0, ell0, GVARS_ST)
-        if i == 0:
-            nl_pruned = CENMULT_AND_NBS.nl_nbs
-            omega_pruned = CENMULT_AND_NBS.omega_nbs
-        else:
-            nl_pruned = np.concatenate((nl_pruned, CENMULT_AND_NBS.nl_nbs), 0)
-            omega_pruned = np.append(omega_pruned, CENMULT_AND_NBS.omega_nbs)
-            
-        wig_list, wig_idx = wigmap.get_wigners(CENMULT_AND_NBS.nl_nbs, 
-                                               wig_list, wig_idx)
-        print(n0, ell0)
+    # building the namedtuple for the central multiplet and its neighbours
+    CENMULTS = getnt4cenmult_(GVARS)
+    
+    nl_pruned = CENMULTS.nl_cnm
+    omega_pruned = CENMULTS.omega_cnm
 
-    nl_arr = np.asarray(GVARS_ST.nl_all)
+    wig_list, wig_idx = wigmap.get_wigners(CENMULTS.nl_cnm, GVARS.s_arr,
+                                           wig_list, wig_idx)
+
+    nl_arr = np.asarray(GVARS.nl_all)
     nl_pruned = np.asarray(nl_pruned)
 
     # extracting the unique multiplets in the nl_pruned

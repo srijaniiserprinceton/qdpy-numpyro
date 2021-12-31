@@ -1,4 +1,5 @@
 import numpy as np
+from tqdm import tqdm
 from qdpy_jax import globalvars as gvar_jax
 
 
@@ -37,8 +38,8 @@ class load_multiplets:
 
         # directory containing the eigenfunctions
         eigdir = self.GVAR.eigdir
-
-        for i in range(nmults):
+        
+        for i in tqdm(range(nmults), desc=f"Loading eigenfunctions..."):
             idx = self.nl_idx_pruned[i]
             U_arr[i] = np.loadtxt(f'{eigdir}/U{idx}.dat')[rmin_idx:rmax_idx]
             V_arr[i] = np.loadtxt(f'{eigdir}/V{idx}.dat')[rmin_idx:rmax_idx]

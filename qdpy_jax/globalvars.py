@@ -125,7 +125,6 @@ class GlobalVars():
 
         # rth = r threshold beyond which the profiles are updated. 
         self.rth = qdPars.rth
-        print(f"rth = {self.rth}")
 
         # retaining only region between rmin and rmax
         self.r = self.mask_minmax(self.r)
@@ -199,6 +198,7 @@ class GlobalVars():
                                                   self.t_internal,
                                                   self.knot_ind_th,
                                                   self.spl_deg)
+
         return None
 
     def get_dom_dell(self):

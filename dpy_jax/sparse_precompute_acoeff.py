@@ -10,9 +10,9 @@ from jax import jit
 from qdpy_jax import globalvars as gvar_jax
 from qdpy_jax import load_multiplets
 from dpy_jax import jax_functions_dpy as jf
-from qdpy_jax import prune_multiplets
-from qdpy_jax import wigner_map2 as wigmap
 
+from dpy_jax import wigner_map2 as wigmap
+from dpy_jax import prune_multiplets
 from dpy_jax import build_cenmults as build_cnm
 
 # defining functions used in multiplet functions in the script
@@ -33,8 +33,7 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             load_from_file=int(ARGS[5]))
 GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx =\
-                    prune_multiplets.get_pruned_attributes(GVARS,
-                                                           GVARS_ST)
+                    prune_multiplets.get_pruned_attributes(GVARS)
 
 CNM = build_cnm.getnt4cenmult(GVARS)
 
@@ -46,7 +45,6 @@ ellmax = np.max(CNM.nl_cnm[:,1])
 lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
                                      nl_idx_pruned,
                                      omega_pruned)
-
 
 def get_bsp_basis_elements(x):
     """Returns the integrated basis polynomials

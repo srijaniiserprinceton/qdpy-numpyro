@@ -13,7 +13,6 @@ config.update('jax_enable_x64', True)
 from qdpy_jax import globalvars as gvar_jax
 import sparse_precompute_acoeff as precompute
 from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
-
 #-----------------------------------------------------------------#
 parser = argparse.ArgumentParser()
 parser.add_argument("--n0", help="radial order",
@@ -38,17 +37,15 @@ with open(".n0-lmin-lmax.dat", "w") as f:
             f"{ARGS.knot_num}" + "\n" +
             f"{ARGS.load_mults}")
 #-----------------------------------------------------------------#
-
 GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
                             lmin=ARGS.lmin,
                             lmax=ARGS.lmax,
                             rth=ARGS.rth,
                             knot_num=ARGS.knot_num,
                             load_from_file=ARGS.load_mults)
+
 __, GVARS_TR, __ = GVARS.get_all_GVAR()
-
 #-----------------------------------------------------------------#
-
 # precomputing the perform tests and checks and generate true synthetic eigvals
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse, omega0_arr =\
                                 precompute.build_hypmat_all_cenmults()

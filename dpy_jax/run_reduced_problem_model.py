@@ -1,4 +1,10 @@
-import os
+Bimport os
+
+#----------------setting the number of chains to be used-----------------#                    
+num_chains = 38
+os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
+#------------------------------------------------------------------------# 
+
 import numpy as np
 from collections import namedtuple
 import matplotlib.pyplot as plt
@@ -24,10 +30,8 @@ from numpyro.infer import NUTS, MCMC, SA
 
 from qdpy_jax import globalvars as gvar_jax
 
-#----------------setting the number of chains to be used-----------------#
-num_chains = 1
-os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
-#------------------------------------------------------------------------#
+#------------------------------------------------------------------------# 
+
 ARGS = np.loadtxt(".n0-lmin-lmax.dat")
 GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             lmin=int(ARGS[1]),
@@ -131,19 +135,14 @@ cmax = 1.5 * jnp.ones_like(true_params_flat)# / 1e-3
 
 init_params = {}
 init_params[f'c_arr'] = jnp.ones_like(true_params_flat)
-ip_nt = namedtuple('ip', init_params.keys())(*init_params.values())
+# ip_nt = namedtuple('ip', init_params.keys())(*init_params.values())
 
-'''
-param_coeff = jnp.reshape(param_coeff, (nc*len_s, -1), 'F')
-true_params_flat = jnp.reshape(true_params, nc*len_s, 'F')
-'''
-sys.exit()
-
+# the model function that is used by MCMC kernel
 def model():
     # predicted a-coefficients
     pred_acoeffs = jnp.zeros(num_j * nmults)
+    
     # sampling from a uniform prior
-    # c1 = []
     c_arr = numpyro.sample(f'c_arr', dist.Uniform(cmin, cmax))
     c_arr = c_arr * true_params_flat
 
@@ -174,6 +173,7 @@ def print_summary(samples, ctrl_arr):
               f"error/sigma = {(sample.mean()-obs)/sample.std():8.3f}")
     return None
 
+#----------------------------------------------------------------------# 
 
 # Start from this source of randomness. We will split keys for subsequent operations.    
 seed = int(123 + 100*np.random.rand())
@@ -181,19 +181,25 @@ rng_key = random.PRNGKey(seed)
 rng_key, rng_key_ = random.split(rng_key)
 
 #kernel = SA(model, adapt_state_size=200)
-init_strat = numpyro.infer.init_to_value(values=init_params)
+# init_strat = numpyro.infer.init_to_value(values=init_params)
 
+# defining the kernel
 kernel = NUTS(model,
               max_tree_depth=(20, 5))
               # adapt_step_size=False,
               # step_size=1e-3,
               # init_strategy=init_strat)
+
 mcmc = MCMC(kernel,
             num_warmup=5000,
             num_samples=5000,
             num_chains=num_chains)  
-mcmc.run(rng_key_,
-         extra_fields=('potential_energy',))
+
+# running 
+mcmc.run(rng_key_, extra_fields=('potential_energy',))
+
+#----------------Analyzing the chains-----------------------#
+
 pe = mcmc.get_extra_fields()['potential_energy']
 
 # extracting necessary fields for plotting
