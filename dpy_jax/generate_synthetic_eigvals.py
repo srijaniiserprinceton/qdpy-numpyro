@@ -9,10 +9,6 @@ config.update("jax_log_compiles", 1)
 config.update('jax_platform_name', 'cpu')
 config.update('jax_enable_x64', True)
 
-# importing local package 
-from qdpy_jax import globalvars as gvar_jax
-import sparse_precompute_acoeff as precompute
-from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
 #-----------------------------------------------------------------#
 parser = argparse.ArgumentParser()
 parser.add_argument("--n0", help="radial order",
@@ -36,6 +32,11 @@ with open(".n0-lmin-lmax.dat", "w") as f:
             f"{ARGS.rth}" + "\n" +
             f"{ARGS.knot_num}" + "\n" +
             f"{ARGS.load_mults}")
+#-----------------------------------------------------------------#
+# importing local package 
+from qdpy_jax import globalvars as gvar_jax
+import sparse_precompute_acoeff as precompute
+from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
 #-----------------------------------------------------------------#
 GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
                             lmin=ARGS.lmin,
@@ -83,7 +84,7 @@ def compare_hypmat():
 
 if __name__ == "__main__":
     model_ = jit(model)
-    # eigvals_true = compare_hypmat()
+    eigvals_true = compare_hypmat()
     eigvals_true = model_()
 
     # storing the eigvals sigmas

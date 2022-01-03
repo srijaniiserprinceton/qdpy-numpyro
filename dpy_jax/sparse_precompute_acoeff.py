@@ -9,8 +9,8 @@ from jax import jit
 
 from qdpy_jax import globalvars as gvar_jax
 from qdpy_jax import load_multiplets
-from dpy_jax import jax_functions_dpy as jf
 
+from dpy_jax import jax_functions_dpy as jf
 from dpy_jax import wigner_map2 as wigmap
 from dpy_jax import prune_multiplets
 from dpy_jax import build_cenmults as build_cnm

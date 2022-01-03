@@ -1,6 +1,5 @@
 import numpy as np
 from tqdm import tqdm
-from qdpy_jax import globalvars as gvar_jax
 
 
 class load_multiplets:
