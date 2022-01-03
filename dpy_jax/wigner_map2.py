@@ -1,4 +1,5 @@
 import jax.numpy as jnp
+from tqdm import tqdm
 import numpy as np
 from jax.lax import fori_loop as foril
 import py3nj
@@ -48,7 +49,7 @@ def w3j_vecm(l1, l2, l3, m1, m2, m3):
     return wigvals
 
 
-def get_wigners(nl_nbs, wig_list, wig_idx):
+def get_wigners(nl_nbs, s_arr, wig_list, wig_idx):
     # re-converting it back to array
     nl_nbs = jnp.asarray(nl_nbs)
     
@@ -69,36 +70,25 @@ def get_wigners(nl_nbs, wig_list, wig_idx):
 
     num_multiplets = nl_nbs.shape[0]
     num_blocks = int(num_multiplets**2)
-    s_arr = np.array([1, 3, 5])
 
-    for i in range(num_multiplets):
-        for ii in range(i, num_multiplets):
-            ell1 = np.array([nl_nbs[i, 1]])[0]
-            ell2 = np.array([nl_nbs[ii, 1]])[0]
-            ellmin = min(ell1, ell2)
-            m = np.arange(0, ellmin+1)
-            l1arr = np.ones_like(m)*ell1
-            l2arr = np.ones_like(m)*ell2
-            for s in s_arr:
-                dell = abs(ell2 - ell1)
-                # if s < dell:
-                #     continue
-
-                widx, fac = find_idx_fac(l1arr, s, l2arr, m)
+    for i in tqdm(range(num_multiplets), desc=f"Precomputing wigners..."):
+        ell = np.array([nl_nbs[i, 1]])[0]
+        m = np.arange(0, ell+1)
+        larr = np.ones_like(m)*ell
+        for s in s_arr:
+            widx, fac = find_idx_fac(larr, s, larr, m)
+            exists = True
+            
+            try:
+                _i1 = wig_idx.index(widx)
                 exists = True
-
-                try:
-                    _i1 = wig_idx.index(widx)
-                    exists = True
-                except ValueError:
-                    exists = False
-
-                if not exists:
-                    wigvals = w3j_vecm(ell1, s, ell2, -m, 0*m, m)
-                    wig_list.extend(list(wigvals))
-                    wig_idx.extend(list(widx))
-                    # print(ell1, s, ell2)
-                    # print(wigvals[-6:][::-1])
+            except ValueError:
+                exists = False
+                
+            if not exists:
+                wigvals = w3j_vecm(ell, s, ell, -m, 0*m, m)
+                wig_list.extend(list(wigvals))
+                wig_idx.extend(list(widx))
 
     return wig_list, wig_idx
 

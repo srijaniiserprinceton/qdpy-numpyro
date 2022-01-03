@@ -1,5 +1,6 @@
 import numpy as np   
-from qdpy_jax import jax_functions as jf
+from qdpy_jax import misc_functions
+from qdpy_jax import cenmult_functions
 
 def getnt4cenmult(n0, ell0, GVARS):
     """Function that returns the name tuple for the
@@ -26,35 +27,11 @@ def getnt4cenmult(n0, ell0, GVARS):
     --------
     CENMULT_AND_NBS - namedtuple containing 'nl_nbs', 'nl_nbs_idx', 'omega_nbs'
     """
-    def nl_idx(n0, ell0):
-        """Find the index for given n0, ell0"""
-        try:
-            idx = nl_list.index([n0, ell0])
-        except ValueError:
-            idx = None
-            logger.error('Mode not found')
-        return idx
-
-    def nl_idx_vec(nl_neighbours):
-        """Find the index for given n0, ell0"""
-        nlnum = nl_neighbours.shape[0]
-        nlidx = np.zeros(nlnum, dtype='int32')
-        for i in range(nlnum):
-            nlidx[i] = nl_idx(nl_neighbours[i][0],
-                              nl_neighbours[i][1])
-        return nlidx
-
-    def get_omega_neighbors(nl_idx):
-        """Get omega of the neighbours of central multiplet"""
-        nlnum = len(nl_idx)
-        omega_neighbors = np.zeros(nlnum)
-        for i in range(nlnum):
-            omega_neighbors[i] = GVARS.omega_list[nl_idx[i]]
-        return omega_neighbors
+    # initializing class containing functions needed for cenmult
+    cnm_funcs = cenmult_functions.cenmult_functions(GVARS)
 
     omega_list = np.asarray(GVARS.omega_list)
     nl_arr = np.asarray(GVARS.nl_all)
-    nl_list = list(map(list, GVARS.nl_all))
 
     # masking the other radial orders
     mask_n = abs(nl_arr[:, 0] - n0) == 0 
@@ -78,15 +55,15 @@ def getnt4cenmult(n0, ell0, GVARS):
     
     # the final attributes that will be stored
     nl_neighbours = nl_neighbours_unsorted[sort_idx]
-    nl_neighbours_idx = nl_idx_vec(nl_neighbours)
-    omega_neighbours = get_omega_neighbors(nl_neighbours_idx)
+    nl_neighbours_idx = cnm_funcs.nl_idx_vec(nl_neighbours)
+    omega_neighbours = cnm_funcs.get_omega_neighbors(nl_neighbours_idx)
 
-    CENMULT_AND_NBS = jf.create_namedtuple('CENMULT_AND_NBS',
-                                           ['nl_nbs',
-                                            'nl_nbs_idx',
-                                            'omega_nbs'],
-                                           (nl_neighbours,
-                                            nl_neighbours_idx,
-                                            omega_neighbours))
+    CENMULT_AND_NBS = misc_functions.create_namedtuple('CENMULT_AND_NBS',
+                                                       ['nl_nbs',
+                                                        'nl_nbs_idx',
+                                                        'omega_nbs'],
+                                                       (nl_neighbours,
+                                                        nl_neighbours_idx,
+                                                        omega_neighbours))
 
     return CENMULT_AND_NBS

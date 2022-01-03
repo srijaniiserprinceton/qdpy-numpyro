@@ -23,9 +23,9 @@ parser.add_argument("--lmin", help="min angular degree",
 parser.add_argument("--lmax", help="max angular degree",
                     type=int, default=200)
 parser.add_argument("--rth", help="threshold radius",
-                    type=float, default=0.98)
+                    type=float, default=0.97)
 parser.add_argument("--knot_num", help="number of knots beyond rth",
-                    type=int, default=10)
+                    type=int, default=5)
 parser.add_argument("--load_mults", help="load mults from file",
                     type=int, default=0)
 ARGS = parser.parse_args()
@@ -38,11 +38,11 @@ with open(".n0-lmin-lmax.dat", "w") as f:
             f"{ARGS.knot_num}" + "\n" +
             f"{ARGS.load_mults}")
 
-# importing local package 
+# importing from local packages
 from qdpy_jax import jax_functions as jf
 from qdpy_jax import globalvars as gvar_jax
 from vorontsov_qdpy import sparse_precompute as precompute
-from vorontsov_qdpy import build_hypermatrix_sparse as build_hm_sparse
+from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
 
 GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
                             lmin=ARGS.lmin,
@@ -53,21 +53,25 @@ GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
 __, GVARS_TR, __ = GVARS.get_all_GVAR()
 nmults = len(GVARS.n0_arr)  # total number of central multiplets
 len_s = GVARS.wsr.shape[0]  # number of s
+
+# storing the HMI acoeff and sigma
 np.save('acoeffs_sigma.npy', GVARS.acoeffs_sigma)
 np.save('acoeffs_true.npy', GVARS.acoeffs_true)
 
-
+# getting components of the sparse matrix
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr, sparse_idx =\
                                 precompute.build_hypmat_all_cenmults()
 noc_hypmat_all_sparse = np.asarray(noc_hypmat_all_sparse)
 fixed_hypmat_all_sparse = np.asarray(fixed_hypmat_all_sparse)
 
+# extracting various shape information
 fixmat_shape = fixed_hypmat_all_sparse[0].shape
 max_nbs = fixmat_shape[1]
 len_mmax = fixmat_shape[2]
 len_s = noc_hypmat_all_sparse.shape[1]
 nc = noc_hypmat_all_sparse.shape[2]
 
+# flattening out appropriately to facilitate densification
 fixed_hypmat = np.reshape(fixed_hypmat_all_sparse,
                           (nmults, max_nbs*max_nbs*len_mmax),
                           order='F')
@@ -75,19 +79,21 @@ noc_hypmat = np.reshape(noc_hypmat_all_sparse,
                         (nmults, len_s, nc, max_nbs*max_nbs*len_mmax),
                         order='F')
 
+# flattening the array containing indices
 sparse_idxs_flat = np.zeros((nmults, max_nbs*max_nbs*len_mmax, 2), dtype=int)
+
 for i in range(nmults):
     sparse_idxs_flat[i] = np.reshape(sparse_idx[i],
                                      (max_nbs*max_nbs*len_mmax, 2),
                                      order='F')
 
+# densifying the fixed hypermatrix to read dim_hyper
 fixed_hypmat_dense = sparse.coo_matrix((fixed_hypmat[0],
                                         (sparse_idxs_flat[0, ..., 0],
                                         sparse_idxs_flat[0, ..., 1]))).toarray()
 dim_hyper = fixed_hypmat_dense.shape[0]
 
 
-# converting to numpy ndarrays from lists
 def model():
     eigval_model = jnp.array([])
     acoeff_model = jnp.array([])
@@ -106,16 +112,16 @@ def model():
                                     (sparse_idxs_flat[i, ..., 0],
                                      sparse_idxs_flat[i, ..., 1])),
                                    shape=(dim_hyper, dim_hyper)).toarray()
-
+        
         # # # solving the eigenvalue problem and mapping eigenvalues
         ell0 = ell0_arr[i]
-        # hypmat = np.load(f"supmat_qdpt_{ell0}.npy")
         omegaref = omega0_arr[i]
         eigval_qdpt_mult = get_eigs(hypmat)[:2*ell0+1]/2./omegaref
-        # eigval_qdpt_mult = np.diag(hypmat)[:2*ell0+1]/2./omegaref
+        
         eigval_qdpt_mult *= GVARS.OM*1e6
         eigval_mult[:len(eigval_qdpt_mult)] = eigval_qdpt_mult
 
+        # building polynomials for finding a-coeffs
         Pjl_local = Pjl[i][:, :2*ell0+1]
         qdpt_acoeff = (Pjl_local @ eigval_qdpt_mult)/Pjl_norm[i]
 
@@ -140,7 +146,7 @@ def get_eigs(mat):
     return eigvals
 
 
-def get_eigvals_sigma(len_evals_true):
+def get_eigvals_sigma():
     '''Function to get the sigma from data
     for the frequency splittings.
     '''
@@ -161,7 +167,7 @@ def get_eigvals_sigma(len_evals_true):
 
     return eigvals_sigma
 
-
+# function to check the correct construction of hypermatrix
 def compare_hypmat():
     for i in range(nmults):
         hypmat_sparse = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
@@ -170,7 +176,7 @@ def compare_hypmat():
                                                         GVARS.nc, len_s)
         hypmat_flat = np.reshape(hypmat_sparse, max_nbs*max_nbs*len_mmax, order='F')
 
-        # converting to dense
+        # converting to dense hypermatrix
         hypmat = sparse.coo_matrix((hypmat_flat,
                                     (sparse_idxs_flat[i, ..., 0],
                                     sparse_idxs_flat[i, ..., 1])),
@@ -181,32 +187,35 @@ def compare_hypmat():
             supmat_qdpt = np.load(f"supmat_qdpt_{ell0}.npy")
         except FileNotFoundError:
             continue
+
+        # correctly clipping off matrix to compare with
+        # qdPy supermatrix
         matsize = supmat_qdpt.shape[0]
         supmat_model = hypmat[:matsize, :matsize]
-        diff = supmat_model - supmat_qdpt
-        print(f"[{ell0}] Max diff = {abs(diff).max()}")
-    return supmat_qdpt, supmat_model
-
+        
+        # testing is arrays are the same
+        np.testing.assert_array_almost_equal(supmat_model, supmat_qdpt)
+        print(f"[{ell0}] Passed test.")
 
 
 if __name__ == "__main__":
     # model_ = jit(model)
     RL_poly = np.load('RL_poly.npy')
-    smin = min(GVARS.s_arr)
-    smax = max(GVARS.s_arr)
+    smin, smax = min(GVARS.s_arr), max(GVARS.s_arr)
+    # extracting only necessary j (or s) from RL Poly
     Pjl = RL_poly[:, smin:smax+1:2, :]
 
+    # the normalizing factor that goes into the denominator
     Pjl_norm = np.zeros((Pjl.shape[0],
                          Pjl.shape[1]))
     for mult_ind in range(Pjl.shape[0]):
         Pjl_norm[mult_ind] = np.diag(Pjl[mult_ind] @ Pjl[mult_ind].T)
 
     eigvals_true, acoeffs_true = model()
-    eigvals_sigma = get_eigvals_sigma(len(eigvals_true))
-    print(f"num elements = {len(eigvals_true)}")
+    eigvals_sigma = get_eigvals_sigma()
     np.save("evals_model.npy", eigvals_true) 
     np.save('eigvals_sigma.npy', eigvals_sigma)
     np.save('acoeffs_sigma.npy', GVARS.acoeffs_sigma)
-    # np.save('acoeffs_true.npy', acoeffs_true)
-    np.save('acoeffs_true.npy', GVARS.acoeffs_true)
+    np.save('acoeffs_true.npy', acoeffs_true)
+    # np.save('acoeffs_true.npy', GVARS.acoeffs_true)
     # sm_qdpt, sm_model = compare_hypmat()

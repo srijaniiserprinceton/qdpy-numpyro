@@ -1,4 +1,4 @@
-import os
+BBBBimport os
 import time
 num_chains = 1
 os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
@@ -96,7 +96,7 @@ k_arr = np.load('k_arr.npy')
 p_arr = np.load('p_arr.npy')
 
 k_arr_denom = k_arr*1
-k_arr_denom[k_arr==0] = 1
+k_arr_denom[k_arr==0] = np.inf
 
 #################################################################
 # number of central multiplets
@@ -195,22 +195,19 @@ supmat_jax = param_coeff @ true_params + fixed_part
 
 def get_clp(bkm):
     tvals = jnp.linspace(0, jnp.pi, 25)
-    integrand = jnp.zeros((bkm.shape[0],
-                           bkm.shape[1],
-                           bkm.shape[-1],
+    
+    # integrand of shape (ell, p, m ,t)
+    integrand = jnp.zeros((p_arr.shape[0],
+                           p_arr.shape[1],
+                           p_arr.shape[2],
                            len(tvals)))
 
     def t_func(i, intg):
-
-        # def p_func(j, intg2):
-        #     intg2 = jidx_update(intg2,
-        #                         jidx[:, j, :, i],
-        #                         jnp.cos(p_arr[:, j]*tvals[i] - term2))
-        #     return intg2
-        term2 = 2*bkm*jnp.sin(k_arr*tvals[i])/k_arr_denom
-        term2 = term2.sum(axis=(1, 2))[:, NAX, :]
-        intg = jidx_update(intg, jidx[:, :, :, i], jnp.cos(p_arr[:, :, NAX]*tvals[i]
-                                                           - term2))
+        term2 = 2. * bkm * jnp.sin(k_arr*tvals[i]) / k_arr_denom
+        term2 = term2.sum(axis=1)
+        intg = jidx_update(intg,
+                           jidx[:, :, :, i],
+                           jnp.cos(p_arr * tvals[i] - term2[:, NAX, :]))
         # intg = foril(0, max_nbs, p_func, intg)
         return intg
 
@@ -288,9 +285,9 @@ def compare_model():
 
 compare_model_ = jax.jit(compare_model)
 
-
 def model():
-    c_arr = numpyro.sample(f'c_arr', dist.Uniform(cmin, cmax))
+    # c_arr = numpyro.sample(f'c_arr', dist.Uniform(cmin, cmax))
+    c_arr = jnp.ones_like(true_params)
     pred_acoeffs = jnp.zeros(num_j * nmults)
     c_params = c_arr * true_params
 
@@ -319,9 +316,9 @@ def model():
         return pred_acoeff
 
     pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
-    misfit_acoeffs = (pred_acoeffs[7:] - acoeffs_true[7:])/acoeffs_sigma[7:]
-    return numpyro.factor('obs', dist.Normal(0.0, 1.0).log_prob(misfit_acoeffs))
-
+    # misfit_acoeffs = (pred_acoeffs - acoeffs_true)/acoeffs_sigma
+    # return numpyro.factor('obs', dist.Normal(0.0, 1.0).log_prob(misfit_acoeffs))
+    return pred_acoeffs
 
 def model_old():
     c_arr = numpyro.sample(f'c_arr', dist.Uniform(cmin, cmax))
@@ -358,7 +355,7 @@ def model_old():
         return pred_acoeff
 
     pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
-    misfit_acoeffs = (pred_acoeffs[7:] - acoeffs_true[7:])/acoeffs_sigma[7:]
+    misfit_acoeffs = (pred_acoeffs - acoeffs_true)/acoeffs_sigma
     return numpyro.factor('obs', dist.Normal(0.0, 1.0).log_prob(misfit_acoeffs))
 
 
@@ -417,6 +414,8 @@ def test_setup():
     t2 = time.time()
     print(f"Total time taken for {nmults} modes = {(t2-t1)/N:.3e} seconds")
 
+
+sys.exit()
 
 if __name__ == "__main__":
     test_setup()

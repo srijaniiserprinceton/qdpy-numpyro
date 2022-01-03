@@ -67,14 +67,40 @@ def get_bsp_basis_elements(x):
         basis_elements[c_ind, :] = splev(x, (t, c, k))
     return basis_elements
 
-# extracting the basis elements once 
+# extracting the basis elements once of shape (GVARS.nc x s)
 bsp_basis = get_bsp_basis_elements(GVARS.r)
 
 def build_integrated_part(eig_idx, ell, s):
-    # ls2fac
+    '''Builds the integrated part of the kernel
+    which depends on s and the control point as a 
+    part of pre-computation.
+
+    Parameters:
+    -----------
+    eig_idx : int
+              Index of the multiplet in the list of multiplets 
+              whose eigenfunctions are pre-loaded.
+    
+    ell     : int
+              Angular degree of the multiplet whose kernel integral
+              we want to calculate.
+    
+    s       : int
+              Angular degree of the perturbation
+              (differential rotation for now).
+
+    Returns:
+    --------
+    post_integral: float, ndarray
+                   Array of shape (GVARS.nc,) containing
+                   the integrated values using the spline basis
+                   to which the spline coefficients need to be
+                   multiplied during inversion.
+    '''
+    
     ls2fac = 2*ell*(ell+1) - s*(s+1)
 
-    # slicing the required eigenfunctions
+    # slicing out the required eigenfunctions
     U, V = lm.U_arr[eig_idx], lm.V_arr[eig_idx]
     
     # the factor in the integral dependent on eigenfunctions
@@ -89,9 +115,32 @@ def build_integrated_part(eig_idx, ell, s):
 
     # shape (nc,)
     post_integral = integrate.trapz(integrand, GVARS.r, axis=1)
+    
     return post_integral
 
 def integrate_fixed_wsr(eig_idx, ell, s):
+    '''Builds the integrated part of the fixed  
+    part of pre-computation for the region below 
+    rth.
+    Parameters:                                             
+    -----------                                             
+    eig_idx : int                                                 
+              Index of the multiplet in the list of multiplets    
+              whose eigenfunctions are pre-loaded.                                           
+
+    ell     : int                                                                          
+              Angular degree of the multiplet whose kernel integral
+              we want to calculate.                                                  
+
+    s       : int   
+              Angular degree of the perturbation                              
+              (differential rotation for now).                                
+    Returns:                                                                  
+    --------                                                                     
+    post_integral: float, ndarray                                         
+                   Array of shape containing the integrated values using
+                   the fixed part of the profile below rth.
+    '''
     s_ind = (s-1)//2
     ls2fac = 2*ell*(ell+1) - s*(s+1)
 
@@ -101,15 +150,38 @@ def integrate_fixed_wsr(eig_idx, ell, s):
     # the factor in the integral dependent on eigenfunctions
     # shape (r,)
     eigfac = 2*U*V - U**2 - 0.5*(V**2)*ls2fac
+    
     # total integrand
     integrand = -1. * GVARS.wsr_fixed[s_ind] * eigfac / GVARS.r
-    post_integral = integrate.trapz(integrand, GVARS.r) # a scalar
+    
+    # a scalar
+    post_integral = integrate.trapz(integrand, GVARS.r) 
+    
     return post_integral
 
 
 def build_hm_nonint_n_fxd_1cnm(s):
-    """Computes elements in the hypermatrix excluding the
-    integral part.
+    """Main function that does the multiplet-wise
+    precomputation of the non-c and the fixed part of the hypermatrix.
+    In this case, the hypermatrix is effectively the diagonal of 
+    each cenmult which are appended one after another in a long
+    column vector of length (2*ell+1).shape()
+    
+    Paramters:
+    ----------
+    s : int
+        The angualr degree for which the no-c and fixed part
+        needs to be precomputed.
+    
+    Returns:
+    --------
+    non_c_diag_list   : float, ndarray in sparse form
+                        The pre-integrated part of the hypermatrix which 
+                        has the shape (nc x (2*ell+1).sum()).
+    
+    fixed_diag_sparse : float, ndarray in sparse form
+                        The pre-integrated part of the hypermatrix 
+                        which has the shape (2*ell+1).sum().
     """
     two_ellp1_sum_all = np.sum(2 * CNM.nl_cnm[:, 1] + 1) 
     # the non-m part of the hypermatrix
@@ -126,8 +198,9 @@ def build_hm_nonint_n_fxd_1cnm(s):
 
     # filling in the non-m part using the masks
     for i in tqdm(range(num_cnm), desc=f"Precomputing for s={s}"):
-        # updating the start and end indices
         omega0 = CNM.omega_cnm[i]
+
+        # updating the start and end indices
         end_cnm_ind = np.sum(2 * CNM.nl_cnm[:i+1, 1] + 1)
 
         # self coupling for isolated multiplets
@@ -177,8 +250,8 @@ def build_hm_nonint_n_fxd_1cnm(s):
         # updating the start index
         start_cnm_ind = end_cnm_ind 
 
-    # deleting wigvalm 
-    del wigvalm
+    # deleting miscellaneous arrays
+    del wigvalm, wigval1, fixed_integral, integrated_part
 
     # making it a list to allow easy c * hypermat later
     for c_ind in range(GVARS.nc):
@@ -195,9 +268,27 @@ def build_hm_nonint_n_fxd_1cnm(s):
 
 
 def build_hypmat_all_cenmults():
+    '''Precomputes all the arrays needed for the inversion.
+    
+    Returns:
+    --------
+    non_c_diag_cs : ndarray (sparse form), float
+                    Returns the sparse array of shape (s x c x (2*ell + 1).sum())
+                    containing the coefficients for s and each ctrl point.
+    
+    fixed_diag :    ndarray (sparse form), float
+                    Returns the sparse array of shape (2*ell + 1).sum() containing
+                    the integrated fixed part of the flow profile below rth.
 
+    omega0_arr :    ndarray, float
+                    Returns blocks of omega0 concatenated along one long
+                    column of length (2*ell+1).sum() to be used later
+                    when dividing by 2 * omega0.
+    '''
+    
     # to store the cnm frequencies
     omega0_arr = np.zeros(np.sum(2 * CNM.nl_cnm[:,1] + 1))
+
     start_cnm_ind = 0
     for i, omega_cnm in enumerate(CNM.omega_cnm):
         # updating the start and end indices
@@ -212,9 +303,7 @@ def build_hypmat_all_cenmults():
     non_c_diag_cs = []
 
     for s_ind, s in enumerate(GVARS.s_arr):
-        # shape (dim_hyper x dim_hyper) but sparse form
-        non_c_diag_s, fixed_diag_s =\
-                    build_hm_nonint_n_fxd_1cnm(s)
+        non_c_diag_s, fixed_diag_s = build_hm_nonint_n_fxd_1cnm(s)
         
         # appending the different m part in the list
         non_c_diag_cs.append(non_c_diag_s)
@@ -224,5 +313,6 @@ def build_hypmat_all_cenmults():
             fixed_diag = fixed_diag_s
         else:
             fixed_diag += fixed_diag_s
-    # non_c_diag_s = (s x 2ellp1_sum_all), fixed_diag = (2ellp1_sum_all,)
+            
+    # non_c_diag_cs = (s x c x 2ellp1_sum_all), fixed_diag and omega0 = (2ellp1_sum_all)
     return non_c_diag_cs, fixed_diag, omega0_arr

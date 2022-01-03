@@ -51,7 +51,22 @@ lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
                                      nl_idx_pruned,
                                      omega_pruned)
 
+def get_max_lmax_and_nbs():
+    nmults = len(GVARS.n0_arr)
+    max_nbs = 0
+    max_lmax = 0
+    for i in range(nmults):
+        n0 = GVARS.n0_arr[i]
+        ell0 = GVARS.ell0_arr[i]
+        CENMULT_AND_NBS = getnt4cenmult(n0, ell0, GVARS_ST)
+        num_nbs = len(CENMULT_AND_NBS.omega_nbs)
+        max_nbs = max(num_nbs, max_nbs)
+        max_lmax = max(max_lmax, max(CENMULT_AND_NBS.nl_nbs[:, 1]))
 
+    return max_lmax, max_nbs
+
+# necessary shapes for making arrays
+max_lmax, max_nbs = get_max_lmax_and_nbs() 
 
 
 def get_bsp_basis_elements(x):
@@ -162,35 +177,17 @@ def build_SUBMAT_INDICES(CNM_AND_NBS):
     return SUBMAT_DICT
 
 
-def get_sparse_idx():
-    nmults = len(GVARS.n0_arr)
-    dim_hyper = get_dim_hyper()
-    max_nbs = 0
-    max_lmax = 0
-    for i in range(nmults):
-        n0 = GVARS.n0_arr[i]
-        ell0 = GVARS.ell0_arr[i]
-        CENMULT_AND_NBS = getnt4cenmult(n0, ell0, GVARS_ST)
-        num_nbs = len(CENMULT_AND_NBS.omega_nbs)
-        max_nbs = max(num_nbs, max_nbs)
-        max_lmax = max(max_lmax, max(CENMULT_AND_NBS.nl_nbs[:, 1]))
-
-    sparse_idx = np.zeros((nmults, max_nbs, max_nbs, 2*max_lmax+1, 2), dtype=int)
-    return max_lmax, max_nbs, sparse_idx
-
-
-max_lmax, max_nbs, sparse_idx = get_sparse_idx()
-
-
 def build_bkm_nonint_n_fxd_1cnm(CNM_AND_NBS, CNM_AND_NBS_bkm, k_arr, p_arr, s):
     """Computes elements in the hypermatrix excluding the
     integral part.
     """
 
+    num_k = (GVARS.smax - 1)//2
+
     # the non-c part of b_k_m and
     # the fixed part of b_k_m (contribution below rth)
-    noc_b_k_m  = np.zeros((GVARS.nc, max_nbs, max_nbs, 2*max_lmax+1))
-    fixed_b_k_m = np.zeros((max_nbs, max_nbs, 2*max_lmax+1))
+    noc_b_k_m  = np.zeros((GVARS.nc, num_k, 2*max_lmax+1))
+    fixed_b_k_m = np.zeros((num_k, 2*max_lmax+1))
 
     # extracting attributes from CNM_AND_NBS
     num_nbs = len(CNM_AND_NBS_bkm.omega_nbs)
@@ -204,6 +201,9 @@ def build_bkm_nonint_n_fxd_1cnm(CNM_AND_NBS, CNM_AND_NBS_bkm, k_arr, p_arr, s):
     # for i in range(2, num_nbs, 2):
     for i in range(0, num_nbs, 2):
         j = i+1   # the index for the coupling multiplet
+
+        # nl_nbs for CNM_AND_NBS_bkm is constructed such that k_ind = i//2                    
+        k_ind = i//2
         
         ell1, ell2 = nl_nbs_bkm[i, 1], nl_nbs_bkm[j, 1]
         kval = ell2 - ell1
@@ -250,40 +250,21 @@ def build_bkm_nonint_n_fxd_1cnm(CNM_AND_NBS, CNM_AND_NBS_bkm, k_arr, p_arr, s):
             # non-ctrl points submat
             # avoiding  newaxis multiplication
             c_integral = integrated_part[c_ind] * wigprod
-            noc_b_k_m[c_ind, i, j, sidx:eidx] = c_integral
+            noc_b_k_m[c_ind, k_ind, sidx:eidx] = c_integral
             
         # the fixed hypermatrix
         # shape (k, 2*ellmin+1)
         f_integral = fixed_integral * wigprod
-        fixed_b_k_m[i, j, sidx:eidx] = f_integral
-        k_arr[i, j, sidx:eidx] = kval
+        fixed_b_k_m[k_ind, sidx:eidx] = f_integral
+        k_arr[k_ind, sidx:eidx] = kval
 
     num_nbs = len(CNM_AND_NBS.omega_nbs)
     ell0 = nl_nbs[0, 1]
     for i in range(num_nbs):
         ell1 = nl_nbs[i, 1]
-        p_arr[i] = ell1 - ell0
+        p_arr[i, sidx:eidx] = ell1 - ell0
 
     return noc_b_k_m, fixed_b_k_m, k_arr, p_arr
-
-
-def get_sparse_idx():
-    nmults = len(GVARS.n0_arr)
-    dim_hyper = get_dim_hyper()
-    max_nbs = 0
-    max_lmax = 0
-    for i in range(nmults):
-        n0 = GVARS.n0_arr[i]
-        ell0 = GVARS.ell0_arr[i]
-        CENMULT_AND_NBS = getnt4cenmult(n0, ell0, GVARS_ST)
-        num_nbs = len(CENMULT_AND_NBS.omega_nbs)
-        max_nbs = max(num_nbs, max_nbs)
-        max_lmax = max(max_lmax, max(CENMULT_AND_NBS.nl_nbs[:, 1]))
-
-    sparse_idx = np.zeros((nmults, max_nbs, max_nbs, 2*max_lmax+1, 2), dtype=int)
-    return max_lmax, max_nbs, sparse_idx
-
-max_lmax, max_nbs, sparse_idx = get_sparse_idx()
 
 
 def build_bkm_all_cenmults():
@@ -296,19 +277,19 @@ def build_bkm_all_cenmults():
     # (ell+k/2, ell-k/2) get coupled. So, coupling for k = 2, 4 only.
     num_k = (GVARS.smax - 1)//2
     len_s = len(GVARS.s_arr)
-    # storing the arrays in dim_hyper length
-    # to facilitate easy c_l_p construction and 
-    # eigenvalue calculation later.
+
     
     noc_bkm_shaped = np.zeros((nmults, len_s, GVARS.nc,
-                               max_nbs, max_nbs, 2*max_lmax+1))
-    fixed_bkm_shaped = np.zeros((nmults, max_nbs, max_nbs, 2*max_lmax+1))
-    k_arr_shaped = np.zeros((nmults, max_nbs, max_nbs, 2*max_lmax+1))
+                               num_k, 2*max_lmax+1))
+    fixed_bkm_shaped = np.zeros((nmults, num_k, 2*max_lmax+1))
     
     # to make it convenient to perform explicit k-dependent operations
-    # to make it convenient to perform explicit p-dependent operations
+    # k array should be of shape bkm to allow easy operations
     k_arr_shaped = np.zeros_like(fixed_bkm_shaped)
-    p_arr_shaped = np.zeros((nmults, max_nbs))
+
+    # to make it convenient to perform explicit p-dependent operations
+    # p array should be of shape similar to c_l_p_m
+    p_arr_shaped = np.zeros((nmults, max_nbs, 2*max_lmax+1))
     
     # looping over cenmtral multipelts
     for i in range(nmults):
@@ -321,8 +302,8 @@ def build_bkm_all_cenmults():
         
         # list of arrays for different s
         noc_bkm_this_mult = []
-        k_arr_local = np.zeros((max_nbs, max_nbs, 2*max_lmax+1))
-        p_arr_local = np.zeros(max_nbs)
+        k_arr_local = np.zeros((num_k, 2*max_lmax+1))
+        p_arr_local = np.zeros((max_nbs, 2*max_lmax+1))
 
         # loop in s
         for sind, s in enumerate(GVARS.s_arr):
@@ -340,4 +321,5 @@ def build_bkm_all_cenmults():
         k_arr_shaped[i, ...] = k_arr_local
         p_arr_shaped[i, ...] = p_arr_local
 
-    return noc_bkm_shaped, fixed_bkm_shaped, k_arr_shaped, p_arr_shaped
+    return np.asarray(noc_bkm_shaped), np.asarray(fixed_bkm_shaped),\
+        k_arr_shaped, p_arr_shaped

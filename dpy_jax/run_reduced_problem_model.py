@@ -1,27 +1,36 @@
-import os
-num_chains = 4
+Bimport os
+
+#----------------setting the number of chains to be used-----------------#                    
+num_chains = 38
 os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
+#------------------------------------------------------------------------# 
+
 import numpy as np
+from collections import namedtuple
+import matplotlib.pyplot as plt
+import arviz as az
+import sys
+
 import jax
-print(jax.devices())
 from jax import random
 from jax import jit
 from jax.lax import fori_loop as foril
 from jax.lax import dynamic_slice as jdc
 from jax.lax import dynamic_update_slice as jdc_update
 from jax.ops import index as jidx
-from collections import namedtuple
-import matplotlib.pyplot as plt
+from jax.ops import index_update as jidx_update
 import jax.numpy as jnp
+from jax.config import config
+config.update('jax_enable_x64', True)
+print(jax.devices())
+
 import numpyro
 import numpyro.distributions as dist
 from numpyro.infer import NUTS, MCMC, SA
-from jax.config import config
-config.update('jax_enable_x64', True)
-jidx_update = jax.ops.index_update
-import arviz as az
-import sys
-from dpy_jax import globalvars as gvar_jax
+
+from qdpy_jax import globalvars as gvar_jax
+
+#------------------------------------------------------------------------# 
 
 ARGS = np.loadtxt(".n0-lmin-lmax.dat")
 GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
@@ -31,52 +40,52 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             knot_num=int(ARGS[4]),
                             load_from_file=int(ARGS[5]))
 
-nmults = len(GVARS.ell0_arr)
-num_j = len(GVARS.s_arr)
-
-dim_hyper = 2 * np.max(GVARS.ell0_arr) + 1
-
-# loading the files forthe problem
+#-------------loading precomputed files for the problem-------------------# 
 data = np.load('data_model.npy')
-# true params from Antia wsr
-true_params = np.load('true_params.npy')
-param_coeff = np.load('param_coeff.npy')
-acoeffs_sigma = np.load('acoeffs_sigma.npy')
+true_params_flat = np.load('true_params_flat.npy')
+param_coeff_flat = np.load('param_coeff_flat.npy')
 fixed_part = np.load('fixed_part.npy')
+acoeffs_sigma_HMI = np.load('acoeffs_sigma_HMI.npy')
+acoeffs_HMI = np.load('acoeffs_HMI.npy')
 cind_arr = np.load('cind_arr.npy')
-smin_ind, smax_ind = np.load('sind_arr.npy')
-
+sind_arr = np.load('sind_arr.npy')
 # Reading RL poly from precomputed file
 # shape (nmults x (smax+1) x 2*ellmax+1) 
 RL_poly = np.load('RL_poly.npy')
-# picking out only the odd s
-# smin, smax = 2*smin_ind+1, 2*smax_ind+1
+
+#------------------------------------------------------------------------# 
+
+nmults = len(GVARS.ell0_arr)
+num_j = len(GVARS.s_arr)
+dim_hyper = 2 * np.max(GVARS.ell0_arr) + 1
 smin = min(GVARS.s_arr)
 smax = max(GVARS.s_arr)
+# number of s to fit
+len_s = len(sind_arr)
+# number of c's to fit
+nc = len(cind_arr)
+
+# slicing the Pjl correctly in angular degree s
 Pjl = RL_poly[:, smin:smax+1:2, :]
 
+#------------------------------------------------------------------------#
 # calculating the denominator of a-coefficient converion apriori
 # shape (nmults, num_j)
 aconv_denom = np.zeros((nmults, Pjl.shape[1]))
 for mult_ind in range(nmults):
     aconv_denom[mult_ind] = np.diag(Pjl[mult_ind] @ Pjl[mult_ind].T)
 
-
-# number of s to fit
-len_s = true_params.shape[0]
-# number of c's to fit
-nc = true_params.shape[1]
-
-# converting to device array
+#-------------------------converting to device array---------------------# 
 Pjl = jnp.asarray(Pjl)
 data = jnp.asarray(data)
-true_params = jnp.asarray(true_params)
-param_coeff = jnp.asarray(param_coeff)
+true_params_flat = jnp.asarray(true_params_flat)
+param_coeff_flat = jnp.asarray(param_coeff_flat)
 fixed_part = jnp.asarray(fixed_part)
-acoeffs_sigma = jnp.asarray(acoeffs_sigma)
+acoeffs_HMI = jnp.asarray(acoeffs_HMI)
+acoeffs_sigma_HMI = jnp.asarray(acoeffs_sigma_HMI)
 aconv_denom = jnp.asarray(aconv_denom)
 
-# making the data_acoeffs
+#----------------------making the data_acoeffs---------------------------# 
 data_acoeffs = jnp.zeros(num_j*nmults)
 
 def loop_in_mults(mult_ind, data_acoeff):
@@ -89,34 +98,24 @@ def loop_in_mults(mult_ind, data_acoeff):
 
 data_acoeffs = foril(0, nmults, loop_in_mults, data_acoeffs)
 
-######################################################
-# checking that the loaded data are correct
+#---------------checking that the loaded data are correct----------------#
 pred = fixed_part * 1.0
 
 # adding the contribution from the fitting part
-for sind in range(smin_ind, smax_ind+1):
-    for ci, cind in enumerate(cind_arr):
-        pred += true_params[sind-1, ci] * param_coeff[sind-1][ci]
+pred += true_params_flat @ param_coeff_flat
 
 # these arrays should be very close
 np.testing.assert_array_almost_equal(pred, data)
 
-######################################################
-# checking that the loaded data are correct
+#-------------checking that the acoeffs match correctly------------------#
 pred_acoeffs = jnp.zeros(num_j * nmults)
-
-pred = fixed_part * 1.0
-
-# adding the contribution from the fitting part
-for sind in range(smin_ind, smax_ind+1):
-    for ci, cind in enumerate(cind_arr):
-        pred += true_params[sind-1, ci] * param_coeff[sind-1][ci]
 
 def loop_in_mults(mult_ind, pred_acoeff):
     pred_omega = jdc(pred, (mult_ind*dim_hyper,), (dim_hyper,))
     pred_acoeff = jdc_update(pred_acoeff,
                              (Pjl[mult_ind] @ pred_omega)/aconv_denom[mult_ind],
                              (mult_ind * num_j,))
+
     return pred_acoeff
 
 pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
@@ -124,33 +123,30 @@ pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
 # these arrays should be very close
 np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
 
-######################################################
+#----------------------------------------------------------------------#
 
-num_params = len(cind_arr)
+# changing to the HMI acoeffs if doing this for real data 
+# data_acoeffs = GVARS.acoeffs_true
 
 # setting the prior limits
-cmin = 0.95 * np.ones_like(true_params.flatten())# / 1e-3
-cmax = 1.05 * np.ones_like(true_params.flatten())# / 1e-3
+cmin = 0.5 * jnp.ones_like(true_params_flat)# / 1e-3
+cmax = 1.5 * jnp.ones_like(true_params_flat)# / 1e-3
 #param_coeff *= 1e-3
 
-
 init_params = {}
-init_params[f'c_arr'] = jnp.ones_like(true_params.flatten())
-ip_nt = namedtuple('ip', init_params.keys())(*init_params.values())
+init_params[f'c_arr'] = jnp.ones_like(true_params_flat)
+# ip_nt = namedtuple('ip', init_params.keys())(*init_params.values())
 
-param_coeff = jnp.reshape(param_coeff, (nc*len_s, -1), 'F')
-true_params_flat = jnp.reshape(true_params, nc*len_s, 'F')
-
-
+# the model function that is used by MCMC kernel
 def model():
     # predicted a-coefficients
     pred_acoeffs = jnp.zeros(num_j * nmults)
+    
     # sampling from a uniform prior
-    # c1 = []
     c_arr = numpyro.sample(f'c_arr', dist.Uniform(cmin, cmax))
     c_arr = c_arr * true_params_flat
 
-    pred = fixed_part + c_arr @ param_coeff
+    pred = fixed_part + c_arr @ param_coeff_flat
 
     def loop_in_mults(mult_ind, pred_acoeff):
         pred_omega = jdc(pred, (mult_ind*dim_hyper,), (dim_hyper,))
@@ -160,7 +156,7 @@ def model():
         return pred_acoeff
 
     pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
-    misfit_acoeffs = (pred_acoeffs - data_acoeffs)/acoeffs_sigma
+    misfit_acoeffs = (pred_acoeffs - data_acoeffs)/acoeffs_sigma_HMI
 
     return numpyro.factor('obs', dist.Normal(0.0, 1.0).log_prob(misfit_acoeffs))
 
@@ -177,6 +173,7 @@ def print_summary(samples, ctrl_arr):
               f"error/sigma = {(sample.mean()-obs)/sample.std():8.3f}")
     return None
 
+#----------------------------------------------------------------------# 
 
 # Start from this source of randomness. We will split keys for subsequent operations.    
 seed = int(123 + 100*np.random.rand())
@@ -184,19 +181,25 @@ rng_key = random.PRNGKey(seed)
 rng_key, rng_key_ = random.split(rng_key)
 
 #kernel = SA(model, adapt_state_size=200)
-init_strat = numpyro.infer.init_to_value(values=init_params)
+# init_strat = numpyro.infer.init_to_value(values=init_params)
 
+# defining the kernel
 kernel = NUTS(model,
-              max_tree_depth=(10, 4),
+              max_tree_depth=(20, 5))
               # adapt_step_size=False,
               # step_size=1e-3,
-              init_strategy=init_strat)
+              # init_strategy=init_strat)
+
 mcmc = MCMC(kernel,
-            num_warmup=1000,
-            num_samples=1000,
+            num_warmup=5000,
+            num_samples=5000,
             num_chains=num_chains)  
-mcmc.run(rng_key_,
-         extra_fields=('potential_energy',))
+
+# running 
+mcmc.run(rng_key_, extra_fields=('potential_energy',))
+
+#----------------Analyzing the chains-----------------------#
+
 pe = mcmc.get_extra_fields()['potential_energy']
 
 # extracting necessary fields for plotting

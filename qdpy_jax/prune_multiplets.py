@@ -46,6 +46,7 @@ def get_pruned_attributes(GVARS, GVARS_ST):
             
         wig_list, wig_idx = wigmap.get_wigners(CENMULT_AND_NBS.nl_nbs, 
                                                wig_list, wig_idx)
+        print(n0, ell0)
 
     nl_arr = np.asarray(GVARS_ST.nl_all)
     nl_pruned = np.asarray(nl_pruned)
