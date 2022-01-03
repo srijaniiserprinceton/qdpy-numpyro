@@ -188,7 +188,7 @@ def split_large_corner(samples, params_per_plot=8):
 
     num_blocks = len(keylist_blocks)
     for i in range(num_blocks):
-        for j in range(num_blocks):
+        for j in range(i, num_blocks):
             samples_ij = {}
             block_ij = []
             block_ij.extend(keylist_blocks[i])
