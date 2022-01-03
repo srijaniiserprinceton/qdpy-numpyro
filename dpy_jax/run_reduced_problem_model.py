@@ -184,7 +184,7 @@ def split_large_corner(samples, params_per_plot=8):
     for i in range(len(skeys)//split_length+1):
         sidx = split_length*i
         eidx = split_length*(i+1)
-        keylist_blocks.append(skeys[5*i:5*i+5])
+        keylist_blocks.append(skeys[sidx:eidx])
 
     num_blocks = len(keylist_blocks)
     for i in range(num_blocks):
