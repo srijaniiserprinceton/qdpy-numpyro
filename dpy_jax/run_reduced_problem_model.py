@@ -1,7 +1,7 @@
-Bimport os
+import os
 
 #----------------setting the number of chains to be used-----------------#                    
-num_chains = 38
+num_chains = 3
 os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
 #------------------------------------------------------------------------# 
 
@@ -173,6 +173,60 @@ def print_summary(samples, ctrl_arr):
               f"error/sigma = {(sample.mean()-obs)/sample.std():8.3f}")
     return None
 
+
+def split_large_corner(samples, params_per_plot=8):
+    split_samples = []
+    split_keys = []
+    split_length = params_per_plot//2
+    skeys = [key for key in samples.keys()]
+    
+    keylist_blocks = []
+    for i in range(len(skeys)//split_length+1):
+        sidx = split_length*i
+        eidx = split_length*(i+1)
+        keylist_blocks.append(skeys[5*i:5*i+5])
+
+    num_blocks = len(keylist_blocks)
+    for i in range(num_blocks):
+        for j in range(num_blocks):
+            samples_ij = {}
+            block_ij = []
+            block_ij.extend(keylist_blocks[i])
+            block_ij.extend(keylist_blocks[j])
+            block_ij = list(set(block_ij))
+            for ijkey in block_ij:
+                samples_ij[ijkey] = samples[ijkey]
+            split_samples.append(samples_ij)
+            split_keys.append(block_ij)
+    return split_samples
+
+
+def plot_corner(samples, plot_num=0):
+    ax = az.plot_pair(
+        samples,
+        var_names=[key for key in samples.keys()],
+        kde_kwargs={"fill_last": False},
+        kind=["scatter", "kde"],
+        marginals=True,
+        point_estimate="median",
+        figsize=(10, 8),
+        reference_values=refs,
+        reference_values_kwargs={'color':"red",
+                                    "marker":"o",
+                                    "markersize":6}
+    )
+    plt.savefig(f'corner_reduced_prob_{plot_num:02d}.png')
+    return ax
+
+
+def plot_corner_split(samples, params_per_plot=8):
+    split_samples = split_large_corner(samples, params_per_plot=params_per_plot)
+    num_cornerplots = len(split_samples)
+    for i in range(num_cornerplots):
+        if split_samples[i] != {}:
+            plot_corner(split_samples[i], plot_num=i)
+    return None
+
 #----------------------------------------------------------------------# 
 
 # Start from this source of randomness. We will split keys for subsequent operations.    
@@ -219,20 +273,7 @@ for idx in range(len_s * nc):
     refs[argstr] = 1.0
     plot_samples[argstr] = mcmc_sample['c_arr'][:, idx]
 
-ax = az.plot_pair(
-    plot_samples,
-    var_names=[key for key in plot_samples.keys()],
-    kde_kwargs={"fill_last": False},
-    kind=["scatter", "kde"],
-    marginals=True,
-    point_estimate="median",
-    figsize=(10, 8),
-    reference_values=refs,
-    reference_values_kwargs={'color':"red",
-                                "marker":"o",
-                                "markersize":6}
-)
-
-plt.savefig('corner_reduced_prob.png')
+plot_corner(plot_samples)
+plot_corner_split(plot_samples, params_per_plot=3)
 
 # print_summary(mcmc_sample, true_params)

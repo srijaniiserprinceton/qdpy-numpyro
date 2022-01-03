@@ -84,7 +84,7 @@ def compare_hypmat():
 
 if __name__ == "__main__":
     model_ = jit(model)
-    eigvals_true = compare_hypmat()
+    # eigvals_true = compare_hypmat()
     eigvals_true = model_()
 
     # storing the eigvals sigmas
