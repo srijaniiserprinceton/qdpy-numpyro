@@ -1,4 +1,5 @@
 import os
+import time
 
 #----------------setting the number of chains to be used-----------------#                    
 num_chains = 3
@@ -127,10 +128,10 @@ np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
 
 #----------------------------------------------------------------------#
 # changing to the HMI acoeffs if doing this for real data 
-# data_acoeffs = GVARS.acoeffs_true
+data_acoeffs = GVARS.acoeffs_true
 
 # the regularizing parameter
-mu = 1.e-3
+mu = 1.e-2
 
 # the model function that is used by MCMC kernel
 def data_misfit_fn(c_arr):
@@ -168,7 +169,6 @@ def loss_fn(c_arr):
     model_misfit_val = model_misfit_fn(c_arr)
     data_hess = data_hess_fn(c_arr)
     lambda_factor = jnp.trace(data_hess)
-    # total misfit
     misfit = data_misfit_val + mu * model_misfit_val * lambda_factor
     return misfit
 
@@ -195,6 +195,7 @@ loss_arr = []
 loss_threshold = 1e-12
 
 while (loss > loss_threshold):
+    t1 = time.time()
     grads = grad_fn(c_arr)
     hess = hess_fn(c_arr)
     hess_inv = jnp.linalg.inv(hess)
@@ -202,6 +203,9 @@ while (loss > loss_threshold):
     loss = loss_fn(c_arr)
     loss_arr.append(loss)
     print(f'Loss = {loss:12.5e}; max-grads = {abs(grads).max():12.5e}')
+
+t2 = time.time()
+print(f"Total time taken = {(t2-t1):12.3f} seconds")
 
 #------------------------------------------------------------------------# 
 def print_summary(samples, ctrl_arr):
