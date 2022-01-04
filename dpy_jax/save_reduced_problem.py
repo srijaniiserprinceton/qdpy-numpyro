@@ -28,7 +28,7 @@ print('JAX using:', xla_bridge.get_backend().platform)
 
 #-------------------parameters to be inverted for--------------------#
 # the indices of ctrl points that we want to invert for
-ind_min, ind_max = 0, 40#0, 3
+ind_min, ind_max = 0, 3
 cind_arr = np.arange(ind_min, ind_max + 1)
 
 # the angular degrees we want to invert for

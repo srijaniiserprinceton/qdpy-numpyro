@@ -89,3 +89,7 @@ def jax_gamma(ell):
 def model_renorm(model_params, model_params_ref, model_params_sigma):
     model_renorm_arr = (model_params - model_params_ref)/model_params_sigma
     return model_renorm_arr
+
+def model_denorm(model_params, model_params_ref, model_params_sigma):
+    model_denorm_arr = model_params * model_params_sigma + model_params_ref
+    return model_denorm_arr

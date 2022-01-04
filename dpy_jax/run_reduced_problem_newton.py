@@ -131,16 +131,17 @@ np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
 # data_acoeffs = GVARS.acoeffs_true
 
 # the regularizing parameter
-mu = 1.e-2
+mu = 0.0 #1.e-2
 
 # the model function that is used by MCMC kernel
 def data_misfit_fn(c_arr):
     # predicted a-coefficients
     pred_acoeffs = jnp.zeros(num_j * nmults)
-                          
-    c_arr = c_arr * true_params_flat
+            
+    # denormalizing to make actual model params
+    c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, model_params_sigma)
 
-    pred = fixed_part + c_arr @ param_coeff_flat
+    pred = fixed_part + c_arr_denorm @ param_coeff_flat
 
     def loop_in_mults(mult_ind, pred_acoeff):
         pred_omega = jdc(pred, (mult_ind*dim_hyper,), (dim_hyper,))
@@ -155,9 +156,7 @@ def data_misfit_fn(c_arr):
     return jnp.sum(jnp.square(data_misfit_arr))
 
 def model_misfit_fn(c_arr):
-    # getting the renormalized model parameters
-    model_misfit_arr = jf.model_renorm(c_arr*true_params_flat, true_params_flat, model_params_sigma)
-    return jnp.sum(jnp.square(model_misfit_arr))
+    return jnp.sum(jnp.square(c_arr))
 
 def hessian(f):
     return jacfwd(jacrev(f))
@@ -189,7 +188,12 @@ def update_H(c_arr, grads, hess_inv):
 
 #-----------------------the main training loop--------------------------#
 # initialization of params
-c_arr = np.random.uniform(5.0, 20.0, size=len(true_params_flat))
+c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))
+
+# getting the renormalized model parameters
+c_arr_renorm = jf.model_renorm(c_init*true_params_flat,
+                               true_params_flat,
+                               model_params_sigma)
 
 N = len(data_acoeffs)
 
@@ -199,16 +203,20 @@ loss_threshold = 1e-12
 
 while (loss > loss_threshold):
     t1 = time.time()
-    grads = grad_fn(c_arr)
-    hess = hess_fn(c_arr)
+    grads = grad_fn(c_arr_renorm)
+    hess = hess_fn(c_arr_renorm)
     hess_inv = jnp.linalg.inv(hess)
-    c_arr = update_H(c_arr, grads, hess_inv)
-    loss = loss_fn(c_arr)
+    c_arr_renorm = update_H(c_arr_renorm, grads, hess_inv)
+    loss = loss_fn(c_arr_renorm)
     loss_arr.append(loss)
     print(f'Loss = {loss:12.5e}; max-grads = {abs(grads).max():12.5e}')
 
 t2 = time.time()
 print(f"Total time taken = {(t2-t1):12.3f} seconds")
+
+# reconverting back to model_params in units of true_params_flat
+c_arr_fit = jf.model_denorm(c_arr_renorm, true_params_flat, model_params_sigma)\
+            /true_params_flat
 
 #------------------------------------------------------------------------# 
 def print_summary(samples, ctrl_arr):
