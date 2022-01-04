@@ -130,7 +130,7 @@ np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
 # data_acoeffs = GVARS.acoeffs_true
 
 # the regularizing parameter
-mu = 0.0
+mu = 1.e-3
 
 # the model function that is used by MCMC kernel
 def data_misfit_fn(c_arr):
@@ -155,7 +155,7 @@ def data_misfit_fn(c_arr):
 
 def model_misfit_fn(c_arr):
     # getting the renormalized model parameters
-    model_misfit_arr = jf.model_renorm(c_arr, true_params_flat, model_params_sigma)
+    model_misfit_arr = jf.model_renorm(c_arr*true_params_flat, true_params_flat, model_params_sigma)
     return jnp.sum(jnp.square(model_misfit_arr))
 
 def hessian(f):
@@ -169,7 +169,7 @@ def loss_fn(c_arr):
     data_hess = data_hess_fn(c_arr)
     lambda_factor = jnp.trace(data_hess)
     # total misfit
-    misfit = data_misfit_val + mu * lambda_factor * model_misfit_val
+    misfit = data_misfit_val + mu * model_misfit_val * lambda_factor
     return misfit
 
 grad_fn = jax.grad(loss_fn)
@@ -180,7 +180,7 @@ def update(c_arr, grads, loss):
     return jax.tree_multimap(lambda c, g: c - g / grad_strength, c_arr, grads)
 
 def update_H(c_arr, grads, hess_inv):
-    grad_strength = jnp.sqrt(jnp.sum(jnp.square(grads)))
+    # grad_strength = jnp.sqrt(jnp.sum(jnp.square(grads)))
     return jax.tree_multimap(lambda c, g, h: c - g @ h, c_arr, grads, hess_inv)
 
 
@@ -201,7 +201,7 @@ while (loss > loss_threshold):
     c_arr = update_H(c_arr, grads, hess_inv)
     loss = loss_fn(c_arr)
     loss_arr.append(loss)
-    print(f'Loss = {loss:12.5e}')
+    print(f'Loss = {loss:12.5e}; max-grads = {abs(grads).max():12.5e}')
 
 #------------------------------------------------------------------------# 
 def print_summary(samples, ctrl_arr):
