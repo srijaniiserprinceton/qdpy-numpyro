@@ -182,20 +182,22 @@ def update_H(c_arr, grads, hess_inv):
 
 #-----------------------the main training loop--------------------------#
 # initialization of params
-c_arr = np.random.uniform(0.0, 2.0, size=len(true_params_flat))
+c_arr = np.random.uniform(5.0, 20.0, size=len(true_params_flat))
 
 N = len(data_acoeffs)
 loss = 1e25
+loss_arr = []
 loss_threshold = 1e-12
 
 while (loss > loss_threshold):
-    loss = loss_fn(c_arr)
     err = model(c_arr)
     grads = grad_fn(c_arr)
     hess = hess_fn(c_arr)
     hess_inv = jnp.linalg.inv(hess)
     # c_arr = update(c_arr, grads, loss)
     c_arr = update_H(c_arr, grads, hess_inv)
+    loss = loss_fn(c_arr)
+    loss_arr.append(loss)
     print(f'Loss = {loss:12.5e}')
 
 #------------------------------------------------------------------------# 
