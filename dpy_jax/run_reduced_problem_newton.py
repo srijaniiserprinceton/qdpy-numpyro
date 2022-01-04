@@ -130,7 +130,7 @@ np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
 # data_acoeffs = GVARS.acoeffs_true
 
 # the regularizing parameter
-mu = 0.0
+mu = 0.01
 
 # the model function that is used by MCMC kernel
 def data_misfit_fn(c_arr):
@@ -190,16 +190,15 @@ def update_H(c_arr, grads, hess_inv):
 c_arr = np.random.uniform(0.0, 2.0, size=len(true_params_flat))
 
 N = len(data_acoeffs)
+loss = 1.0
 
-for _ in range(1000):
+while(loss > 1e-10):
     grads = grad_fn(c_arr)
     hess = hess_fn(c_arr)
-    loss = loss_fn(c_arr)
     hess_inv = jnp.linalg.inv(hess)
     c_arr = update_H(c_arr, grads, hess_inv)
-
+    loss = loss_fn(c_arr)
     print('Loss: ', loss)
-    if(loss < 1e-10): break
 
 #------------------------------------------------------------------------# 
 def print_summary(samples, ctrl_arr):
