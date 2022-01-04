@@ -130,7 +130,7 @@ np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
 # data_acoeffs = GVARS.acoeffs_true
 
 # the regularizing parameter
-mu = 0.01
+mu = 0.0
 
 # the model function that is used by MCMC kernel
 def data_misfit_fn(c_arr):
@@ -168,7 +168,6 @@ def loss_fn(c_arr):
     model_misfit_val = model_misfit_fn(c_arr)
     data_hess = data_hess_fn(c_arr)
     lambda_factor = jnp.trace(data_hess)
-    print(data_hess.shape, lambda_factor.shape)
     # total misfit
     misfit = data_misfit_val + mu * lambda_factor * model_misfit_val
     return misfit
@@ -187,18 +186,22 @@ def update_H(c_arr, grads, hess_inv):
 
 #-----------------------the main training loop--------------------------#
 # initialization of params
-c_arr = np.random.uniform(0.0, 2.0, size=len(true_params_flat))
+c_arr = np.random.uniform(5.0, 20.0, size=len(true_params_flat))
 
 N = len(data_acoeffs)
-loss = 1.0
 
-while(loss > 1e-10):
+loss = 1e25
+loss_arr = []
+loss_threshold = 1e-12
+
+while (loss > loss_threshold):
     grads = grad_fn(c_arr)
     hess = hess_fn(c_arr)
     hess_inv = jnp.linalg.inv(hess)
     c_arr = update_H(c_arr, grads, hess_inv)
     loss = loss_fn(c_arr)
-    print('Loss: ', loss)
+    loss_arr.append(loss)
+    print(f'Loss = {loss:12.5e}')
 
 #------------------------------------------------------------------------# 
 def print_summary(samples, ctrl_arr):
