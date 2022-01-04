@@ -185,8 +185,10 @@ def update_H(c_arr, grads, hess_inv):
 c_arr = np.random.uniform(0.0, 2.0, size=len(true_params_flat))
 
 N = len(data_acoeffs)
+loss = 1e25
+loss_threshold = 1e-12
 
-for _ in range(1000):
+while (loss > loss_threshold):
     loss = loss_fn(c_arr)
     err = model(c_arr)
     grads = grad_fn(c_arr)
@@ -194,9 +196,7 @@ for _ in range(1000):
     hess_inv = jnp.linalg.inv(hess)
     # c_arr = update(c_arr, grads, loss)
     c_arr = update_H(c_arr, grads, hess_inv)
-
-    print('Loss: ', loss)
-    if(loss < 1e-10): break
+    print(f'Loss = {loss:12.5e}')
 
 #------------------------------------------------------------------------# 
 def print_summary(samples, ctrl_arr):
