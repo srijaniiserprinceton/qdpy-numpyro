@@ -30,7 +30,7 @@ import numpyro.distributions as dist
 from numpyro.infer import NUTS, MCMC, SA
 
 from qdpy_jax import globalvars as gvar_jax
-
+from dpy_jax import jax_functions_dpy as jf
 #------------------------------------------------------------------------# 
 
 ARGS = np.loadtxt(".n0-lmin-lmax.dat")
@@ -53,6 +53,7 @@ sind_arr = np.load('sind_arr.npy')
 # Reading RL poly from precomputed file
 # shape (nmults x (smax+1) x 2*ellmax+1) 
 RL_poly = np.load('RL_poly.npy')
+model_params_sigma = np.load('model_params_sigma.npy')
 
 #------------------------------------------------------------------------# 
 
@@ -125,21 +126,14 @@ pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
 np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
 
 #----------------------------------------------------------------------#
-
 # changing to the HMI acoeffs if doing this for real data 
 # data_acoeffs = GVARS.acoeffs_true
 
-# setting the prior limits
-cmin = 0.5 * jnp.ones_like(true_params_flat)# / 1e-3
-cmax = 1.5 * jnp.ones_like(true_params_flat)# / 1e-3
-#param_coeff *= 1e-3
-
-init_params = {}
-init_params[f'c_arr'] = jnp.ones_like(true_params_flat)
-# ip_nt = namedtuple('ip', init_params.keys())(*init_params.values())
+# the regularizing parameter
+mu = 0.0
 
 # the model function that is used by MCMC kernel
-def model(c_arr):
+def data_misfit_fn(c_arr):
     # predicted a-coefficients
     pred_acoeffs = jnp.zeros(num_j * nmults)
                           
@@ -155,18 +149,29 @@ def model(c_arr):
         return pred_acoeff
 
     pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
-    misfit_acoeffs = (pred_acoeffs - data_acoeffs)/acoeffs_sigma_HMI
+    data_misfit_arr = (pred_acoeffs - data_acoeffs)/acoeffs_sigma_HMI
 
-    return misfit_acoeffs
+    return jnp.sum(jnp.square(data_misfit_arr))
 
-
-def loss_fn(c_arr):
-    err = model(c_arr)
-    misfit = jnp.mean(jnp.square(err))
-    return misfit
+def model_misfit_fn(c_arr):
+    # getting the renormalized model parameters
+    model_misfit_arr = jf.model_renorm(c_arr, true_params_flat, model_params_sigma)
+    return jnp.sum(jnp.square(model_misfit_arr))
 
 def hessian(f):
     return jacfwd(jacrev(f))
+
+data_hess_fn = hessian(data_misfit_fn)
+
+def loss_fn(c_arr):
+    data_misfit_val = data_misfit_fn(c_arr)
+    model_misfit_val = model_misfit_fn(c_arr)
+    data_hess = data_hess_fn(c_arr)
+    lambda_factor = jnp.trace(data_hess)
+    print(data_hess.shape, lambda_factor.shape)
+    # total misfit
+    misfit = data_misfit_val + mu * lambda_factor * model_misfit_val
+    return misfit
 
 grad_fn = jax.grad(loss_fn)
 hess_fn = hessian(loss_fn)
@@ -187,12 +192,10 @@ c_arr = np.random.uniform(0.0, 2.0, size=len(true_params_flat))
 N = len(data_acoeffs)
 
 for _ in range(1000):
-    loss = loss_fn(c_arr)
-    err = model(c_arr)
     grads = grad_fn(c_arr)
     hess = hess_fn(c_arr)
+    loss = loss_fn(c_arr)
     hess_inv = jnp.linalg.inv(hess)
-    # c_arr = update(c_arr, grads, loss)
     c_arr = update_H(c_arr, grads, hess_inv)
 
     print('Loss: ', loss)

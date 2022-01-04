@@ -122,6 +122,7 @@ class GlobalVars():
         self.fwindow = qdPars.fwindow
         self.wsr = -1.0*np.loadtxt(f'{self.datadir}/w_s/w.dat')
         # self.wsr = np.loadtxt(f'{self.datadir}/w_s/w_hmi.dat')
+        self.wsr_err = np.loadtxt(f'{self.datadir}/w_s/err_hmi.dat')
         self.wsr_extend()
 
         # rth = r threshold beyond which the profiles are updated. 
@@ -130,6 +131,7 @@ class GlobalVars():
         # retaining only region between rmin and rmax
         self.r = self.mask_minmax(self.r)
         self.wsr = self.mask_minmax(self.wsr, axis=1)
+        self.wsr_err = np.abs(self.mask_minmax(self.wsr_err, axis=1))
         self.rth_ind = self.get_ind(self.r, self.rth)
         self.r_spline = self.r[self.rth_ind:]
 
@@ -178,6 +180,15 @@ class GlobalVars():
                            self.t_internal,
                            self.spl_deg)
         self.nc = len(self.ctrl_arr_dpt_clipped[0])
+
+        # getting  wsr_err spline_coefficients                                          
+        bsplines_err = bsp.get_splines(self.r, self.rth, self.wsr_err,
+                                       self.knot_num, self.fac_arr,
+                                       self.spl_deg)
+        self.ctrl_arr_sig_clipped = bsplines_err.c_arr_dpt_clipped
+
+        # taking absolute value to avoid spurious negatives
+        self.ctrl_arr_sig_full = np.abs(bsplines_err.c_arr_dpt_full)
 
         # throws an error if ctrl_arr_up is not always larger than ctrl_arr_lo
         np.testing.assert_array_equal([np.sum(self.ctrl_arr_lo>self.ctrl_arr_up)],[0])

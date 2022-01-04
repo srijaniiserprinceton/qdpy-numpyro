@@ -164,6 +164,13 @@ for sind in range(smin_ind, smax_ind+1):
     for ci, cind in enumerate(cind_arr):
         true_params[sind-1, ci] = GVARS.ctrl_arr_dpt_clipped[sind, cind]
 
+#-------------saving the sigma in model params-------------------#
+carr_sigma = np.zeros_like(true_params)
+
+for sind in range(smin_ind, smax_ind+1):
+    for ci, cind in enumerate(cind_arr):
+        carr_sigma[sind-1, ci] = GVARS.ctrl_arr_sig_clipped[sind, cind]
+
 #----------------------------------------------------------------------# 
 # checking if the forward problem works with the above components
 pred = diag_evals_fixed * 1.0
@@ -171,6 +178,8 @@ pred = diag_evals_fixed * 1.0
 # flattening for easy dot product
 true_params_flat = np.reshape(true_params,
                               (len(sind_arr) * len(cind_arr)), 'F')
+carr_sigma_flat = np.reshape(carr_sigma,
+                             (len(sind_arr) * len(cind_arr)), 'F')
 noc_diag_flat = np.reshape(noc_diag,
                            (len(sind_arr) * len(cind_arr), -1), 'F')
 
@@ -185,6 +194,7 @@ np.testing.assert_array_almost_equal(pred, eigvals_model)
 np.save('fixed_part.npy', diag_evals_fixed)
 np.save('param_coeff_flat.npy', noc_diag_flat)
 np.save('true_params_flat.npy', true_params_flat)
+np.save('model_params_sigma.npy', carr_sigma_flat)
 np.save('data_model.npy', eigvals_model)
 np.save('cind_arr.npy', cind_arr)
 np.save('sind_arr.npy', sind_arr)
