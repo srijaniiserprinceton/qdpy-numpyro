@@ -169,7 +169,7 @@ def loss_fn(c_arr):
     data_hess = data_hess_fn(c_arr)
     lambda_factor = jnp.trace(data_hess)
     # total misfit
-    misfit = data_misfit_val + mu * lambda_factor * model_misfit_val
+    misfit = data_misfit_val #+ mu * lambda_factor * model_misfit_val
     return misfit
 
 grad_fn = jax.grad(loss_fn)
