@@ -17,4 +17,5 @@ qdpy_output
 jobscripts/gnup_v11.sh
 jobscripts/gnup_v11.pbs
 jobscripts/ipjobs_v11.sh
+jobscripts/ipjobs*.sh
 *.pbs
