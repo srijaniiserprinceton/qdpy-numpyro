@@ -1,9 +1,14 @@
 import os
 import time
+import argparse
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--mu", help="regularization",
+                    type=float, default=0.)
+PARGS = parser.parse_args()
 #----------------setting the number of chains to be used-----------------#                    
-num_chains = 3
-os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
+# num_chains = 3
+# os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
 #------------------------------------------------------------------------# 
 
 import numpy as np
@@ -128,10 +133,10 @@ np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
 
 #----------------------------------------------------------------------#
 # changing to the HMI acoeffs if doing this for real data 
-# data_acoeffs = GVARS.acoeffs_true
+data_acoeffs = GVARS.acoeffs_true
 
 # the regularizing parameter
-mu = 0.0 #1.e-2
+mu = PARGS.mu
 
 # the model function that is used by MCMC kernel
 def data_misfit_fn(c_arr):
@@ -140,7 +145,6 @@ def data_misfit_fn(c_arr):
             
     # denormalizing to make actual model params
     c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, model_params_sigma)
-
     pred = fixed_part + c_arr_denorm @ param_coeff_flat
 
     def loop_in_mults(mult_ind, pred_acoeff):
@@ -186,6 +190,12 @@ def update_H(c_arr, grads, hess_inv):
     return jax.tree_multimap(lambda c, g, h: c - g @ h, c_arr, grads, hess_inv)
 
 
+#---------------------- jitting the functions --------------------------#
+_grad_fn = jit(grad_fn)
+_hess_fn = jit(hess_fn)
+_update_H = jit(update_H)
+_loss_fn = jit(loss_fn)
+
 #-----------------------the main training loop--------------------------#
 # initialization of params
 c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))
@@ -194,22 +204,27 @@ c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))
 c_arr_renorm = jf.model_renorm(c_init*true_params_flat,
                                true_params_flat,
                                model_params_sigma)
+c_arr_renorm = jnp.asarray(c_arr_renorm)
 
 N = len(data_acoeffs)
 
 loss = 1e25
 loss_arr = []
 loss_threshold = 1e-12
+maxiter = 5
+itercount = 0
 
-while (loss > loss_threshold):
-    t1 = time.time()
-    grads = grad_fn(c_arr_renorm)
-    hess = hess_fn(c_arr_renorm)
+t1 = time.time()
+while ((loss > loss_threshold) and
+       (itercount < maxiter)):
+    grads = _grad_fn(c_arr_renorm)
+    hess = _hess_fn(c_arr_renorm)
     hess_inv = jnp.linalg.inv(hess)
-    c_arr_renorm = update_H(c_arr_renorm, grads, hess_inv)
-    loss = loss_fn(c_arr_renorm)
+    c_arr_renorm = _update_H(c_arr_renorm, grads, hess_inv)
+    loss = _loss_fn(c_arr_renorm)
     loss_arr.append(loss)
-    print(f'Loss = {loss:12.5e}; max-grads = {abs(grads).max():12.5e}')
+    itercount += 1
+    print(f'[iter:{itercount:3d}] Loss = {loss:12.5e}; max-grads = {abs(grads).max():12.5e}')
 
 t2 = time.time()
 print(f"Total time taken = {(t2-t1):12.3f} seconds")
@@ -217,6 +232,12 @@ print(f"Total time taken = {(t2-t1):12.3f} seconds")
 # reconverting back to model_params in units of true_params_flat
 c_arr_fit = jf.model_denorm(c_arr_renorm, true_params_flat, model_params_sigma)\
             /true_params_flat
+print(c_arr_fit)
+
+with open("reg_misfit.txt", "a") as f:
+    f.seek(0, os.SEEK_END)
+    opstr = f"{mu:18.12e}, {loss:18.12e}\n"
+    f.write(opstr)
 
 #------------------------------------------------------------------------# 
 def print_summary(samples, ctrl_arr):
