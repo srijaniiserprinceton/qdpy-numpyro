@@ -1,9 +1,14 @@
 import os
 import time
+import argparse
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--mu", help="regularization",
+                    type=float, default=0.)
+PARGS = parser.parse_args()
 #----------------setting the number of chains to be used-----------------#                    
-num_chains = 3
-os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
+# num_chains = 3
+# os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
 #------------------------------------------------------------------------# 
 
 import numpy as np
@@ -54,7 +59,7 @@ sind_arr = np.load('sind_arr.npy')
 # Reading RL poly from precomputed file
 # shape (nmults x (smax+1) x 2*ellmax+1) 
 RL_poly = np.load('RL_poly.npy')
-model_params_sigma = np.load('model_params_sigma.npy')
+model_params_sigma = np.load('model_params_sigma.npy')*100.
 
 #------------------------------------------------------------------------# 
 
@@ -128,10 +133,11 @@ np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
 
 #----------------------------------------------------------------------#
 # changing to the HMI acoeffs if doing this for real data 
-# data_acoeffs = GVARS.acoeffs_true
+data_acoeffs = GVARS.acoeffs_true
+print(f"data_acoeffs = {data_acoeffs[:15]}")
 
 # the regularizing parameter
-mu = 0.0
+mu = PARGS.mu
 
 # the model function that is used by MCMC kernel
 def data_misfit_fn(c_arr):
@@ -140,7 +146,6 @@ def data_misfit_fn(c_arr):
             
     # denormalizing to make actual model params
     c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, model_params_sigma)
-
     pred = fixed_part + c_arr_denorm @ param_coeff_flat
 
     def loop_in_mults(mult_ind, pred_acoeff):
@@ -155,6 +160,28 @@ def data_misfit_fn(c_arr):
 
     return jnp.sum(jnp.square(data_misfit_arr))
 
+def data_misfit_arr_fn(c_arr):
+    # predicted a-coefficients
+    pred_acoeffs = jnp.zeros(num_j * nmults)
+            
+    # denormalizing to make actual model params
+    c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, model_params_sigma)
+    pred = fixed_part + c_arr_denorm @ param_coeff_flat
+
+    def loop_in_mults(mult_ind, pred_acoeff):
+        pred_omega = jdc(pred, (mult_ind*dim_hyper,), (dim_hyper,))
+        pred_acoeff = jdc_update(pred_acoeff,
+                                (Pjl[mult_ind] @ pred_omega)/aconv_denom[mult_ind],
+                                (mult_ind * num_j,))
+        return pred_acoeff
+
+    pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
+    data_misfit_arr = (pred_acoeffs - data_acoeffs)/acoeffs_sigma_HMI
+
+    return data_misfit_arr
+
+
+
 def model_misfit_fn(c_arr):
     return jnp.sum(jnp.square(c_arr))
 
@@ -165,13 +192,12 @@ data_hess_fn = hessian(data_misfit_fn)
 
 def loss_fn(c_arr):
     data_misfit_val = data_misfit_fn(c_arr)
-    # model_misfit_val = model_misfit_fn(c_arr)
+    model_misfit_val = model_misfit_fn(c_arr)
     data_hess = data_hess_fn(c_arr)
     lambda_factor = jnp.trace(data_hess)
 
     # total misfit
-    misfit = data_misfit_val # + mu * model_misfit_val * lambda_factor
-
+    misfit = data_misfit_val + mu * model_misfit_val * lambda_factor
     return misfit
 
 grad_fn = jax.grad(loss_fn)
@@ -186,6 +212,12 @@ def update_H(c_arr, grads, hess_inv):
     return jax.tree_multimap(lambda c, g, h: c - g @ h, c_arr, grads, hess_inv)
 
 
+#---------------------- jitting the functions --------------------------#
+_grad_fn = jit(grad_fn)
+_hess_fn = jit(hess_fn)
+_update_H = jit(update_H)
+_loss_fn = jit(loss_fn)
+
 #-----------------------the main training loop--------------------------#
 # initialization of params
 c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))
@@ -194,31 +226,57 @@ c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))
 c_arr_renorm = jf.model_renorm(c_init*true_params_flat,
                                true_params_flat,
                                model_params_sigma)
+c_arr_renorm = jnp.asarray(c_arr_renorm)
 
 N = len(data_acoeffs)
 
 loss = 1e25
+loss_diff = loss - 1.
 loss_arr = []
-loss_threshold = 1e-12
+loss_threshold = 1e-14
+maxiter = 15
+itercount = 0
 
-# sys.exit()
-
-while (loss > loss_threshold):
+t1s = time.time()
+while ((abs(loss_diff) > loss_threshold) and
+       (itercount < maxiter)):
     t1 = time.time()
-    grads = grad_fn(c_arr_renorm)
-    hess = hess_fn(c_arr_renorm)
+    loss_prev = loss
+    grads = _grad_fn(c_arr_renorm)
+    hess = _hess_fn(c_arr_renorm)
     hess_inv = jnp.linalg.inv(hess)
-    c_arr_renorm = update_H(c_arr_renorm, grads, hess_inv)
-    loss = loss_fn(c_arr_renorm)
+    c_arr_renorm = _update_H(c_arr_renorm, grads, hess_inv)
+    loss = _loss_fn(c_arr_renorm)
+
+    model_misfit = model_misfit_fn(c_arr_renorm)
+    data_hess = data_hess_fn(c_arr_renorm)
+    model_misfit = model_misfit * jnp.trace(data_hess)
+    data_misfit = loss - model_misfit * mu
+
+    loss_diff = loss_prev - loss
     loss_arr.append(loss)
-    print(f'Loss = {loss:12.5e}; max-grads = {abs(grads).max():12.5e}')
+    itercount += 1
+    t2 = time.time()
+    print(f'[{itercount:3d} | {(t2-t1):6.1f} sec ] data_misfit = {data_misfit:12.5e} loss-diff = {loss_diff:12.5e}; ' +
+          f'max-grads = {abs(grads).max():12.5e} model-misfit={model_misfit:12.5e}')
+
 
     t2 = time.time()
     print(f"Total time taken = {(t2-t1):12.3f} seconds")
 
+t2s = time.time()
+print(f"Total time taken = {(t2s-t1s):12.3f} seconds")
+
+
 # reconverting back to model_params in units of true_params_flat
 c_arr_fit = jf.model_denorm(c_arr_renorm, true_params_flat, model_params_sigma)\
             /true_params_flat
+print(c_arr_fit)
+
+with open("reg_misfit.txt", "a") as f:
+    f.seek(0, os.SEEK_END)
+    opstr = f"{mu:18.12e}, {data_misfit:18.12e}, {model_misfit:18.12e}\n"
+    f.write(opstr)
 
 #------------------------------------------------------------------------# 
 def print_summary(samples, ctrl_arr):
