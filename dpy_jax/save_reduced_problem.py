@@ -28,7 +28,7 @@ print('JAX using:', xla_bridge.get_backend().platform)
 
 #-------------------parameters to be inverted for--------------------#
 # the indices of ctrl points that we want to invert for
-ind_min, ind_max = 0, 40 #0, 3
+ind_min, ind_max = 0, 20
 cind_arr = np.arange(ind_min, ind_max + 1)
 
 # the angular degrees we want to invert for
@@ -194,7 +194,7 @@ np.testing.assert_array_almost_equal(pred, eigvals_model)
 np.save('fixed_part.npy', diag_evals_fixed)
 np.save('param_coeff_flat.npy', noc_diag_flat)
 np.save('true_params_flat.npy', true_params_flat)
-np.save('model_params_sigma.npy', carr_sigma_flat)
+np.save('model_params_sigma.npy', carr_sigma_flat*20.)
 np.save('data_model.npy', eigvals_model)
 np.save('cind_arr.npy', cind_arr)
 np.save('sind_arr.npy', sind_arr)

@@ -5,15 +5,16 @@ import os
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--mumin", help="Min regularization",
-                    type=float, default=2)
+                    type=float, default=1e-12)
 parser.add_argument("--mumax", help="Max regularization",
-                    type=float, default=2)
+                    type=float, default=1e-1)
 ARGS = parser.parse_args()
 
 muexp_min = np.log10(ARGS.mumax)
 muexp_max = np.log10(ARGS.mumin)
-muexp_list = np.linspace(muexp_min, muexp_max, 32)
+muexp_list = np.linspace(muexp_min, muexp_max, 60)
 mu_list = 10**muexp_list
+print(f"mu = {mu_list}")
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
@@ -28,13 +29,13 @@ f"""#!/bin/bash
 #PBS -N {jobname}
 #PBS -o out-{jobname}.log
 #PBS -e err-{jobname}.log
-#PBS -l select=1:ncpus=32:mem=64gb
+#PBS -l select=1:ncpus=112:mem=700gb
 #PBS -l walltime=06:00:00
-#PBS -q small
+#PBS -q clx
 echo \"Starting at \"`date`
 cd $PBS_O_WORKDIR
 cd ..
-parallel --jobs 32 < $PBS_O_WORKDIR/ipjobs_dpt_rls.sh
+parallel --jobs 112 < $PBS_O_WORKDIR/ipjobs_dpt_rls.sh
 echo \"Finished at \"`date`
 """
 
@@ -45,6 +46,6 @@ with open(f"{package_dir}/jobscripts/ipjobs_dpt_rls.sh", "w") as f:
     for idx, muval in enumerate(mu_list):
         ipjobs_str = f"{pythonpath} {execpath} "
         job_args = f"--mu {muval}"
-        outfile = f" >{package_dir}/jobscripts/qdrls.{idx:03d}.out"
-        errfile = f" 2>{package_dir}/jobscripts/qdrls.{idx:03d}.err"
-        f.write(ipjobs_str + job_args + outfile + errfile + "\n")
+        outfile = f" >{package_dir}/jobscripts/logs/qdrls.{idx:03d}.out"
+        errfile = f" 2>{package_dir}/jobscripts/logs/qdrls.{idx:03d}.err"
+        f.write(ipjobs_str + job_args + outfile + errfile + " \n")
