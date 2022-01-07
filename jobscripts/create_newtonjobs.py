@@ -34,6 +34,7 @@ f"""#!/bin/bash
 #PBS -q clx
 echo \"Starting at \"`date`
 cd $PBS_O_WORKDIR
+module load GnuParallel
 cd ..
 parallel --jobs 112 < $PBS_O_WORKDIR/ipjobs_dpt_rls.sh
 echo \"Finished at \"`date`
