@@ -46,7 +46,8 @@ fig.subplots_adjust(top=0.92)
 plt.savefig('crude_params.png')
 
 #-----------------finding the renormalized distributions------------------------# 
-true_params_samples_renormed = true_params_samples/true_params_flat[:,NAX] - 1
+#true_params_samples_renormed = true_params_samples/true_params_flat[:,NAX] - 1
+true_params_samples_renormed = np.log(true_params_samples/true_params_flat[:,NAX])
 
 fig, ax = plt.subplots(2, 3, figsize=(10,8))
 
@@ -66,7 +67,8 @@ for i in range(len(chosen_indices)):
 
 plt.tight_layout()
 
-fig.suptitle('Step 1 normalization: $\\frac{m-m_0}{m_0}$', size=16)
+# fig.suptitle('Step 1 normalization: $\\frac{m-m_0}{m_0}$', size=16)
+fig.suptitle('Step 1 normalization: $log(\\frac{m}{m_0})$', size=16)
 fig.subplots_adjust(top=0.92)
 
 plt.savefig('renormed_params.png')
@@ -98,7 +100,8 @@ for i in range(len(chosen_indices)):
 
 plt.tight_layout()
 
-fig.suptitle('Step 2 normalization: $\\frac{m-m_0}{m_0}/\sigma$', size=16)
+# fig.suptitle('Step 2 normalization: $\\frac{m-m_0}{m_0}/\sigma$', size=16)
+fig.suptitle('Step 2 normalization: $log(\\frac{m}{m_0})/\sigma$', size=16)
 fig.subplots_adjust(top=0.92)
 
 plt.savefig('final_params.png')

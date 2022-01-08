@@ -86,10 +86,19 @@ def jax_gamma(ell):
     """Computes gamma_ell"""
     return jnp.sqrt((2*ell + 1)/4/jnp.pi)
 
-def model_renorm(model_params, model_params_ref, model_params_sigma):
-    model_renorm_arr = (model_params - model_params_ref)/model_params_sigma
+def model_renorm(model_params, model_params_ref, sigma):
+    model_renorm_arr = model_params / model_params_ref - 1.
+    model_renorm_arr = model_renorm_arr / sigma
     return model_renorm_arr
 
-def model_denorm(model_params, model_params_ref, model_params_sigma):
-    model_denorm_arr = model_params * model_params_sigma + model_params_ref
+def model_denorm(model_params, model_params_ref, sigma):
+    model_denorm_arr = (model_params * sigma + 1.) * model_params_ref
+    return model_denorm_arr
+
+def model_renorm_log(model_params, model_params_ref, sigma):
+    model_renorm_arr = jnp.log(model_params / model_params_ref) / sigma
+    return model_renorm_arr
+
+def model_denorm_log(model_params, model_params_ref, sigma):
+    model_denorm_arr = jnp.exp(model_params * sigma) * model_params_ref
     return model_denorm_arr

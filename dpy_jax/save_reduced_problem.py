@@ -3,6 +3,9 @@ from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
+from scipy.stats import norm
+
+NAX = np.newaxis
 
 import jax.numpy as jnp
 from jax.config import config
@@ -22,6 +25,12 @@ from qdpy_jax import globalvars as gvar_jax
 from dpy_jax import jax_functions_dpy as jf
 from dpy_jax import sparse_precompute_acoeff as precompute
 from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
+
+import os
+current_dir = os.path.dirname(os.path.realpath(__file__))
+package_dir = os.path.dirname(current_dir)
+sys.path.append(f"{package_dir}/plotter")
+import plot_model_renorm as plot_renorm
 
 from jax.lib import xla_bridge
 print('JAX using:', xla_bridge.get_backend().platform)
@@ -190,11 +199,39 @@ pred += true_params_flat @ noc_diag_flat
 # into the fixed part.
 np.testing.assert_array_almost_equal(pred, eigvals_model)
 
+#---------finding sigma of renorm params-------------------#
+num_params = len(true_params_flat)
+num_samples = int(1e3)
+true_params_samples = np.zeros((num_params, num_samples))
+true_params_flat_shaped = np.reshape(true_params_flat, (num_params, 1))
+
+# looping over model params                                                                   
+for i in range(num_params):
+    true_params_samples[i, :] = np.random.normal(loc=true_params_flat[i],
+                                                 scale=carr_sigma_flat[i],
+                                                 size=num_samples)
+
+# step 1 of renormalization
+true_params_samples_renormed = jf.model_renorm(true_params_samples,
+                                               true_params_flat_shaped,
+                                               1.)
+
+# array to store the sigma values to rescale renormed model params                           
+sigma2scale = np.zeros(num_params)
+
+for i in range(num_params):
+    __, sigma2scale[i] = norm.fit(true_params_samples_renormed[i])
+
+# plotting for visual verification of renormalization
+plot_renorm.visualize_model_renorm(true_params_flat, true_params_samples,
+                                   sigma2scale, jf.model_renorm, len(sind_arr))
+
 #-------------saving miscellaneous files-------------------#
 np.save('fixed_part.npy', diag_evals_fixed)
 np.save('param_coeff_flat.npy', noc_diag_flat)
 np.save('true_params_flat.npy', true_params_flat)
-np.save('model_params_sigma.npy', carr_sigma_flat*20.)
+np.save('sigma2scale.npy', sigma2scale)
+# np.save('model_params_sigma.npy', carr_sigma_flat*20.)
 np.save('data_model.npy', eigvals_model)
 np.save('cind_arr.npy', cind_arr)
 np.save('sind_arr.npy', sind_arr)
