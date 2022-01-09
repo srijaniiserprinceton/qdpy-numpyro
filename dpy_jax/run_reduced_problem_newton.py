@@ -139,11 +139,11 @@ np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
 
 #----------------------------------------------------------------------#
 # changing to the HMI acoeffs if doing this for real data 
-# data_acoeffs = GVARS.acoeffs_true
+data_acoeffs = GVARS.acoeffs_true
 print(f"data_acoeffs = {data_acoeffs[:15]}")
 
 # plotting acoeffs pred and data to see if we should expect got fit
-pred_acoeffs_plot = -1*np.reshape(pred_acoeffs, (3,-1), 'F')
+pred_acoeffs_plot = np.reshape(pred_acoeffs, (3,-1), 'F')
 data_acoeffs_plot = np.reshape(data_acoeffs, (3,-1), 'F')
 data_acoeffs_error = np.reshape(acoeffs_sigma_HMI, (3, -1), 'F')
 
