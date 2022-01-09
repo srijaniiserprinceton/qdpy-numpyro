@@ -254,7 +254,9 @@ c_arr_renorm = jnp.asarray(c_arr_renorm)
 
 #----------------------------------------------------------------------#                      
 # plotting acoeffs from initial data and HMI data
-init_acoeffs = data_misfit_arr_fn(c_arr_renorm)
+init_acoeffs = data_misfit_arr_fn(c_arr_renorm)*acoeffs_sigma_HMI +\
+               data_acoeffs
+
 plot_acoeffs.plot_acoeffs_datavsmodel(init_acoeffs, data_acoeffs,
                                       acoeffs_sigma_HMI, 'init')
 #----------------------------------------------------------------------#
@@ -301,7 +303,9 @@ print(f"Total time taken = {(t2s-t1s):12.3f} seconds")
 
 #----------------------------------------------------------------------#                      
 # plotting acoeffs from initial data and HMI data                                            
-final_acoeffs = data_misfit_arr_fn(c_arr_renorm)
+final_acoeffs = data_misfit_arr_fn(c_arr_renorm)*acoeffs_sigma_HMI +\
+                data_acoeffs
+
 plot_acoeffs.plot_acoeffs_datavsmodel(final_acoeffs, data_acoeffs,
                                       acoeffs_sigma_HMI, 'final')
 #----------------------------------------------------------------------# 

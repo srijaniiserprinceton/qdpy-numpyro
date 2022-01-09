@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 def plot_acoeffs_datavsmodel(pred_acoeffs, data_acoeffs, data_acoeffs_sigma,
                              label):
-    pred_acoeffs_plot = -1*np.reshape(pred_acoeffs, (3,-1), 'F')
+    pred_acoeffs_plot = np.reshape(pred_acoeffs, (3,-1), 'F')
     data_acoeffs_plot = np.reshape(data_acoeffs, (3,-1), 'F')
     data_acoeffs_error = np.reshape(data_acoeffs_sigma, (3, -1), 'F')
     
