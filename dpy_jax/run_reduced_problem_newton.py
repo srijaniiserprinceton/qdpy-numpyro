@@ -140,7 +140,7 @@ np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
 
 #----------------------------------------------------------------------#
 # changing to the HMI acoeffs if doing this for real data 
-# data_acoeffs = GVARS.acoeffs_true
+data_acoeffs = GVARS.acoeffs_true
 print(f"data_acoeffs = {data_acoeffs[:15]}")
 
 #----------------------------------------------------------------------# 
