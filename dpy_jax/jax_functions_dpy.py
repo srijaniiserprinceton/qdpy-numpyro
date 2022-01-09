@@ -102,3 +102,17 @@ def model_renorm_log(model_params, model_params_ref, sigma):
 def model_denorm_log(model_params, model_params_ref, sigma):
     model_denorm_arr = jnp.exp(model_params * sigma) * model_params_ref
     return model_denorm_arr
+
+def c4fit_2_c4plot(GVARS, c_arr, sind_arr, cind_arr):
+    c_arr_plot_clipped = 1.0 * GVARS.ctrl_arr_dpt_clipped
+    c_arr_plot_shaped = jnp.reshape(c_arr, (len(sind_arr), -1), 'F')
+    
+    for sind_idx, sind in enumerate(sind_arr):
+        c_arr_plot_clipped[sind, cind_arr] = c_arr_plot_shaped[sind_idx]
+        
+    c_arr_plot_full = 1.0 * GVARS.ctrl_arr_dpt_full
+        
+    # tiling the fitted values in the larger array of ctrl points                             
+    c_arr_plot_full[:, GVARS.knot_ind_th:] = c_arr_plot_clipped
+    
+    return c_arr_plot_full

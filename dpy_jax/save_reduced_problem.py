@@ -37,7 +37,7 @@ print('JAX using:', xla_bridge.get_backend().platform)
 
 #-------------------parameters to be inverted for--------------------#
 # the indices of ctrl points that we want to invert for
-ind_min, ind_max = 0, 20
+ind_min, ind_max = 0, 10
 cind_arr = np.arange(ind_min, ind_max + 1)
 
 # the angular degrees we want to invert for
@@ -208,7 +208,7 @@ true_params_flat_shaped = np.reshape(true_params_flat, (num_params, 1))
 # looping over model params                                                                   
 for i in range(num_params):
     true_params_samples[i, :] = np.random.normal(loc=true_params_flat[i],
-                                                 scale=carr_sigma_flat[i],
+                                                 scale=np.abs(carr_sigma_flat[i]),
                                                  size=num_samples)
 
 # step 1 of renormalization

@@ -37,6 +37,11 @@ from numpyro.infer import NUTS, MCMC, SA
 
 from qdpy_jax import globalvars as gvar_jax
 from dpy_jax import jax_functions_dpy as jf
+
+current_dir = os.path.dirname(os.path.realpath(__file__))
+package_dir = os.path.dirname(current_dir)
+sys.path.append(f"{package_dir}/plotter")
+import postplotter
 #------------------------------------------------------------------------# 
 
 ARGS = np.loadtxt(".n0-lmin-lmax.dat")
@@ -134,7 +139,7 @@ np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
 
 #----------------------------------------------------------------------#
 # changing to the HMI acoeffs if doing this for real data 
-data_acoeffs = GVARS.acoeffs_true
+# data_acoeffs = GVARS.acoeffs_true
 print(f"data_acoeffs = {data_acoeffs[:15]}")
 
 # plotting acoeffs pred and data to see if we should expect got fit
@@ -147,8 +152,6 @@ for i in range(3):
     plt.plot(data_acoeffs_plot[i], '.k', markersize=2)
     plt.savefig(f'a{2*i+1}.png')
     plt.close()
-
-sys.exit()
 
 #----------------------------------------------------------------------# 
 # the regularizing parameter
@@ -240,7 +243,13 @@ _loss_fn = jit(loss_fn)
 # initialization of params
 c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))
 
-sys.exit()
+#------------------plotting the initial profiles-------------------#                     
+c_arr_init_full = jf.c4fit_2_c4plot(GVARS, c_init*true_params_flat,
+                                    sind_arr, cind_arr)
+
+# converting ctrl points to wsr and plotting                                                  
+init_plot = postplotter.postplotter(GVARS, c_arr_init_full, 'init')
+#------------------------------------------------------------------------# 
 
 # getting the renormalized model parameters
 c_arr_renorm = jf.model_renorm(c_init*true_params_flat,
@@ -291,6 +300,15 @@ c_arr_fit = jf.model_denorm(c_arr_renorm, true_params_flat, sigma2scale)\
             /true_params_flat
 
 print(c_arr_fit)
+
+#------------------plotting the post fitting profiles-------------------#
+c_arr_fit_full = jf.c4fit_2_c4plot(GVARS, c_arr_fit*true_params_flat,
+                                   sind_arr, cind_arr)
+
+# converting ctrl points to wsr and plotting                                                  
+fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full, 'fit')
+
+#------------------------------------------------------------------------#
 
 with open("reg_misfit.txt", "a") as f:
     f.seek(0, os.SEEK_END)
