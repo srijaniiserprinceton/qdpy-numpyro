@@ -199,8 +199,9 @@ def data_misfit_arr_fn(c_arr):
 
 
 def model_misfit_fn(c_arr):
+    c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
     # return jnp.sum(jnp.square(c_arr))
-    return c_arr @ D_bsp_j_D_bsp_k @ c_arr
+    return c_arr_denorm @ D_bsp_j_D_bsp_k @ c_arr_denorm
 
 def hessian(f):
     return jacfwd(jacrev(f))
@@ -268,7 +269,7 @@ N = len(data_acoeffs)
 loss = 1e25
 loss_diff = loss - 1.
 loss_arr = []
-loss_threshold = 1e-10
+loss_threshold = 1e-9
 maxiter = 15
 itercount = 0
 
