@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 from scipy.stats import norm
+from scipy import integrate
 
 NAX = np.newaxis
 
@@ -180,6 +181,30 @@ for sind in range(smin_ind, smax_ind+1):
     for ci, cind in enumerate(cind_arr):
         carr_sigma[sind-1, ci] = GVARS.ctrl_arr_sig_clipped[sind, cind]
 
+#-------------computing the regularization terms-------------------#                        
+# extracting the entire basis elements once for one s                                        
+bsp_basis_one_s = precompute.get_bsp_basis_elements(GVARS.r)
+
+# retaining the ctrl points needed
+bsp_basis_one_s = bsp_basis_one_s[cind_arr]
+
+# making the bsp basis for all s according to the ordering of
+# c_arr_flat
+bsp_basis = np.zeros((len(sind_arr), len(cind_arr), len(GVARS.r)))
+
+for sind in range(smin_ind, smax_ind+1):
+    bsp_basis[sind-1] = bsp_basis_one_s
+
+# flattening in the s and c dimension like ctrl_arr_flat
+bsp_basis = np.reshape(bsp_basis, (len(sind_arr) * len(cind_arr), -1), 'F')
+
+# acting the basis elements on with operator D
+D_bsp = jf.D(bsp_basis, GVARS.r)
+
+# calculating D_bsp_k * D_bsp_j and then integrating over radius
+D_bsp_j_D_bsp_k_r = D_bsp[:, NAX, :] * D_bsp[NAX, :, :]
+D_bsp_j_D_bsp_k = integrate.trapz(D_bsp_j_D_bsp_k_r, GVARS.r, axis=2)
+
 #----------------------------------------------------------------------# 
 # checking if the forward problem works with the above components
 pred = diag_evals_fixed * 1.0
@@ -235,7 +260,7 @@ np.save('sigma2scale.npy', sigma2scale)
 np.save('data_model.npy', eigvals_model)
 np.save('cind_arr.npy', cind_arr)
 np.save('sind_arr.npy', sind_arr)
-
+np.save('D_bsp_j_D_bsp_k .npy', D_bsp_j_D_bsp_k)
 sys.exit()
 
 #-----------------generating the 2D pdfs-------------------#

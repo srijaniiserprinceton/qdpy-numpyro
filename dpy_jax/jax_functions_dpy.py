@@ -6,6 +6,7 @@ from tqdm import tqdm
 from jax import jit
 from jax.lax import cond as cond
 import jax.numpy as jnp
+import numpy as np
 import pickle
 
 def save_obj(obj, name):
@@ -116,3 +117,13 @@ def c4fit_2_c4plot(GVARS, c_arr, sind_arr, cind_arr):
     c_arr_plot_full[:, GVARS.knot_ind_th:] = c_arr_plot_clipped
     
     return c_arr_plot_full
+
+def D(f, r):
+    num_f = f.shape[0]
+    d2r_df2 = np.zeros_like(f)
+    for i in range(num_f):
+        dr_df = np.gradient(f[i], r, edge_order=2)
+        d2r_df2[i] = np.gradient(dr_df, r, edge_order=2)
+    
+    return d2r_df2
+    
