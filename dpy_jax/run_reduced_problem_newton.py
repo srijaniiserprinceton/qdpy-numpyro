@@ -67,7 +67,7 @@ sind_arr = np.load('sind_arr.npy')
 RL_poly = np.load('RL_poly.npy')
 # model_params_sigma = np.load('model_params_sigma.npy')*100.
 sigma2scale = np.load('sigma2scale.npy')
-D_bsp_j_D_bsp_k = np.load('D_bsp_j_D_bsp_k .npy')
+D_bsp_j_D_bsp_k = np.load('D_bsp_j_D_bsp_k.npy')
 #------------------------------------------------------------------------# 
 
 nmults = len(GVARS.ell0_arr)

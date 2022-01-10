@@ -260,7 +260,7 @@ np.save('sigma2scale.npy', sigma2scale)
 np.save('data_model.npy', eigvals_model)
 np.save('cind_arr.npy', cind_arr)
 np.save('sind_arr.npy', sind_arr)
-np.save('D_bsp_j_D_bsp_k .npy', D_bsp_j_D_bsp_k)
+np.save('D_bsp_j_D_bsp_k.npy', D_bsp_j_D_bsp_k)
 sys.exit()
 
 #-----------------generating the 2D pdfs-------------------#
