@@ -123,7 +123,8 @@ def D(f, r):
     d2r_df2 = np.zeros_like(f)
     for i in range(num_f):
         dr_df = np.gradient(f[i], r, edge_order=2)
-        d2r_df2[i] = np.gradient(dr_df, r, edge_order=2)
+        # d2r_df2[i] = np.gradient(dr_df, r, edge_order=2)
+        d2r_df2[i] = dr_df
     
     return d2r_df2
     

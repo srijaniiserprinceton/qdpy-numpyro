@@ -197,11 +197,31 @@ def data_misfit_arr_fn(c_arr):
     return data_misfit_arr
 
 
-
 def model_misfit_fn(c_arr):
     c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
+
+    # Djk is the same for s=3 and s=5
+    # cd3 = c_arr_denorm[0::2]
+    # cd5 = c_arr_denorm[1::2]
+    # Djk = D_bsp_j_D_bsp_k[0::2, 0::2]
+    # return (cd3 @ Djk @ cd3 +
+    #         cd5 @ Djk @ cd5)
     # return jnp.sum(jnp.square(c_arr))
     return c_arr_denorm @ D_bsp_j_D_bsp_k @ c_arr_denorm
+
+def model_misfit_fn_new(c_arr):
+    c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
+    cd3 = c_arr_denorm[0::2] * jnp.sqrt(3)
+    cd5 = c_arr_denorm[1::2] * jnp.sqrt(5) * (-3./2.)
+    c_arr_corrected = jnp.ones_like(c_arr_denorm)
+    c_arr_corrected = jidx_update(c_arr_corrected,
+                                  jidx[0::2], cd3)
+    c_arr_corrected = jidx_update(c_arr_corrected,
+                                  jidx[1::2], cd5)
+    # return jnp.sum(jnp.square(c_arr))
+    return c_arr_corrected @ D_bsp_j_D_bsp_k @ c_arr_corrected
+
+
 
 def hessian(f):
     return jacfwd(jacrev(f))
@@ -239,6 +259,7 @@ _loss_fn = jit(loss_fn)
 #-----------------------the main training loop--------------------------#
 # initialization of params
 c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))
+c_init = np.ones_like(true_params_flat)
 
 #------------------plotting the initial profiles-------------------#                     
 c_arr_init_full = jf.c4fit_2_c4plot(GVARS, c_init*true_params_flat,
@@ -296,7 +317,6 @@ while ((abs(loss_diff) > loss_threshold) and
     print(f'[{itercount:3d} | {(t2-t1):6.1f} sec ] data_misfit = {data_misfit:12.5e} loss-diff = {loss_diff:12.5e}; ' +
           f'max-grads = {abs(grads).max():12.5e} model_misfit={model_misfit:12.5e}')
 
-
     t2 = time.time()
 
 t2s = time.time()
@@ -326,7 +346,6 @@ c_arr_fit_full = jf.c4fit_2_c4plot(GVARS, c_arr_fit*true_params_flat,
 fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full, 'fit')
 
 #------------------------------------------------------------------------#
-
 with open("reg_misfit.txt", "a") as f:
     f.seek(0, os.SEEK_END)
     opstr = f"{mu:18.12e}, {data_misfit:18.12e}, {model_misfit:18.12e}\n"
