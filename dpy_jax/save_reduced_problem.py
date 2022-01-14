@@ -42,7 +42,7 @@ ind_min, ind_max = 0, 10
 cind_arr = np.arange(ind_min, ind_max + 1)
 
 # the angular degrees we want to invert for
-smin, smax = 3, 5
+smin, smax = 5, 5
 smin_ind, smax_ind = (smin-1)//2, (smax-1)//2
 sind_arr = np.arange(smin_ind, smax_ind+1)
 #---------------------------------------------------------------------#
@@ -172,14 +172,14 @@ true_params = np.zeros((smax_ind - smin_ind + 1, ind_max - ind_min + 1))
 
 for sind in range(smin_ind, smax_ind+1):
     for ci, cind in enumerate(cind_arr):
-        true_params[sind-1, ci] = GVARS.ctrl_arr_dpt_clipped[sind, cind]
+        true_params[sind-smin_ind, ci] = GVARS.ctrl_arr_dpt_clipped[sind, cind]
 
 #-------------saving the sigma in model params-------------------#
 carr_sigma = np.zeros_like(true_params)
 
 for sind in range(smin_ind, smax_ind+1):
     for ci, cind in enumerate(cind_arr):
-        carr_sigma[sind-1, ci] = GVARS.ctrl_arr_sig_clipped[sind, cind]
+        carr_sigma[sind-smin_ind, ci] = GVARS.ctrl_arr_sig_clipped[sind, cind]
 
 #-------------computing the regularization terms-------------------#                        
 # extracting the entire basis elements once for one s                                        
@@ -193,10 +193,11 @@ bsp_basis_one_s = bsp_basis_one_s[cind_arr]
 bsp_basis = np.zeros((len(sind_arr), len(cind_arr), len(GVARS.r)))
 
 for sind in range(smin_ind, smax_ind+1):
-    bsp_basis[sind-1] = bsp_basis_one_s
+    bsp_basis[sind-smin_ind] = bsp_basis_one_s
 
 # flattening in the s and c dimension like ctrl_arr_flat
 bsp_basis = np.reshape(bsp_basis, (len(sind_arr) * len(cind_arr), -1), 'F')
+np.save('bsp_basis.npy', bsp_basis)
 
 # acting the basis elements on with operator D
 D_bsp = jf.D(bsp_basis, GVARS.r)
@@ -248,8 +249,8 @@ for i in range(num_params):
     __, sigma2scale[i] = norm.fit(true_params_samples_renormed[i])
 
 # plotting for visual verification of renormalization
-plot_renorm.visualize_model_renorm(true_params_flat, true_params_samples,
-                                   sigma2scale, jf.model_renorm, len(sind_arr))
+# plot_renorm.visualize_model_renorm(true_params_flat, true_params_samples,
+#                                    sigma2scale, jf.model_renorm, len(sind_arr))
 
 #-------------saving miscellaneous files-------------------#
 np.save('fixed_part.npy', diag_evals_fixed)
