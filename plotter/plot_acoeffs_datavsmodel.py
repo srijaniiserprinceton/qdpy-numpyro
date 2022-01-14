@@ -1,10 +1,15 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from jax.ops import index as jidx
+from jax.ops import index_update as jidx_update
 
-def plot_acoeffs_datavsmodel(pred_acoeffs, data_acoeffs, data_acoeffs_sigma,
-                             label):
+def plot_acoeffs_datavsmodel(pred_acoeffs, data_acoeffs, data_acoeffs_out_HMI,
+                             data_acoeffs_sigma, label):
+    
     pred_acoeffs_plot = np.reshape(pred_acoeffs, (3,-1), 'F')
     data_acoeffs_plot = np.reshape(data_acoeffs, (3,-1), 'F')
+    data_acoeffs_out_HMI_plot = np.reshape(data_acoeffs_out_HMI,
+                                           (3,-1), 'F')
     data_acoeffs_error = np.reshape(data_acoeffs_sigma, (3, -1), 'F')
     
     for i in range(3):
@@ -13,6 +18,7 @@ def plot_acoeffs_datavsmodel(pred_acoeffs, data_acoeffs, data_acoeffs_sigma,
                      data_acoeffs_plot[i], yerr=data_acoeffs_error[i], alpha=0.5,
                      fmt='o', ms=2, capsize=4, color='k')
         plt.plot(pred_acoeffs_plot[i], '.r', markersize=4)
+        plt.plot(data_acoeffs_out_HMI_plot[i], 'xb', markersize=4)
         plt.savefig(f'a{2*i+1}_{label}.png')
         plt.close()
         

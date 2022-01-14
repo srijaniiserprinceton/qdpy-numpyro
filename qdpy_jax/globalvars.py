@@ -89,7 +89,9 @@ class GlobalVars():
         self.outdir = f"{self.scratch_dir}/output_files"
         self.eigdir = f"{self.snrnmais_dir}/eig_files"
         self.progdir = self.local_dir
-        self.hmidata = np.loadtxt(f"{self.snrnmais_dir}/data_files/hmi.6328.36")
+        self.hmidata_in = np.loadtxt(f"{self.snrnmais_dir}/data_files/hmi.6328.5")
+        self.hmidata_out =\
+                    np.loadtxt(f"{self.snrnmais_dir}/data_files/hmirot.out.6328.5")
 
         qdPars = qdParams(lmin=lmin, lmax=lmax, n0=n0, rth=rth)
 
@@ -153,6 +155,8 @@ class GlobalVars():
 
         self.eigvals_true, self.eigvals_sigma = self.get_eigvals_true()
         self.acoeffs_true, self.acoeffs_sigma = self.get_acoeffs_true()
+        self.acoeffs_out_HMI, self.acoeffs_sigma_out_HMI =\
+                                            self.get_acoeffs_out_HMI()
 
         # the factor to be multiplied to make the upper and lower 
         # bounds of the model space to be explored
@@ -251,11 +255,23 @@ class GlobalVars():
         acoeffs_true = np.array([])
         acoeffs_sigma = np.array([])
         for i in range(nmults):
-            _aval, _asig = self.find_acoeffs(ell0arr[i], n0arr[i])
+            _aval, _asig = self.find_acoeffs(self.hmidata_in, ell0arr[i], n0arr[i])
             acoeffs_true = np.append(acoeffs_true, _aval)
             acoeffs_sigma = np.append(acoeffs_sigma, _asig)
         return acoeffs_true*1e-3, acoeffs_sigma*1e-3
 
+
+    def get_acoeffs_out_HMI(self):
+        n0arr = self.n0_arr
+        ell0arr = self.ell0_arr
+        nmults = len(n0arr)
+        acoeffs_true = np.array([])
+        acoeffs_sigma = np.array([])
+        for i in range(nmults):
+            _aval, _asig = self.find_acoeffs(self.hmidata_out, ell0arr[i], n0arr[i])
+            acoeffs_true = np.append(acoeffs_true, _aval)
+            acoeffs_sigma = np.append(acoeffs_sigma, _asig)
+        return acoeffs_true*1e-3, acoeffs_sigma*1e-3
 
     # {{{ def findfreq(self, l, n, m, fullfreq=False):
     def findfreq(self, l, n, m, fullfreq=False):
@@ -283,7 +299,7 @@ class GlobalVars():
                 totsigma += (leg * sigmas[i])**2
             return np.sqrt(totsigma)
 
-        data = self.hmidata
+        data = self.hmidata_in
         L = np.sqrt(l*(l+1))
         try:
             modeindex = np.where((data[:, 0] == l) *
@@ -308,7 +324,7 @@ class GlobalVars():
     # }}} findfreq(data, l, n, m)
 
     # {{{ def find_acoeffs(data, l, n):
-    def find_acoeffs(self, l, n, odd=True, smax=5):
+    def find_acoeffs(self, data, l, n, odd=True, smax=5):
         '''Find the splitting coefficients for a given (l, n) 
         in nHz
 
@@ -321,7 +337,6 @@ class GlobalVars():
             a_{nl}    - splitting coefficients in nHz
             asigma_{nl} - uncertainity
         '''
-        data = self.hmidata
         L = np.sqrt(l*(l+1))
         try:
             modeindex = np.where((data[:, 0] == l) *
@@ -414,7 +429,7 @@ class GlobalVars():
                                            self.outdir,
                                            self.eigdir,
                                            self.progdir,
-                                           self.hmidata))
+                                           self.hmidata_in))
         return GVAR_PATHS
 
     def get_namedtuple_gvar_traced(self):

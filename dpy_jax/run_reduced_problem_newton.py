@@ -141,13 +141,15 @@ np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
 #----------------------------------------------------------------------#
 # changing to the HMI acoeffs if doing this for real data 
 data_acoeffs = GVARS.acoeffs_true
+data_acoeffs_out_HMI = GVARS.acoeffs_out_HMI
 print(f"data_acoeffs = {data_acoeffs[:15]}")
 
 #----------------------------------------------------------------------# 
 # plotting acoeffs pred and data to see if we should expect got fit
 plot_acoeffs.plot_acoeffs_datavsmodel(pred_acoeffs, data_acoeffs,
+                                      data_acoeffs_out_HMI,
                                       acoeffs_sigma_HMI, 'ref')
-
+sys.exit()
 #----------------------------------------------------------------------# 
 # the regularizing parameter
 mu = PARGS.mu
