@@ -42,7 +42,7 @@ ind_min, ind_max = 0, 10
 cind_arr = np.arange(ind_min, ind_max + 1)
 
 # the angular degrees we want to invert for
-smin, smax = 5, 5
+smin, smax = 3, 5
 smin_ind, smax_ind = (smin-1)//2, (smax-1)//2
 sind_arr = np.arange(smin_ind, smax_ind+1)
 #---------------------------------------------------------------------#
@@ -249,8 +249,8 @@ for i in range(num_params):
     __, sigma2scale[i] = norm.fit(true_params_samples_renormed[i])
 
 # plotting for visual verification of renormalization
-# plot_renorm.visualize_model_renorm(true_params_flat, true_params_samples,
-#                                    sigma2scale, jf.model_renorm, len(sind_arr))
+plot_renorm.visualize_model_renorm(true_params_flat, true_params_samples,
+                                   sigma2scale, jf.model_renorm, len(sind_arr))
 
 #-------------saving miscellaneous files-------------------#
 np.save('fixed_part.npy', diag_evals_fixed)

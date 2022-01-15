@@ -14,6 +14,7 @@ PARGS = parser.parse_args()
 import numpy as np
 from collections import namedtuple
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import arviz as az
 import sys
 
@@ -140,7 +141,11 @@ np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
 
 #----------------------------------------------------------------------#
 # changing to the HMI acoeffs if doing this for real data 
-data_acoeffs = GVARS.acoeffs_true
+# data_acoeffs = GVARS.acoeffs_true
+
+data_acoeffs_err = np.random.normal(loc=0, scale=acoeffs_sigma_HMI)
+data_acoeffs = data_acoeffs + data_acoeffs_err
+
 data_acoeffs_out_HMI = GVARS.acoeffs_out_HMI
 print(f"data_acoeffs = {data_acoeffs[:15]}")
 
@@ -149,7 +154,7 @@ print(f"data_acoeffs = {data_acoeffs[:15]}")
 plot_acoeffs.plot_acoeffs_datavsmodel(pred_acoeffs, data_acoeffs,
                                       data_acoeffs_out_HMI,
                                       acoeffs_sigma_HMI, 'ref')
-sys.exit()
+# sys.exit()
 #----------------------------------------------------------------------# 
 # the regularizing parameter
 mu = PARGS.mu
@@ -200,17 +205,19 @@ def data_misfit_arr_fn(c_arr):
 
 
 def model_misfit_fn(c_arr):
-    c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
+    # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
 
     # Djk is the same for s=3 and s=5
-    # cd3 = c_arr_denorm[0::2]
-    # cd5 = c_arr_denorm[1::2]
-    # Djk = D_bsp_j_D_bsp_k[0::2, 0::2]
-    # return (cd3 @ Djk @ cd3 +
-    #         cd5 @ Djk @ cd5)
+    cd3 = c_arr[0::2]
+    cd5 = c_arr[1::2]
+    Djk = D_bsp_j_D_bsp_k[0::2, 0::2]
+    return (cd3 @ Djk @ cd3 +
+            cd5 @ Djk @ cd5)
     # return jnp.sum(jnp.square(c_arr))
-    return c_arr_denorm @ D_bsp_j_D_bsp_k @ c_arr_denorm
+    # return c_arr_denorm @ D_bsp_j_D_bsp_k @ c_arr_denorm
+    # return c_arr @ D_bsp_j_D_bsp_k @ c_arr
 
+'''
 def model_misfit_fn_new(c_arr):
     c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
     cd3 = c_arr_denorm[0::2] * jnp.sqrt(3)
@@ -222,7 +229,7 @@ def model_misfit_fn_new(c_arr):
                                   jidx[1::2], cd5)
     # return jnp.sum(jnp.square(c_arr))
     return c_arr_corrected @ D_bsp_j_D_bsp_k @ c_arr_corrected
-
+'''
 
 
 def hessian(f):
@@ -261,7 +268,7 @@ _loss_fn = jit(loss_fn)
 #-----------------------the main training loop--------------------------#
 # initialization of params
 c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))
-c_init = np.ones_like(true_params_flat)
+# c_init = np.ones_like(true_params_flat)
 
 #------------------plotting the initial profiles-------------------#                     
 c_arr_init_full = jf.c4fit_2_c4plot(GVARS, c_init*true_params_flat,
@@ -283,6 +290,7 @@ init_acoeffs = data_misfit_arr_fn(c_arr_renorm)*acoeffs_sigma_HMI +\
                data_acoeffs
 
 plot_acoeffs.plot_acoeffs_datavsmodel(init_acoeffs, data_acoeffs,
+                                      data_acoeffs_out_HMI,
                                       acoeffs_sigma_HMI, 'init')
 #----------------------------------------------------------------------#
 
@@ -331,6 +339,7 @@ final_acoeffs = data_misfit_arr_fn(c_arr_renorm)*acoeffs_sigma_HMI +\
                 data_acoeffs
 
 plot_acoeffs.plot_acoeffs_datavsmodel(final_acoeffs, data_acoeffs,
+                                      data_acoeffs_out_HMI,
                                       acoeffs_sigma_HMI, 'final')
 #----------------------------------------------------------------------# 
 
@@ -367,3 +376,19 @@ def print_summary(samples, ctrl_arr):
     return None
 #------------------------------------------------------------------------# 
 
+# plotting the hessians for analysis
+fig, ax = plt.subplots(1, 2, figsize=(10,5))
+
+im1 = ax[0].pcolormesh(hess)
+divider = make_axes_locatable(ax[0])
+cax = divider.append_axes('right', size='5%', pad=0.05)
+fig.colorbar(im1, cax=cax, orientation='vertical')
+
+im2 = ax[1].pcolormesh(data_hess)
+divider = make_axes_locatable(ax[1])
+cax = divider.append_axes('right', size='5%', pad=0.05)
+fig.colorbar(im2, cax=cax, orientation='vertical')
+
+plt.tight_layout()
+plt.savefig('hessians.png')
+plt.close()
