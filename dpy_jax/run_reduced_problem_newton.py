@@ -141,10 +141,10 @@ np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
 
 #----------------------------------------------------------------------#
 # changing to the HMI acoeffs if doing this for real data 
-# data_acoeffs = GVARS.acoeffs_true
-np.random.seed(3)
-data_acoeffs_err = np.random.normal(loc=0, scale=acoeffs_sigma_HMI)
-data_acoeffs = data_acoeffs + data_acoeffs_err
+data_acoeffs = GVARS.acoeffs_true
+# np.random.seed(3)
+# data_acoeffs_err = np.random.normal(loc=0, scale=acoeffs_sigma_HMI)
+# data_acoeffs = data_acoeffs + data_acoeffs_err
 data_acoeffs_out_HMI = GVARS.acoeffs_out_HMI
 print(f"data_acoeffs = {data_acoeffs[:15]}")
 
