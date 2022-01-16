@@ -141,10 +141,10 @@ np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
 
 #----------------------------------------------------------------------#
 # changing to the HMI acoeffs if doing this for real data 
-data_acoeffs = GVARS.acoeffs_true
-# np.random.seed(3)
-# data_acoeffs_err = np.random.normal(loc=0, scale=acoeffs_sigma_HMI)
-# data_acoeffs = data_acoeffs + data_acoeffs_err
+# data_acoeffs = GVARS.acoeffs_true
+np.random.seed(3)
+data_acoeffs_err = np.random.normal(loc=0, scale=acoeffs_sigma_HMI)
+data_acoeffs = data_acoeffs + data_acoeffs_err
 data_acoeffs_out_HMI = GVARS.acoeffs_out_HMI
 print(f"data_acoeffs = {data_acoeffs[:15]}")
 
@@ -153,7 +153,7 @@ print(f"data_acoeffs = {data_acoeffs[:15]}")
 plot_acoeffs.plot_acoeffs_datavsmodel(pred_acoeffs, data_acoeffs,
                                       data_acoeffs_out_HMI,
                                       acoeffs_sigma_HMI, 'ref')
-# sys.exit()
+sys.exit()
 #----------------------------------------------------------------------# 
 # the regularizing parameter
 mu = PARGS.mu
@@ -205,30 +205,14 @@ def data_misfit_arr_fn(c_arr):
 
 def model_misfit_fn(c_arr):
     # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
-
     # Djk is the same for s=3 and s=5
-    cd3 = c_arr[0::2]
-    cd5 = c_arr[1::2]
-    Djk = D_bsp_j_D_bsp_k[0::2, 0::2]
-    return (cd3 @ Djk @ cd3 +
+    cd1 = c_arr[0::3]
+    cd3 = c_arr[1::3]
+    cd5 = c_arr[2::3]
+    Djk = D_bsp_j_D_bsp_k[0::3, 0::3]
+    return (cd1 @ Djk @ cd1 + 
+            cd3 @ Djk @ cd3 +
             cd5 @ Djk @ cd5)
-    # return jnp.sum(jnp.square(c_arr))
-    # return c_arr_denorm @ D_bsp_j_D_bsp_k @ c_arr_denorm
-    # return c_arr @ D_bsp_j_D_bsp_k @ c_arr
-
-'''
-def model_misfit_fn_new(c_arr):
-    c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
-    cd3 = c_arr_denorm[0::2] * jnp.sqrt(3)
-    cd5 = c_arr_denorm[1::2] * jnp.sqrt(5) * (-3./2.)
-    c_arr_corrected = jnp.ones_like(c_arr_denorm)
-    c_arr_corrected = jidx_update(c_arr_corrected,
-                                  jidx[0::2], cd3)
-    c_arr_corrected = jidx_update(c_arr_corrected,
-                                  jidx[1::2], cd5)
-    # return jnp.sum(jnp.square(c_arr))
-    return c_arr_corrected @ D_bsp_j_D_bsp_k @ c_arr_corrected
-'''
 
 
 def hessian(f):

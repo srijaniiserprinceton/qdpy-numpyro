@@ -42,7 +42,7 @@ ind_min, ind_max = 0, 10
 cind_arr = np.arange(ind_min, ind_max + 1)
 
 # the angular degrees we want to invert for
-smin, smax = 3, 5
+smin, smax = 1, 5
 smin_ind, smax_ind = (smin-1)//2, (smax-1)//2
 sind_arr = np.arange(smin_ind, smax_ind+1)
 #---------------------------------------------------------------------#
