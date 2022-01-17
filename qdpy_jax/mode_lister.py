@@ -17,7 +17,7 @@ lmin, lmax = args.lmin, args.lmax
 gvar= gvar_jax.GlobalVars()
 
 # that's all we use gvar for
-data = gvar.hmidata
+data = gvar.hmidata_in
 
 # starting with the desired shape. Will reject this value later
 nl_arr = np.array([-1,-1], dtype=int)
