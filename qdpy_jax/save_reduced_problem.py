@@ -197,7 +197,6 @@ for i in range(nmults):
 np.save('fixed_part.npy', fixed_hypmat_sparse)
 np.save('param_coeff.npy', param_coeff)
 np.save('sparse_idx.npy', hypmat_idx)
-np.savetxt('.dimhyper', np.array([dim_hyper]), fmt='%d')
 np.save('omega0_arr.npy', omega0_arr)
 np.save('ell0_arr.npy', ell0_arr)
 np.save('data_model.npy', eigvals_model)

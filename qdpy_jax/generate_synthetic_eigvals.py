@@ -1,5 +1,6 @@
 import argparse
 import numpy as np
+from tqdm import tqdm
 import sys
 from scipy import sparse
 
@@ -55,19 +56,12 @@ __, GVARS_TR, __ = GVARS.get_all_GVAR()
 # precomputing the perform tests and checks and generate true synthetic eigvals
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr, sp_indices_all =\
                                 precompute.build_hypmat_all_cenmults()
-#-----------------------------------------------------------------#
-
-fixed_hypmat_dense = sparse.coo_matrix((fixed_hypmat_all_sparse[0],
-                                        sp_indices_all[0])).toarray()
-
-# converting to numpy ndarrays from lists
-#noc_hypmat_all_sparse = np.asarray(noc_hypmat_all_sparse)
-#fixed_hypmat_all_sparse = np.asarray(fixed_hypmat_all_sparse)
 
 #----------------miscellaneous parameters-------------------------#
 nmults = len(GVARS.n0_arr)  # total number of central multiplets
 len_s = GVARS.ctrl_arr_dpt_clipped.shape[0]  # number of s
-dim_hyper = fixed_hypmat_dense.shape[0]
+dim_hyper = int(np.loadtxt('.dimhyper'))
+
 #-----------------------------------------------------------------# 
 # storing the true parameters and flattening appropriately                                   
 true_params = 1.* GVARS.ctrl_arr_dpt_clipped
@@ -76,6 +70,7 @@ true_params_flat = np.reshape(true_params, (len_s * GVARS.nc), 'F')
 # reshaping to make dotting seamless
 param_coeff = np.reshape(noc_hypmat_all_sparse,
                          (nmults, len_s * GVARS.nc, -1), 'F')
+
 #-----------------------------------------------------------------#
 
 def model():
@@ -84,7 +79,7 @@ def model():
     pred_hypmat_all_sparse = true_params_flat @ param_coeff +\
                              fixed_hypmat_all_sparse
     
-    for mult_ind in range(nmults):
+    for mult_ind in tqdm(range(nmults), desc="Solving eigval problem..."):
         eigval_mult = np.zeros(2*ellmax+1)
         # converting to dense
         hypmat = sparse.coo_matrix((pred_hypmat_all_sparse[mult_ind],

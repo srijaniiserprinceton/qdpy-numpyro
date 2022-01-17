@@ -1,4 +1,5 @@
 from jax import jit
+from tqdm import tqdm
 import numpy as np
 
 from qdpy_jax import wigner_map2 as wigmap
@@ -32,11 +33,12 @@ def get_pruned_attributes(GVARS, GVARS_ST):
     wig_list = []
     wig_idx = []
     
-    for i in range(len(GVARS.n0_arr)):
+    for i in tqdm(range(len(GVARS.n0_arr)), desc=f"Precomputing wigners..."):
         n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
         
         # building the namedtuple for the central multiplet and its neighbours
         CENMULT_AND_NBS = getnt4cenmult_(n0, ell0, GVARS_ST)
+        
         if i == 0:
             nl_pruned = CENMULT_AND_NBS.nl_nbs
             omega_pruned = CENMULT_AND_NBS.omega_nbs
@@ -44,9 +46,9 @@ def get_pruned_attributes(GVARS, GVARS_ST):
             nl_pruned = np.concatenate((nl_pruned, CENMULT_AND_NBS.nl_nbs), 0)
             omega_pruned = np.append(omega_pruned, CENMULT_AND_NBS.omega_nbs)
             
-        wig_list, wig_idx = wigmap.get_wigners(CENMULT_AND_NBS.nl_nbs, 
-                                               wig_list, wig_idx)
-        print(n0, ell0)
+        wig_list, wig_idx = wigmap.get_wigners(CENMULT_AND_NBS.nl_nbs,
+                                               GVARS.s_arr, wig_list, wig_idx)
+        
 
     nl_arr = np.asarray(GVARS_ST.nl_all)
     nl_pruned = np.asarray(nl_pruned)

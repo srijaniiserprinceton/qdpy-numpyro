@@ -338,7 +338,8 @@ def build_hypmat_all_cenmults():
     # number of multiplets used
     nmults = len(GVARS.n0_arr)
     dim_hyper = get_dim_hyper()
-    print(f"dim_hyper = {dim_hyper}")
+
+    np.savetxt('.dimhyper', np.array([dim_hyper]), fmt='%d')
 
     # storing as a list of sparse matrices
     # the fixed hypat (the part of hypermatrix that does not
@@ -354,7 +355,6 @@ def build_hypmat_all_cenmults():
 
 
     # getting the sparse-element size for largest ell cenmult
-    print(f"nl = {GVARS.n0_arr[0]}, {GVARS.ell0_arr[0]}")
     MAXMULT_AND_NBS = getnt4cenmult(GVARS.n0_arr[0], GVARS.ell0_arr[0], GVARS_ST)
     SUBMAT_DICT_MAX = build_SUBMAT_INDICES(MAXMULT_AND_NBS)
     __, __, maskmat_maxmult = build_hm_nonint_n_fxd_1cnm(MAXMULT_AND_NBS,
@@ -367,14 +367,13 @@ def build_hypmat_all_cenmults():
     
     # the shape of all the cenmult data and indices
     len_sp_indices_maxmult = len(sp_indices_maxmult[0])
-    print(f"maxmult spindices = {len_sp_indices_maxmult}")
     
     sp_indices_all.append(sp_indices_maxmult)
 
     # going over the cenmults in a reverse order
     # this is to ensure that the largest is fileld first
     # to fill the rest in the same max shape
-    for i in tqdm(range(nmults), desc='nmult'):#-1, -1, -1):
+    for i in tqdm(range(nmults), desc='Precomputing hypmat for nmults'):
         # looping over all the central multiplets                                      
         n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
         ell0_nmults.append(ell0)
