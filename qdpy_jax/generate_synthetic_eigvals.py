@@ -145,6 +145,6 @@ if __name__ == "__main__":
     
     # saving the HMI acoeffs and their uncertainties
     np.save('acoeffs_sigma_HMI.npy', GVARS.acoeffs_sigma)
-    np.save('acoeffs_true_HMI.npy', GVARS.acoeffs_true)
+    np.save('acoeffs_HMI.npy', GVARS.acoeffs_true)
     
     
