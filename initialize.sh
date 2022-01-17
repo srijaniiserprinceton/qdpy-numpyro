@@ -39,10 +39,10 @@ python dpy_jax/precompute_ritzlavely.py >.rl.out 2>.rl.err
 echo "       -- `tail -1 .rl.out`"
 
 echo "[ 3. ] Generating synthetic eigenvalues ..."
-python dpy_jax/generate_synthetic_eigvals.py --load_mults 1 --knot_num $KNOTNUM --rth $RTH
+python dpy_jax/generate_synthetic_eigvals.py --load_mults 1 --knot_num $KNOTNUM --rth $RTH 2>.gen.err
 echo "       -- DONE"
 
 echo "[ 4. ] Saving reduced problem ..."
-python dpy_jax/save_reduced_problem.py
+python dpy_jax/save_reduced_problem.py 2>.savered.err
 echo "       -- DONE"
 echo "----- INITIALIZATION COMPLETE --------------------"
