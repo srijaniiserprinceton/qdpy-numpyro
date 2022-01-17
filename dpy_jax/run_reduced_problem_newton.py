@@ -153,7 +153,7 @@ print(f"data_acoeffs = {data_acoeffs[:15]}")
 plot_acoeffs.plot_acoeffs_datavsmodel(pred_acoeffs, data_acoeffs,
                                       data_acoeffs_out_HMI,
                                       acoeffs_sigma_HMI, 'ref')
-sys.exit()
+# sys.exit()
 #----------------------------------------------------------------------# 
 # the regularizing parameter
 mu = PARGS.mu
@@ -227,7 +227,7 @@ def loss_fn(c_arr):
     lambda_factor = jnp.trace(data_hess) / len_data
 
     # total misfit
-    misfit = data_misfit_val + mu * model_misfit_val * lambda_factor
+    misfit = data_misfit_val + mu * model_misfit_val #* lambda_factor
     return misfit
 
 grad_fn = jax.grad(loss_fn)
