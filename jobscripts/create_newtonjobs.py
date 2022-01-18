@@ -29,14 +29,14 @@ f"""#!/bin/bash
 #PBS -N {jobname}
 #PBS -o out-{jobname}.log
 #PBS -e err-{jobname}.log
-#PBS -l select=1:ncpus=112:mem=700gb
+#PBS -l select=1:ncpus=32:mem=70gb
 #PBS -l walltime=06:00:00
-#PBS -q clx
+#PBS -q small
 echo \"Starting at \"`date`
 cd $PBS_O_WORKDIR
 module load GnuParallel
 cd ..
-parallel --jobs 112 < $PBS_O_WORKDIR/ipjobs_dpt_rls.sh
+parallel --jobs 32 < $PBS_O_WORKDIR/ipjobs_dpt_rls.sh
 echo \"Finished at \"`date`
 """
 

@@ -42,7 +42,7 @@ ind_min, ind_max = 0, 3
 cind_arr = np.arange(ind_min, ind_max + 1)
 
 # the angular degrees we want to invert for
-smin, smax = 3, 5
+smin, smax = 1, 5
 smin_ind, smax_ind = (smin-1)//2, (smax-1)//2
 sind_arr = np.arange(smin_ind, smax_ind+1)
 #---------------------------------------------------------------------#
@@ -73,68 +73,6 @@ num_eigvals = len(eigvals_model)
 nc = GVARS.nc
 len_s = len(GVARS.s_arr)
 nmults = len(GVARS.n0_arr)
-#----------------------------------------------------------------------# 
-'''
-def get_posterior_grid(cind, sind, N):
-    # array containing the factors for the param space
-    fac = jnp.linspace(0.01, 2.0, N)
-    
-    # misfit as a function of scaling param
-    misfit_model_arr = jnp.zeros(N)
-    
-    # looping over factors
-    def loop_facind(facind, misfits):
-        misfit_mod_arr = misfits
-        cdpt = GVARS.ctrl_arr_dpt_clipped*1.0
-        cdpt = jidx_update(cdpt, jidx[sind, cind],
-                           ctrl_arr_dpt[sind, cind] * fac[facind])
-
-        diag_evals = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse,
-                                                  fixed_hypmat_all_sparse,
-                                                  cdpt, nc, len_s)
-        delta_omega = diag_evals.todense()/2./omega0_arr*GVARS.OM*1e6
-        delta_omega_model = delta_omega - eigvals_model
-
-        # delta_omega_model /= eigvals_sigma
-        misfit_mod = -0.5*np.sum(delta_omega_model**2)/len_data
-        misfit_mod_arr = jidx_update(misfit_mod_arr, jidx[facind], misfit_mod)
-
-        return misfit_mod_arr
-    
-    return fac, foril(0, N, loop_facind, misfit_model_arr)
-
-# jitting the function
-_get_posterior_grid = jax.jit(get_posterior_grid, static_argnums=(2,))
-
-N = 100
-
-# the misfit array of shape (s x ctrl_pts x N)
-misfit_arr_all = jnp.zeros((smax_ind - smin_ind + 1, len(cind_arr), N))
-
-for sind in range(smin_ind, smax_ind+1):
-    for ci, cind in enumerate(cind_arr):
-        fac, misfit_cs = _get_posterior_grid(cind, sind, N)
-
-        misfit_arr_all = jidx_update(misfit_arr_all,
-                                     jidx[sind-1, ci, :],
-                                     misfit_cs)
-
-# 1D plot of the misfit as we scan across the terrain
-
-fig, axs = plt.subplots(smax_ind-smin_ind+1,
-                        ind_max-ind_min+1,
-                        figsize=(12, 8), sharex=True)
-axs = np.reshape(axs, (smax_ind - smin_ind + 1, ind_max-ind_min+1))
-
-for si in range(smin_ind, smax_ind+1):
-    for j, ci in enumerate(cind_arr):
-        axs[si-1, j].plot(fac, np.exp(misfit_arr_all[si-1,j]), 'k', label='model')
-        axs[si-1, j].set_title('$c_{%i}^{%i}$'%(ci, 2*si+1))
-
-plt.tight_layout()
-
-plt.savefig('model_vs_data_minfunc.png')
-'''
 
 #---------section to add some more ctrl points to fixed part------------#
 # array of ctrl points which aer non-zero for the fixed splines
@@ -262,73 +200,4 @@ np.save('data_model.npy', eigvals_model)
 np.save('cind_arr.npy', cind_arr)
 np.save('sind_arr.npy', sind_arr)
 np.save('D_bsp_j_D_bsp_k.npy', D_bsp_j_D_bsp_k)
-sys.exit()
 
-#-----------------generating the 2D pdfs-------------------#
-
-true_params_flat = true_params.flatten(order='F')
-num_params = len(true_params_flat)
-noc_diag = np.asarray(noc_diag)
-noc_diag = np.reshape(noc_diag, (num_params, -1), order='F')
-noc_diag = jnp.asarray(noc_diag)
-true_params_flat = jnp.asarray(true_params_flat)
-
-def get_posterior_grid2d(pc1, pc2):
-    fac = jnp.linspace(0.1, 1.9, N)
-    misfit_arr = jnp.zeros((N, N))
-    
-    fac_nonpc = jnp.ones(num_params)
-    fac_nonpc = jidx_update(fac_nonpc, jidx[pc1], 0.0)
-    fac_nonpc = jidx_update(fac_nonpc, jidx[pc2], 0.0)
-    fac = jnp.linspace(0.01, 1.9, N)
-    
-    fac_params_nonpc = fac_nonpc * true_params_flat
-
-    # {{{ def true_func_i(i, misfits):
-    def true_func_i(i, misfits):
-        def true_func_j(j, misfits):
-            pred = diag_evals_fixed +\
-                   noc_diag[pc1] * true_params_flat[pc1] * fac[i] +\
-                   noc_diag[pc2] * true_params_flat[pc2] * fac[j] +\
-                   fac_params_nonpc @ noc_diag
-            pred = jax.lax.cond(pc1==pc2,
-                                lambda __: pred - noc_diag[pc2] *\
-                                true_params_flat[pc2] * fac[j],
-                                lambda __: pred, 
-                                operand=None)
-            misfits = jidx_update(misfits, jidx[i, j], 
-                    -0.5*np.sum((eigvals_model - pred)**2)/len_data)
-            return misfits
-
-        return foril(0, N, true_func_j, misfits)
-    # }}} true_func_i(i, misfits)
-
-    misfits = foril(0, N, true_func_i, misfit_arr)
-    return fac, misfits
-
-# jitting the function
-_get_posterior_grid2d = jax.jit(get_posterior_grid2d)
-
-# plotting
-fig, axs = plt.subplots(nrows=num_params, 
-                        ncols=num_params, 
-                        figsize=(10, 10))
-for i in range(num_params):
-    for j in range(i+1, num_params):
-        thaxs = axs[j, i]
-        fac, misfit_2d = _get_posterior_grid2d(i, j)
-        facmin = fac.min()
-        facmax = fac.max()
-        plotval = np.exp(misfit_2d)
-
-        im = thaxs.imshow(plotval, extent=[facmin*true_params_flat[i],
-                                           facmax*true_params_flat[i],
-                                           facmin*true_params_flat[j],
-                                           facmax*true_params_flat[j]],
-                          aspect=abs(true_params_flat[i]/true_params_flat[j]))
-        thaxs.plot(true_params_flat[i], true_params_flat[j], 'xr')
-        plt.colorbar(im, ax=thaxs)
-        thaxs.set_title(f"c{i}-c{j}")
-
-fig.tight_layout()
-plt.savefig('2D_pdf.png')

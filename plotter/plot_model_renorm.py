@@ -2,7 +2,6 @@ import numpy as np
 import sys
 from scipy.stats import norm
 import matplotlib.pyplot as plt
-import matplotlib.mlab as mlab
 
 
 def visualize_model_renorm(true_params_flat, true_params_samples, sigma,
@@ -21,8 +20,7 @@ def visualize_model_renorm(true_params_flat, true_params_samples, sigma,
         for j in range(len_s):
             param_ind = chosen_indices[i]
             data = true_params_samples[param_ind+j]
-                        
-            # the histogram of the data                                                       
+            # the histogram of the data
             n, bins, patches = ax[j,i].hist(data, 40, facecolor='green', alpha=0.75)
             
             ax[j,i].grid(True)
@@ -39,14 +37,14 @@ def visualize_model_renorm(true_params_flat, true_params_samples, sigma,
                                              true_params_flat_shaped,
                                              1.0)
     
-    fig, ax = plt.subplots(2, 3, figsize=(10,8))
+    fig, ax = plt.subplots(len_s, 3, figsize=(10,8))
             
     for i in range(len(chosen_indices)):
         for j in range(len_s):
             param_ind = chosen_indices[i]
             data = true_params_samples_renormed[param_ind+j]
             
-            # the histogram of the data                                                       
+            # the histogram of the data
             n, bins, patches = ax[j,i].hist(data, 40, facecolor='green', alpha=0.75)
             
             ax[j,i].grid(True)
@@ -62,7 +60,7 @@ def visualize_model_renorm(true_params_flat, true_params_samples, sigma,
     #-------------sigma scaling the renormalized distributions------------------------# 
     true_params_samples_final = true_params_samples_renormed/sigma
     
-    fig, ax = plt.subplots(2, 3, figsize=(10,8))
+    fig, ax = plt.subplots(len_s, 3, figsize=(10,8))
 
     for i in range(len(chosen_indices)):
         for j in range(len_s):
