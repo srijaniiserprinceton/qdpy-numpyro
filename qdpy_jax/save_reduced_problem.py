@@ -66,6 +66,7 @@ len_s = len(GVARS.s_arr)
 nmults = len(GVARS.n0_arr)
 dim_hyper = int(np.loadtxt('.dimhyper'))
 len_hyper_arr = fixed_hypmat_all_sparse.shape[-1]
+ellmax = np.max(GVARS.ell0_arr)
 
 #---------section to add some more ctrl points to fixed part------------#
 # array of ctrl points which aer non-zero for the fixed splines
@@ -110,22 +111,71 @@ for i in range(nmults):
             param_coeff[i, si, ci, :] = noc_hypmat_all_sparse[i, sind, cind, :]
 
 # flattening in (len_s x cind) dimensions to facilitate seamless dotting
-param_coeff = np.reshape(param_coeff,
-                         (nmults, len(sind_arr) * len(cind_arr), -1), 'F')
-
+param_coeff_flat = np.reshape(param_coeff,
+                              (nmults, len(sind_arr) * len(cind_arr), -1), 'F')
+del param_coeff
 #---------------------------------------------------------------------#
 # converting to array and changing the axes to nmult X element_idx X xy-identifier
 hypmat_idx = np.moveaxis(sp_indices_all, 1, -1)
 
 #----------------saving precomputed parameters------------------------#
+np.save('true_params_flat.npy', true_params_flat)
+np.save('param_coeff_flat.npy', param_coeff_flat)
 np.save('fixed_part.npy', fixed_hypmat_sparse)
-np.save('param_coeff.npy', param_coeff)
 np.save('sparse_idx.npy', hypmat_idx)
-np.save('true_params.npy', true_params_flat)
 np.save('omega0_arr.npy', omega0_arr)
 np.save('ell0_arr.npy', ell0_arr)
 np.save('cind_arr.npy', cind_arr)
 np.save('sind_arr.npy', sind_arr)
+
+#-----------------------------------------------------------------#                           
+synth_hypmat_sparse = true_params_flat @ param_coeff_flat + fixed_hypmat_sparse
+
+def model():
+    eigval_model = np.array([])
+
+    for mult_ind in tqdm(range(nmults), desc="Solving eigval problem..."):
+        eigval_mult = np.zeros(2*ellmax+1)
+        # converting to dense                                                                 
+        hypmat = sparse.coo_matrix((synth_hypmat_sparse[mult_ind],
+                                    sp_indices_all[mult_ind])).toarray()
+
+        # solving the eigenvalue problem and mapping eigenvalues                              
+        ell0 = ell0_arr[mult_ind]
+        omegaref = omega0_arr[mult_ind]
+
+        eigval_qdpt_mult = get_eigs(hypmat)[:2*ell0+1]/2./omegaref
+        eigval_qdpt_mult *= GVARS.OM*1e6
+        eigval_mult[:2*ell0+1] = eigval_qdpt_mult
+
+        # storing the correct order of nmult                                                  
+        eigval_model = np.append(eigval_model,
+                                 eigval_mult)
+
+
+    return eigval_model
+
+def eigval_sort_slice(eigval, eigvec):
+    def body_func(i, ebs):
+        return jidx_update(ebs, jidx[i], jnp.argmax(jnp.abs(eigvec[i])))
+
+    eigbasis_sort = jnp.zeros(len(eigval), dtype=int)
+    eigbasis_sort = foril(0, len(eigval), body_func, eigbasis_sort)
+    return eigval[eigbasis_sort]
+
+
+def get_eigs(mat):
+    eigvals, eigvecs = jnp.linalg.eigh(mat)
+    eigvals = eigval_sort_slice(eigvals, eigvecs)
+    return eigvals
+
+#--------saving miscellaneous files of eigvals and acoeffs---------#                      
+eigvals_true = model()
+
+# saving the synthetic eigvals and HMI acoeffs
+np.save("data_model.npy", eigvals_true)
+np.save('acoeffs_HMI.npy', GVARS.acoeffs_true)
+np.save('acoeffs_sigma_HMI.npy', GVARS.acoeffs_sigma)
 
 # sys.exit()
 
@@ -134,8 +184,6 @@ np.save('sind_arr.npy', sind_arr)
 synth_hypmat = np.zeros((nmults, dim_hyper, dim_hyper))
 
 DPT_eigvals_from_qdpy= np.zeros(2 * (2*201 + 1))
-
-synth_hypmat_sparse = true_params_flat @ param_coeff + fixed_hypmat_sparse
 
 start_idx = 0
 for i in range(2):    
