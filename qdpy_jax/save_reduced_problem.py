@@ -128,6 +128,7 @@ np.save('ell0_arr.npy', ell0_arr)
 np.save('cind_arr.npy', cind_arr)
 np.save('sind_arr.npy', sind_arr)
 
+# sys.exit()
 #-----------------------------------------------------------------#                           
 synth_hypmat_sparse = true_params_flat @ param_coeff_flat + fixed_hypmat_sparse
 
