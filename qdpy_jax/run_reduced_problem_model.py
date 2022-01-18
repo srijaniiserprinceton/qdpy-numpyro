@@ -52,24 +52,17 @@ omega0_arr = np.load('omega0_arr.npy')
 # shape (nmults x (smax+1) x 2*ellmax+1)                                                     
 RL_poly = np.load('RL_poly.npy')
 sigma2scale = np.load('../dpy_jax/sigma2scale.npy')
-#------------------------------------------------------------------------#
 
+#-------------------Miscellaneous parameters---------------------------#
 nmults = len(GVARS.ell0_arr)
 num_j = len(GVARS.s_arr)
 dim_hyper = int(np.loadtxt('.dimhyper'))
+ellmax = np.max(ell0_arr)
 smin = min(GVARS.s_arr)
 smax = max(GVARS.s_arr)
-
 # Reading RL poly from precomputed file
 # shape (nmults x (smax+1) x 2*ellmax+1)
-# reshaping to (nmults x (smax+1) x dim_hyper)
 Pjl = RL_poly[:, smin:smax+1:2, :]
-'''
-Pjl = np.zeros((Pjl_read.shape[0],
-                Pjl_read.shape[1],
-                dim_hyper))
-Pjl[:, :, :Pjl_read.shape[2]] = Pjl_read
-'''
 
 #------------------------------------------------------------------------#                   
 # calculating the denominator of a-coefficient converion apriori                             
@@ -90,28 +83,12 @@ ell0_arr = jnp.asarray(ell0_arr)
 omega0_arr = jnp.asarray(omega0_arr)
 aconv_denom = jnp.asarray(aconv_denom)
 
-#----------------------making the data_acoeffs---------------------------#
-data_acoeffs = jnp.zeros(num_j*nmults)
-
-def loop_in_mults(mult_ind, data_acoeff):
-    ell0 = ell0_arr[mult_ind]
-    data_omega = jdc(data, (mult_ind*dim_hyper,), (dim_hyper,))
-    Pjl_local = Pjl[mult_ind]
-    data_acoeff = jdc_update(data_acoeff,
-                             (Pjl_local @ data_omega)/Pjl_norm[mult_ind],
-                             (mult_ind * num_j,))
-    
-    return data_acoeff
-
-data_acoeffs = foril(0, nmults, loop_in_mults, data_acoeffs)
-
-sys.exit()
-
+#-------------------functions for the forward model------------------------#
 def model(c_arr):
     pred_acoeffs = jnp.zeros(num_j * nmults)
 
     c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
-    pred = c_arr_denorm @ param_coeff + fixed_part
+    pred = c_arr_denorm @ param_coeff_flat + fixed_part
 
     def loop_in_mults(mult_ind, pred_acoeff):
         _eigval_mult = jnp.zeros(2*ellmax+1)
@@ -124,13 +101,13 @@ def model(c_arr):
         Pjl_local = Pjl[mult_ind]
         
         pred_acoeff = jdc_update(pred_acoeff,
-                                 (Pjl_local @ _eigval_mult)/Pjl_norm[mult_ind],
+                                 (Pjl_local @ _eigval_mult)/aconv_denom[mult_ind],
                                  (mult_ind * num_j,))
         return pred_acoeff
 
     pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
 
-    misfit_acoeffs = (pred_acoeffs - data_acoeffs)/acoeffs_sigma
+    return pred_acoeffs
 
 def eigval_sort_slice(eigval, eigvec):
     def body_func(i, ebs):
@@ -146,7 +123,30 @@ def get_eigs(mat):
     eigvals = eigval_sort_slice(eigvals, eigvecs)
     return eigvals
 
+#----------------checking if forward model works fine--------------------#
+c_arr_renorm = jf.model_renorm(true_params_flat, true_params_flat, sigma2scale)
+c_arr_renorm = jnp.asarray(c_arr_renorm)
 
+model_ = jit(model)
+pred_acoeffs = model_(c_arr_renorm)
+
+#----------------------making the data_acoeffs---------------------------#
+data_acoeffs = jnp.zeros(num_j*nmults)
+
+def loop_in_mults(mult_ind, data_acoeff):
+    ell0 = ell0_arr[mult_ind]
+    data_omega = jdc(data, (mult_ind*(2*ellmax+1),), (2*ellmax+1,))
+    Pjl_local = Pjl[mult_ind]
+    data_acoeff = jdc_update(data_acoeff,
+                             (Pjl_local @ data_omega)/aconv_denom[mult_ind],
+                             (mult_ind * num_j,))
+    
+    return data_acoeff
+
+data_acoeffs = foril(0, nmults, loop_in_mults, data_acoeffs)
+
+#----------------------testing the pred_acoeffs---------------------------#
+np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
 
 
 
