@@ -81,7 +81,7 @@ class GlobalVars():
                    "get_ind", "mask_minmax"]
 
     def __init__(self, lmin=200, lmax=200, n0=0, rth=0.9, knot_num=15,
-                 load_from_file=0): 
+                 load_from_file=0, relpath='.'): 
         self.local_dir = dirnames[0]
         self.scratch_dir = dirnames[1]
         self.snrnmais_dir = dirnames[2]
@@ -92,6 +92,7 @@ class GlobalVars():
         self.hmidata_in = np.loadtxt(f"{self.snrnmais_dir}/data_files/hmi.6328.5")
         self.hmidata_out =\
                     np.loadtxt(f"{self.snrnmais_dir}/data_files/hmirot.out.6328.5")
+        self.relpath = relpath
 
         qdPars = qdParams(lmin=lmin, lmax=lmax, n0=n0, rth=rth)
 
@@ -393,7 +394,7 @@ class GlobalVars():
 
         # loading from a file. Must be saved in the (nmults, 2) shape
         if(load_from_file):
-            mults = np.load('qdpy_multiplets.npy').astype('int')
+            mults = np.load(f'{self.relpath}/qdpy_multiplets.npy').astype('int')
             n_arr, ell_arr = mults[:, 0], mults[:, 1]
             for i in range(len(n_arr)):
                 mult_ind = self.nl_all.index((n_arr[i], ell_arr[i]))

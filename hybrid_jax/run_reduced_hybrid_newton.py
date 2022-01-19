@@ -27,6 +27,7 @@ from jax.lax import dynamic_slice as jdc
 from jax.lax import dynamic_update_slice as jdc_update
 from jax.ops import index as jidx
 from jax.ops import index_update as jidx_update
+from jax.experimental import sparse
 import jax.numpy as jnp
 from jax.config import config
 config.update('jax_enable_x64', True)
@@ -50,11 +51,12 @@ qdpy_dir = "../qdpy_jax"
 #------------------------------------------------------------------------#
 ARGS_D = np.loadtxt(f"{dpy_dir}/.n0-lmin-lmax.dat")
 GVARS_D = gvar_jax.GlobalVars(n0=int(ARGS_D[0]),
-                            lmin=int(ARGS_D[1]),
-                            lmax=int(ARGS_D[2]),
-                            rth=ARGS_D[3],
-                            knot_num=int(ARGS_D[4]),
-                            load_from_file=int(ARGS_D[5]))
+                              lmin=int(ARGS_D[1]),
+                              lmax=int(ARGS_D[2]),
+                              rth=ARGS_D[3],
+                              knot_num=int(ARGS_D[4]),
+                              load_from_file=int(ARGS_D[5]),
+                              relpath=dpy_dir)
 
 #-------------loading precomputed files for the problem-------------------# 
 data_D = np.load(f'{dpy_dir}/data_model.npy')
@@ -142,28 +144,30 @@ np.testing.assert_array_almost_equal(pred_acoeffs_D, data_acoeffs_D)
 
 #----------------------------------------------------------------------#
 # changing to the HMI acoeffs if doing this for real data 
-# data_acoeffs = GVARS.acoeffs_true
+# data_acoeffs_D = GVARS_D.acoeffs_true
 np.random.seed(3)
 data_acoeffs_err_D = np.random.normal(loc=0, scale=acoeffs_sigma_HMI_D)
 data_acoeffs_D = data_acoeffs_D + data_acoeffs_err_D
 data_acoeffs_out_HMI_D = GVARS_D.acoeffs_out_HMI
-print(f"data_acoeffs_D = {data_acoeffs[:15]}")
+print(f"data_acoeffs_D = {data_acoeffs_D[:15]}")
 
 #----------------------------------------------------------------------# 
 # plotting acoeffs pred and data to see if we should expect good fit
 plot_acoeffs.plot_acoeffs_datavsmodel(pred_acoeffs_D, data_acoeffs_D,
                                       data_acoeffs_out_HMI_D,
                                       acoeffs_sigma_HMI_D, 'ref_D')
+
 #------------------------------------------------------------------------#                    
 #                                QDPY-JAX                                #                   
 #------------------------------------------------------------------------# 
 ARGS_Q = np.loadtxt(f"{qdpy_dir}/.n0-lmin-lmax.dat")
 GVARS_Q = gvar_jax.GlobalVars(n0=int(ARGS_Q[0]),
-                            lmin=int(ARGS_Q[1]),
-                            lmax=int(ARGS_Q[2]),
-                            rth=ARGS_Q[3],
-                            knot_num=int(ARGS_Q[4]),
-                            load_from_file=int(ARGS_Q[5]))
+                              lmin=int(ARGS_Q[1]),
+                              lmax=int(ARGS_Q[2]),
+                              rth=ARGS_Q[3],
+                              knot_num=int(ARGS_Q[4]),
+                              load_from_file=int(ARGS_Q[5]),
+                              relpath=qdpy_dir)
 #-------------loading precomputed files for the problem-------------------#                  
 data_Q = np.load(f'{qdpy_dir}/data_model.npy')
 true_params_flat_Q = np.load(f'{qdpy_dir}/true_params_flat.npy')
@@ -183,7 +187,7 @@ RL_poly_Q = np.load(f'{qdpy_dir}/RL_poly.npy')
 #-------------------Miscellaneous parameters---------------------------#                    
 nmults_Q = len(GVARS_Q.ell0_arr)
 num_j_Q = len(GVARS_Q.s_arr)
-dim_hyper_Q = int(np.loadtxt('{qdpy_dir}/.dimhyper'))
+dim_hyper_Q = int(np.loadtxt(f'{qdpy_dir}/.dimhyper'))
 ellmax_Q = np.max(ell0_arr_Q)
 smin_Q = min(GVARS_Q.s_arr)
 smax_Q = max(GVARS_Q.s_arr)
@@ -210,14 +214,72 @@ ell0_arr_Q = jnp.asarray(ell0_arr_Q)
 omega0_arr_Q = jnp.asarray(omega0_arr_Q)
 aconv_denom_Q = jnp.asarray(aconv_denom_Q)
 
+#----------------------making the data_acoeffs---------------------------#                    
+data_acoeffs_Q = jnp.zeros(num_j_Q*nmults_Q)
+
+def loop_in_mults_Q(mult_ind, data_acoeff):
+    data_omega = jdc(data_Q, (mult_ind*(2*ellmax_Q+1),), (2*ellmax_Q+1,))
+    data_acoeff = jdc_update(data_acoeff,
+                             (Pjl_Q[mult_ind] @ data_omega)/aconv_denom_Q[mult_ind],
+                             (mult_ind * num_j_Q,))
+
+    return data_acoeff
+
+data_acoeffs_Q = foril(0, nmults_Q, loop_in_mults_Q, data_acoeffs_Q)
+
+#-------------------functions for the forward model------------------------#                  
+def model_Q(c_arr):
+    pred_acoeffs = jnp.zeros(num_j_Q * nmults_Q)
+
+    c_arr_denorm = jf.model_denorm(c_arr, true_params_flat_Q, sigma2scale)
+    pred = c_arr_denorm @ param_coeff_flat_Q + fixed_part_Q
+
+    def loop_in_mults(mult_ind, pred_acoeff):
+        _eigval_mult = jnp.zeros(2*ellmax_Q+1)
+        ell0 = ell0_arr_Q[mult_ind]
+        omegaref = omega0_arr_Q[mult_ind]
+        pred_dense = sparse.bcoo_todense(pred[mult_ind], sparse_idx_Q[mult_ind],
+                                         shape=(dim_hyper_Q, dim_hyper_Q))
+        _eigval_mult = get_eigs(pred_dense)[:2*ellmax_Q+1]/2./omegaref*GVARS_Q.OM*1e6
+
+        pred_acoeff = jdc_update(pred_acoeff,
+                                 (Pjl_Q[mult_ind] @ _eigval_mult)/aconv_denom_Q[mult_ind],
+                                 (mult_ind * num_j_Q,))
+        return pred_acoeff
+
+    pred_acoeffs = foril(0, nmults_Q, loop_in_mults, pred_acoeffs)
+
+    return pred_acoeffs
+
+def eigval_sort_slice(eigval, eigvec):
+    def body_func(i, ebs):
+        return jidx_update(ebs, jidx[i], jnp.argmax(jnp.abs(eigvec[i])))
+
+    eigbasis_sort = jnp.zeros(len(eigval), dtype=int)
+    eigbasis_sort = foril(0, len(eigval), body_func, eigbasis_sort)
+    return eigval[eigbasis_sort]
+
+
+def get_eigs(mat):
+    eigvals, eigvecs = jnp.linalg.eigh(mat)
+    eigvals = eigval_sort_slice(eigvals, eigvecs)
+    return eigvals
+
+#----------------checking if forward model works fine--------------------#                    
+c_arr_renorm_Q = jf.model_renorm(true_params_flat_Q, true_params_flat_Q, sigma2scale)
+c_arr_renorm_Q = jnp.asarray(c_arr_renorm_Q)
+
+model_Q_ = jit(model_Q)
+pred_acoeffs_Q = model_Q_(c_arr_renorm_Q)
+
+#-------------checking that the acoeffs match correctly------------------#
+np.testing.assert_array_almost_equal(pred_acoeffs_Q, data_acoeffs_Q)
 sys.exit()
 #------------------------------------------------------------------------# 
 
 # the regularizing parameter
 mu = PARGS.mu
 
-# the length of data
-len_data = len(data_acoeffs)
 
 # the model function that is used by MCMC kernel
 def data_misfit_fn(c_arr):
@@ -291,14 +353,9 @@ def loss_fn(c_arr):
 grad_fn = jax.grad(loss_fn)
 hess_fn = hessian(loss_fn)
 
-def update(c_arr, grads, loss):
-    grad_strength = jnp.sqrt(jnp.sum(jnp.square(grads)))
-    return jax.tree_multimap(lambda c, g: c - g / grad_strength, c_arr, grads)
-
 def update_H(c_arr, grads, hess_inv):
     # grad_strength = jnp.sqrt(jnp.sum(jnp.square(grads)))
     return jax.tree_multimap(lambda c, g, h: c - g @ h, c_arr, grads, hess_inv)
-
 
 #---------------------- jitting the functions --------------------------#
 _grad_fn = jit(grad_fn)
@@ -335,9 +392,6 @@ plot_acoeffs.plot_acoeffs_datavsmodel(init_acoeffs, data_acoeffs,
                                       acoeffs_sigma_HMI, 'init')
 #----------------------------------------------------------------------#
 
-
-N = len(data_acoeffs)
-
 loss = 1e25
 loss_diff = loss - 1.
 loss_arr = []
@@ -357,8 +411,8 @@ while ((abs(loss_diff) > loss_threshold) and
     loss = _loss_fn(c_arr_renorm)
 
     model_misfit = model_misfit_fn(c_arr_renorm)
-    data_hess = data_hess_fn(c_arr_renorm)
-    model_misfit = model_misfit * jnp.trace(data_hess) / len_data
+    # data_hess = data_hess_fn(c_arr_renorm)
+    # model_misfit = model_misfit * jnp.trace(data_hess) / len_data
     data_misfit = loss - model_misfit * mu
 
     loss_diff = loss_prev - loss

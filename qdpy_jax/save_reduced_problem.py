@@ -20,34 +20,54 @@ config.update("jax_log_compiles", 1)
 config.update('jax_platform_name', 'cpu')
 config.update('jax_enable_x64', True)
 
+#-----------------------------------------------------------------#                           
+parser = argparse.ArgumentParser()
+parser.add_argument("--n0", help="radial order",
+                    type=int, default=0)
+parser.add_argument("--lmin", help="min angular degree",
+                    type=int, default=200)
+parser.add_argument("--lmax", help="max angular degree",
+                    type=int, default=200)
+parser.add_argument("--rth", help="threshold radius",
+                    type=float, default=0.97)
+parser.add_argument("--knot_num", help="number of knots beyond rth",
+                    type=int, default=5)
+parser.add_argument("--load_mults", help="load mults from file",
+                    type=int, default=0)
+ARGS = parser.parse_args()
+
+with open(".n0-lmin-lmax.dat", "w") as f:
+    f.write(f"{ARGS.n0}" + "\n" +
+            f"{ARGS.lmin}" + "\n" +
+            f"{ARGS.lmax}"+ "\n" +
+            f"{ARGS.rth}" + "\n" +
+            f"{ARGS.knot_num}" + "\n" +
+            f"{ARGS.load_mults}")
+
 #----------------------import custom packages------------------------#
 from qdpy_jax import jax_functions as jf
 from qdpy_jax import globalvars as gvar_jax
 from qdpy_jax import sparse_precompute as precompute
 from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
+#---------------------------------------------------------------------# 
+GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
+                            lmin=ARGS.lmin,
+                            lmax=ARGS.lmax,
+                            rth=ARGS.rth,
+                            knot_num=ARGS.knot_num,
+                            load_from_file=ARGS.load_mults)
 
+__, GVARS_TR, __ = GVARS.get_all_GVAR()
 #-------------------parameters to be inverted for--------------------# 
 # the indices of ctrl points that we want to invert for
 ind_min, ind_max = 0, 3
 cind_arr = np.arange(ind_min, ind_max + 1)
 
 # the angular degrees we want to invert for
-smin, smax = 3, 5
+smin, smax = 1, 5
 smin_ind, smax_ind = (smin-1)//2, (smax-1)//2
 sind_arr = np.arange(smin_ind, smax_ind+1)
 #---------------------------------------------------------------------#
-
-ARGS = np.loadtxt(".n0-lmin-lmax.dat")
-GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
-                            lmin=int(ARGS[1]),
-                            lmax=int(ARGS[2]),
-                            rth=ARGS[3],
-                            knot_num=int(ARGS[4]),
-                            load_from_file=int(ARGS[5]))
-
-GVARS_PATHS, GVARS_TR, __ = GVARS.get_all_GVAR()
-
-#----------------------------------------------------------------------#
 
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr, sp_indices_all =\
     precompute.build_hypmat_all_cenmults()
