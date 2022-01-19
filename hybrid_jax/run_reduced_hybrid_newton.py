@@ -416,6 +416,7 @@ itercount = 0
 # calculating the DPT & model hessian once since it doesn't depend on c_arr
 hess_D = _data_hess_fn_D(c_arr_renorm)
 model_hess = _model_hess_fn(c_arr_renorm)
+np.save("/scratch/g.samarth/qdpy-numpyro/hessD.npy", hess_D)
 
 t1s = time.time()
 while ((abs(loss_diff) > loss_threshold) and
@@ -425,9 +426,10 @@ while ((abs(loss_diff) > loss_threshold) and
     loss_prev = loss
     
     grads = _grad_fn(c_arr_renorm)
-    
-    hess = hess_D + model_hess + _data_hess_fn_Q(c_arr_renorm) 
+    hess_Q = _data_hess_fn_Q(c_arr_renorm) 
+    hess = hess_D + hess_Q + model_hess
     hess_inv = jnp.linalg.inv(hess)
+    np.save("/scratch/g.samarth/qdpy-numpyro/hessQ.{itercount:03d}.npy", hess_Q)
     
     c_arr_renorm = _update_H(c_arr_renorm, grads, hess_inv)
     
@@ -498,15 +500,23 @@ def print_summary(samples, ctrl_arr):
 #------------------------------------------------------------------------# 
 
 # plotting the hessians for analysis
-fig, ax = plt.subplots(1, 2, figsize=(10,5))
+fig, ax = plt.subplots(1, 3, figsize=(15, 5))
 
-im1 = ax[0].pcolormesh(hess)
+im0 = ax[0].pcolormesh(hess_Q)
+ax[0].set_title('QDPT Hessian')
 divider = make_axes_locatable(ax[0])
+cax = divider.append_axes('right', size='5%', pad=0.05)
+fig.colorbar(im0, cax=cax, orientation='vertical')
+
+im1 = ax[1].pcolormesh(hess_D)
+ax[1].set_title('DPT Hessian')
+divider = make_axes_locatable(ax[1])
 cax = divider.append_axes('right', size='5%', pad=0.05)
 fig.colorbar(im1, cax=cax, orientation='vertical')
 
-im2 = ax[1].pcolormesh(data_hess)
-divider = make_axes_locatable(ax[1])
+im2 = ax[2].pcolormesh(hess)
+ax[2].set_title('Total Hessian')
+divider = make_axes_locatable(ax[2])
 cax = divider.append_axes('right', size='5%', pad=0.05)
 fig.colorbar(im2, cax=cax, orientation='vertical')
 
