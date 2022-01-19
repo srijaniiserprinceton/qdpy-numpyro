@@ -341,9 +341,9 @@ def model_misfit_fn(c_arr):
     cd3 = c_arr[1::3]
     cd5 = c_arr[2::3]
     Djk = D_bsp_j_D_bsp_k[0::3, 0::3]
-    return (cd1 @ Djk @ cd1 + 
-            cd3 @ Djk @ cd3 +
-            cd5 @ Djk @ cd5)
+    return mu * (cd1 @ Djk @ cd1 + 
+                 cd3 @ Djk @ cd3 +
+                 cd5 @ Djk @ cd5)
 
 
 def hessian_D(f):
@@ -354,6 +354,7 @@ def hessian_Q(f):
 
 data_hess_fn_D = hessian_D(data_misfit_fn_D)
 data_hess_fn_Q = hessian_Q(data_misfit_fn_Q)
+model_hess_fn =  hessian_D(model_misfit_fn)
 
 def loss_fn(c_arr):
     data_misfit_val_D = data_misfit_fn_D(c_arr)
@@ -364,7 +365,7 @@ def loss_fn(c_arr):
 
     # total misfit
     misfit = data_misfit_val_D + data_misfit_val_Q +\
-             mu * model_misfit_val #* lambda_factor
+             model_misfit_val #* lambda_factor
     
     return misfit
 
@@ -377,6 +378,7 @@ def update_H(c_arr, grads, hess_inv):
 _grad_fn = jit(grad_fn)
 _data_hess_fn_D = jit(data_hess_fn_D)
 _data_hess_fn_Q = jit(data_hess_fn_Q)
+_model_hess_fn = jit(model_hess_fn)
 _update_H = jit(update_H)
 _loss_fn = jit(loss_fn)
 
@@ -419,33 +421,40 @@ loss_threshold = 1e-9
 maxiter = 15
 itercount = 0
 
-# calculating the DPT hessian once since it doesn't depend onf c_arr
+# calculating the DPT & model hessian once since it doesn't depend on c_arr
 hess_D = _data_hess_fn_D(c_arr_renorm)
+model_hess = _model_hess_fn(c_arr_renorm)
 
 t1s = time.time()
 while ((abs(loss_diff) > loss_threshold) and
        (itercount < maxiter)):
     t1 = time.time()
+    
     loss_prev = loss
+    
     grads = _grad_fn(c_arr_renorm)
-    hess = hess_D + _data_hess_fn_Q(c_arr_renorm)
+    
+    hess = hess_D + model_hess + _data_hess_fn_Q(c_arr_renorm) 
     hess_inv = jnp.linalg.inv(hess)
+    
     c_arr_renorm = _update_H(c_arr_renorm, grads, hess_inv)
+    
     loss = _loss_fn(c_arr_renorm)
 
     model_misfit = model_misfit_fn(c_arr_renorm)
     # data_hess = data_hess_fn(c_arr_renorm)
     # model_misfit = model_misfit * jnp.trace(data_hess) / len_data
-    data_misfit = loss - model_misfit * mu
+    data_misfit = loss - model_misfit
 
     loss_diff = loss_prev - loss
     loss_arr.append(loss)
+    
     itercount += 1
+    
     t2 = time.time()
+    
     print(f'[{itercount:3d} | {(t2-t1):6.1f} sec ] data_misfit = {data_misfit:12.5e} loss-diff = {loss_diff:12.5e}; ' +
           f'max-grads = {abs(grads).max():12.5e} model_misfit={model_misfit:12.5e}')
-
-    t2 = time.time()
 
 t2s = time.time()
 print(f"Total time taken = {(t2s-t1s):12.3f} seconds")
