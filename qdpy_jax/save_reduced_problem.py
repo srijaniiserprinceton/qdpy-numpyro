@@ -16,11 +16,11 @@ from jax.ops import index_update as jidx_update
 from jax.experimental import sparse as jsparse
 from jax.lib import xla_bridge
 print('JAX using:', xla_bridge.get_backend().platform)
-config.update("jax_log_compiles", 1)
+# config.update("jax_log_compiles", 1)
 config.update('jax_platform_name', 'cpu')
 config.update('jax_enable_x64', True)
 
-#-----------------------------------------------------------------#                           
+#-----------------------------------------------------------------#
 parser = argparse.ArgumentParser()
 parser.add_argument("--n0", help="radial order",
                     type=int, default=0)
@@ -149,7 +149,7 @@ np.save('cind_arr.npy', cind_arr)
 np.save('sind_arr.npy', sind_arr)
 
 # sys.exit()
-#-----------------------------------------------------------------#                           
+#-----------------------------------------------------------------#
 synth_hypmat_sparse = true_params_flat @ param_coeff_flat + fixed_hypmat_sparse
 
 def model():
@@ -157,11 +157,11 @@ def model():
 
     for mult_ind in tqdm(range(nmults), desc="Solving eigval problem..."):
         eigval_mult = np.zeros(2*ellmax+1)
-        # converting to dense                                                                 
+        # converting to dense
         hypmat = sparse.coo_matrix((synth_hypmat_sparse[mult_ind],
                                     sp_indices_all[mult_ind])).toarray()
 
-        # solving the eigenvalue problem and mapping eigenvalues                              
+        # solving the eigenvalue problem and mapping eigenvalues
         ell0 = ell0_arr[mult_ind]
         omegaref = omega0_arr[mult_ind]
 
@@ -169,7 +169,7 @@ def model():
         eigval_qdpt_mult *= GVARS.OM*1e6
         eigval_mult[:2*ell0+1] = eigval_qdpt_mult
 
-        # storing the correct order of nmult                                                  
+        # storing the correct order of nmult
         eigval_model = np.append(eigval_model,
                                  eigval_mult)
 
@@ -198,7 +198,7 @@ np.save("data_model.npy", eigvals_true)
 np.save('acoeffs_HMI.npy', GVARS.acoeffs_true)
 np.save('acoeffs_sigma_HMI.npy', GVARS.acoeffs_sigma)
 
-# sys.exit()
+sys.exit()
 
 #-------------COMPARING AGAINST supmat_qdpt and dpy_jax----------------#
 # testing only valid for nmin = 0, nmax = 0, lmin = 200, lmax = 201
