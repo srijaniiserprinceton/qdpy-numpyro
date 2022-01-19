@@ -17,7 +17,7 @@ from jax.ops import index_update as jidx_update
 from jax.lax import fori_loop as foril
 from jax.lib import xla_bridge
 print('JAX using:', xla_bridge.get_backend().platform)
-config.update("jax_log_compiles", 1)
+# config.update("jax_log_compiles", 1)
 config.update('jax_platform_name', 'gpu')
 config.update('jax_enable_x64', True)
 
@@ -38,7 +38,7 @@ print('JAX using:', xla_bridge.get_backend().platform)
 
 #-------------------parameters to be inverted for--------------------#
 # the indices of ctrl points that we want to invert for
-ind_min, ind_max = 0, 3
+ind_min, ind_max = 0, 4
 cind_arr = np.arange(ind_min, ind_max + 1)
 
 # the angular degrees we want to invert for

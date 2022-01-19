@@ -5,7 +5,7 @@ import sys
 from jax import jit
 from jax.config import config
 # enabling 64 bits and logging compilatino
-config.update("jax_log_compiles", 1)
+# config.update("jax_log_compiles", 1)
 config.update('jax_platform_name', 'cpu')
 config.update('jax_enable_x64', True)
 

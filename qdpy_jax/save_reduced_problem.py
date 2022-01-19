@@ -60,7 +60,7 @@ GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
 __, GVARS_TR, __ = GVARS.get_all_GVAR()
 #-------------------parameters to be inverted for--------------------# 
 # the indices of ctrl points that we want to invert for
-ind_min, ind_max = 0, 3
+ind_min, ind_max = 0, 4
 cind_arr = np.arange(ind_min, ind_max + 1)
 
 # the angular degrees we want to invert for
@@ -159,7 +159,8 @@ def model():
         eigval_mult = np.zeros(2*ellmax+1)
         # converting to dense
         hypmat = sparse.coo_matrix((synth_hypmat_sparse[mult_ind],
-                                    sp_indices_all[mult_ind])).toarray()
+                                    sp_indices_all[mult_ind]),
+                                   shape=(dim_hyper, dim_hyper)).toarray()
 
         # solving the eigenvalue problem and mapping eigenvalues
         ell0 = ell0_arr[mult_ind]
