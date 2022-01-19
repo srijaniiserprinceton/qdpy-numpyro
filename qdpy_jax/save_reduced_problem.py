@@ -60,7 +60,7 @@ GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
 __, GVARS_TR, __ = GVARS.get_all_GVAR()
 #-------------------parameters to be inverted for--------------------# 
 # the indices of ctrl points that we want to invert for
-ind_min, ind_max = 0, 4
+ind_min, ind_max = 0, 3
 cind_arr = np.arange(ind_min, ind_max + 1)
 
 # the angular degrees we want to invert for
