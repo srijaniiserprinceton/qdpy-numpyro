@@ -5,6 +5,8 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--mu", help="regularization",
                     type=float, default=0.)
+parser.add_argument("--store_hess", help="store hessians",
+                    type=bool, default=False)
 PARGS = parser.parse_args()
 #----------------setting the number of chains to be used-----------------#                    
 # num_chains = 3
@@ -219,6 +221,7 @@ def hessian(f):
     return jacfwd(jacrev(f))
 
 data_hess_fn = hessian(data_misfit_fn)
+model_hess_fn = hessian(model_misfit_fn)
 
 def loss_fn(c_arr):
     data_misfit_val = data_misfit_fn(c_arr)
@@ -283,9 +286,19 @@ N = len(data_acoeffs)
 loss = 1e25
 loss_diff = loss - 1.
 loss_arr = []
-loss_threshold = 1e-9
+loss_threshold = 1e-19
 maxiter = 15
 itercount = 0
+
+data_hess_dpy = data_hess_fn(c_arr_renorm)
+model_hess_dpy = model_hess_fn(c_arr_renorm)
+total_hess = data_hess_dpy + mu*model_hess_dpy
+hess_inv = jnp.linalg.inv(total_hess)
+
+if PARGS.store_hess:
+    np.save("data_hess_dpy.npy", data_hess_dpy)
+    np.save("model_hess_dpy.npy", model_hess_dpy)
+
 
 t1s = time.time()
 while ((abs(loss_diff) > loss_threshold) and
@@ -293,14 +306,14 @@ while ((abs(loss_diff) > loss_threshold) and
     t1 = time.time()
     loss_prev = loss
     grads = _grad_fn(c_arr_renorm)
-    hess = _hess_fn(c_arr_renorm)
-    hess_inv = jnp.linalg.inv(hess)
+    # hess = _hess_fn(c_arr_renorm)
+    # hess_inv = jnp.linalg.inv(hess)
     c_arr_renorm = _update_H(c_arr_renorm, grads, hess_inv)
     loss = _loss_fn(c_arr_renorm)
 
     model_misfit = model_misfit_fn(c_arr_renorm)
-    data_hess = data_hess_fn(c_arr_renorm)
-    model_misfit = model_misfit * jnp.trace(data_hess) / len_data
+    # data_hess = data_hess_fn(c_arr_renorm)
+    # model_misfit = model_misfit * jnp.trace(data_hess) / len_data
     data_misfit = loss - model_misfit * mu
 
     loss_diff = loss_prev - loss
