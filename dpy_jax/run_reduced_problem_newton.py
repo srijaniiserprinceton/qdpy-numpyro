@@ -276,7 +276,7 @@ plot_acoeffs.plot_acoeffs_datavsmodel(init_acoeffs, data_acoeffs,
                                       data_acoeffs_out_HMI,
                                       acoeffs_sigma_HMI, 'init')
 #----------------------------------------------------------------------#
-
+sys.exit()
 
 N = len(data_acoeffs)
 

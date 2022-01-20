@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import argparse
 import sys
+import time
 
 import jax
 from jax import random
@@ -150,7 +151,7 @@ data_acoeffs = foril(0, nmults, loop_in_mults, data_acoeffs)
 np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
 
 
-#-------------------------------------------------------------------------
+#--------------------------------inversion---------------------------------#
 def data_misfit_fn(c_arr):
     pred_acoeffs = model(c_arr)
     data_misfit_arr = (pred_acoeffs - data_acoeffs)/acoeffs_sigma_HMI
@@ -160,12 +161,103 @@ def data_misfit_fn(c_arr):
 def hessian(f):
     return jacfwd(jacfwd(f))
 
+def update_H(c_arr, grads, hess_inv):
+    return jax.tree_multimap(lambda c, g, h: c - g @ h, c_arr, grads, hess_inv)
 
-def jacobian(f):
-    return jacfwd(f)
+def approx_B(B_k, y_k, dx_k):
+    B_k_dx_k = B_k @ dx_k
+    B_kp1 = B_k + jnp.outer(y_k, y_k) / (y_k @ dx_k) -\
+            jnp.outer(B_k_dx_k, B_k_dx_k) / (dx_k @ B_k @ dx_k)
+    return B_kp1
 
+# jitting functions
 data_hess_fn = hessian(data_misfit_fn)
 _data_hess_fn = jit(data_hess_fn)
-c_arr = np.ones_like(true_params_flat)
-print(f"computing Hessian")
-hessQ0 = _data_hess_fn(c_arr)
+_grad_fn = jit(jax.grad(data_misfit_fn))
+_loss_fn = jit(data_misfit_fn)
+_update_H = jit(update_H)
+_approx_B = jit(approx_B)
+
+# initializing c_arr_renorm
+c_arr_renorm = 1.1 * np.ones_like(true_params_flat)
+len_c = len(c_arr_renorm)
+
+# the current approximate hessian
+B = _data_hess_fn(c_arr_renorm)
+B_arr = np.zeros_like(B)
+B_arr = np.reshape(B_arr, (1, len_c, len_c))
+B_arr[0] = B + np.identity(len_c) * 0.1
+
+# true_hessian array over iteration
+H_arr = np.zeros_like(B_arr)
+H_arr[0] = 1.0 * B_arr[0]
+
+# the gradient vectors over iteration get appended
+grad_it_arr = _grad_fn(c_arr_renorm)
+grad_it_arr = np.reshape(grad_it_arr, (1, len_c))
+
+# c_arr over iterations
+c_arr_it = np.reshape(c_arr_renorm, (1, len_c))
+
+loss = 1e25
+loss_diff = loss - 1.
+loss_arr = []
+loss_threshold = 1e-9
+maxiter = 15
+itercount = 0
+
+t1s = time.time()
+while ((abs(loss_diff) > loss_threshold) and
+       (itercount < maxiter)):
+    t1 = time.time()
+    loss_prev = loss
+    
+    print('Calculating gradient...')
+    grads = _grad_fn(c_arr_renorm)
+    grad_it_arr = np.append(grad_it_arr,
+                            np.reshape(grads, (1,len_c)), axis=0)
+
+    print('Calculating hessian...')
+    hess = _data_hess_fn(c_arr_renorm)
+    # adding some regularization to make it well conditioned
+    hess += np.identity(len_c) * 0.1
+    H_arr = np.append(H_arr,
+                      np.reshape(hess,(1, len_c, len_c)),
+                      axis=0)
+    hess_inv = jnp.linalg.inv(hess)
+    
+    print('Updating c_arr_renorm...')
+    c_arr_renorm = _update_H(c_arr_renorm, grads, hess_inv)
+    c_arr_it = np.append(c_arr_it,
+                         np.reshape(c_arr_renorm, (1, len_c)), axis=0)
+    
+    print('Calculating loss...')
+    loss = _loss_fn(c_arr_renorm)
+
+    model_misfit = 0.0
+    data_misfit = loss
+
+    loss_diff = loss_prev - loss
+    loss_arr.append(loss)
+    itercount += 1
+    t2 = time.time()
+    print(f'[{itercount:3d} | {(t2-t1):6.1f} sec ] data_misfit = {data_misfit:12.5e} loss-diff\
+ = {loss_diff:12.5e}; ' +
+          f'max-grads = {abs(grads).max():12.5e} model_misfit={model_misfit:12.5e}')
+
+    print('Calculating approximate Hessian...')
+    # using BFGS to get approximate hessian
+    y_k = grad_it_arr[-1] - grad_it_arr[-2]
+    dx_k = c_arr_it[-1] - c_arr_it[-2]
+    B_k = B_arr[-1]
+    B_arr = np.append(B_arr,
+                      np.reshape(_approx_B(B_k, y_k, dx_k), (1, len_c, len_c)),
+                      axis=0)
+
+    # sys.exit()
+
+t2s = time.time()
+
+
+
+
