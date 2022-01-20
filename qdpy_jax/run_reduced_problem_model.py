@@ -26,7 +26,7 @@ print(jax.devices())
 from dpy_jax import jax_functions_dpy as jf
 
 from qdpy_jax import globalvars as gvar_jax
-#------------------------------------------------------------------------#                    
+#------------------------------------------------------------------------#
 
 ARGS = np.loadtxt(".n0-lmin-lmax.dat")
 GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
@@ -36,7 +36,7 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             knot_num=int(ARGS[4]),
                             load_from_file=int(ARGS[5]))
 
-#-------------loading precomputed files for the problem-------------------#                  
+#-------------loading precomputed files for the problem-------------------#
 data = np.load('data_model.npy')
 true_params_flat = np.load('true_params_flat.npy')
 param_coeff_flat = np.load('param_coeff_flat.npy')
@@ -48,8 +48,8 @@ cind_arr = np.load('cind_arr.npy')
 sind_arr = np.load('sind_arr.npy')
 ell0_arr = np.load('ell0_arr.npy')
 omega0_arr = np.load('omega0_arr.npy')
-# Reading RL poly from precomputed file                                                      
-# shape (nmults x (smax+1) x 2*ellmax+1)                                                     
+# Reading RL poly from precomputed file
+# shape (nmults x (smax+1) x 2*ellmax+1)
 RL_poly = np.load('RL_poly.npy')
 sigma2scale = np.load('../dpy_jax/sigma2scale.npy')
 
@@ -64,9 +64,9 @@ smax = max(GVARS.s_arr)
 # shape (nmults x (smax+1) x 2*ellmax+1)
 Pjl = RL_poly[:, smin:smax+1:2, :]
 
-#------------------------------------------------------------------------#                   
-# calculating the denominator of a-coefficient converion apriori                             
-# shape (nmults, num_j)                                                                      
+#------------------------------------------------------------------------#
+# calculating the denominator of a-coefficient converion apriori
+# shape (nmults, num_j)
 aconv_denom = np.zeros((nmults, Pjl.shape[1]))
 for mult_ind in range(nmults):
     aconv_denom[mult_ind] = np.diag(Pjl[mult_ind] @ Pjl[mult_ind].T)
@@ -109,6 +109,7 @@ def model(c_arr):
 
     return pred_acoeffs
 
+
 def eigval_sort_slice(eigval, eigvec):
     def body_func(i, ebs):
         return jidx_update(ebs, jidx[i], jnp.argmax(jnp.abs(eigvec[i])))
@@ -149,4 +150,22 @@ data_acoeffs = foril(0, nmults, loop_in_mults, data_acoeffs)
 np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
 
 
+#-------------------------------------------------------------------------
+def data_misfit_fn(c_arr):
+    pred_acoeffs = model(c_arr)
+    data_misfit_arr = (pred_acoeffs - data_acoeffs)/acoeffs_sigma_HMI
+    return jnp.sum(jnp.square(data_misfit_arr))
 
+
+def hessian(f):
+    return jacfwd(jacfwd(f))
+
+
+def jacobian(f):
+    return jacfwd(f)
+
+data_hess_fn = hessian(data_misfit_fn)
+_data_hess_fn = jit(data_hess_fn)
+c_arr = np.ones_like(true_params_flat)
+print(f"computing Hessian")
+hessQ0 = _data_hess_fn(c_arr)
