@@ -6,9 +6,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--mu", help="regularization",
                     type=float, default=0.)
 parser.add_argument("--synth", help="use synthetic data",
-                    type=float, default=1.)
+                    type=bool, default=False)
 parser.add_argument("--noise", help="add noise",
-                    type=float, default=0.)
+                    type=bool, default=True)
 PARGS = parser.parse_args()
 #----------------setting the number of chains to be used-----------------#                    
 # num_chains = 3
@@ -282,8 +282,9 @@ np.testing.assert_array_almost_equal(pred_acoeffs_Q, data_acoeffs_Q)
 
 #----------------------------------------------------------------------#
 # synthetic or real data; if synthetic whether to add artifical noise 
-if(PARGS.synth):
-    if(PARGS.noise):
+if PARGS.synth:
+    print("Using synthetic data")
+    if PARGS.noise:
         np.random.seed(3)
         data_acoeffs_err_D = np.random.normal(loc=0, scale=acoeffs_sigma_HMI_D)
         data_acoeffs_D = data_acoeffs_D + data_acoeffs_err_D
@@ -293,6 +294,7 @@ if(PARGS.synth):
         data_acoeffs_Q = data_acoeffs_Q + data_acoeffs_err_Q
 
 else:
+    print("Using observed data")
     data_acoeffs_D = GVARS_D.acoeffs_true
     data_acoeffs_Q = GVARS_Q.acoeffs_true                                                 
 
@@ -312,7 +314,7 @@ plot_acoeffs.plot_acoeffs_datavsmodel(pred_acoeffs_Q, data_acoeffs_Q,
                                       data_acoeffs_out_HMI_Q,
                                       acoeffs_sigma_HMI_Q, 'ref_Q')
 
-# sys.exit()
+sys.exit()
 #--------------------------------------------------------------------------# 
 def data_misfit_fn_D(c_arr):
     # predicted DPT a-coefficients
@@ -375,8 +377,9 @@ _update_H = jit(update_H)
 _loss_fn = jit(loss_fn)
 
 #-----------------------initialization of params------------------#
-c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))
-# c_init = np.ones_like(true_params_flat)
+# c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))
+c_init = (np.ones_like(true_params_flat) +
+          0.3*np.random.uniform(0.0, 1.0, size=len(true_params_flat)))
 
 #------------------plotting the initial profiles-------------------#                     
 c_arr_init_full = jf.c4fit_2_c4plot(GVARS_D, c_init*true_params_flat,
@@ -422,27 +425,24 @@ t1s = time.time()
 while ((abs(loss_diff) > loss_threshold) and
        (itercount < maxiter)):
     t1 = time.time()
-    
+
     loss_prev = loss
-    
+
     grads = _grad_fn(c_arr_renorm)
     hess_Q = _data_hess_fn_Q(c_arr_renorm) 
     hess = hess_D + hess_Q + model_hess
     hess_inv = jnp.linalg.inv(hess)
-    np.save("/scratch/g.samarth/qdpy-numpyro/hessQ.{itercount:03d}.npy", hess_Q)
-    
+    np.save(f"/scratch/g.samarth/qdpy-numpyro/hessQ.{itercount:03d}.npy", hess_Q)
+
     c_arr_renorm = _update_H(c_arr_renorm, grads, hess_inv)
-    
     loss = _loss_fn(c_arr_renorm)
 
     model_misfit = model_misfit_fn(c_arr_renorm)
     data_misfit = loss - model_misfit
-
     loss_diff = loss_prev - loss
     loss_arr.append(loss)
-    
+
     itercount += 1
-    
     t2 = time.time()
     
     print(f'[{itercount:3d} | {(t2-t1):6.1f} sec ] ' +
