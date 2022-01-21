@@ -55,22 +55,22 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             rth=ARGS[3],
                             knot_num=int(ARGS[4]),
                             load_from_file=int(ARGS[5]))
-
+outdir = f"{GVARS.scratch_dir}/dpy_jax"
 #-------------loading precomputed files for the problem-------------------# 
-data = np.load('data_model.npy')
-true_params_flat = np.load('true_params_flat.npy')
-param_coeff_flat = np.load('param_coeff_flat.npy')
-fixed_part = np.load('fixed_part.npy')
-acoeffs_sigma_HMI = np.load('acoeffs_sigma_HMI.npy')
-acoeffs_HMI = np.load('acoeffs_HMI.npy')
-cind_arr = np.load('cind_arr.npy')
-sind_arr = np.load('sind_arr.npy')
+data = np.load(f'{outdir}/data_model.npy')
+true_params_flat = np.load(f'{outdir}/true_params_flat.npy')
+param_coeff_flat = np.load(f'{outdir}/param_coeff_flat.npy')
+fixed_part = np.load(f'{outdir}/fixed_part.npy')
+acoeffs_sigma_HMI = np.load(f'{outdir}/acoeffs_sigma_HMI.npy')
+acoeffs_HMI = np.load(f'{outdir}/acoeffs_HMI.npy')
+cind_arr = np.load(f'{outdir}/cind_arr.npy')
+sind_arr = np.load(f'{outdir}/sind_arr.npy')
 # Reading RL poly from precomputed file
 # shape (nmults x (smax+1) x 2*ellmax+1) 
-RL_poly = np.load('RL_poly.npy')
-# model_params_sigma = np.load('model_params_sigma.npy')*100.
-sigma2scale = np.load('sigma2scale.npy')
-D_bsp_j_D_bsp_k = np.load('D_bsp_j_D_bsp_k.npy')
+RL_poly = np.load(f'{outdir}/RL_poly.npy')
+# model_params_sigma = np.load(f'{outdir}/model_params_sigma.npy')*100.
+sigma2scale = np.load(f'{outdir}/sigma2scale.npy')
+D_bsp_j_D_bsp_k = np.load(f'{outdir}/D_bsp_j_D_bsp_k.npy')
 #------------------------------------------------------------------------# 
 
 nmults = len(GVARS.ell0_arr)
@@ -296,8 +296,8 @@ total_hess = data_hess_dpy + mu*model_hess_dpy
 hess_inv = jnp.linalg.inv(total_hess)
 
 if PARGS.store_hess:
-    np.save("data_hess_dpy.npy", data_hess_dpy)
-    np.save("model_hess_dpy.npy", model_hess_dpy)
+    np.save(f"{outdir}/data_hess_dpy.npy", data_hess_dpy)
+    np.save(f"{outdir}/model_hess_dpy.npy", model_hess_dpy)
 
 
 t1s = time.time()
@@ -386,5 +386,5 @@ cax = divider.append_axes('right', size='5%', pad=0.05)
 fig.colorbar(im2, cax=cax, orientation='vertical')
 
 plt.tight_layout()
-plt.savefig('hessians.png')
+plt.savefig(f'{outdir}/hessians.png')
 plt.close()
