@@ -52,6 +52,7 @@ GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
                             load_from_file=ARGS.load_mults)
 
 __, GVARS_TR, __ = GVARS.get_all_GVAR()
+outdir = f"{GVARS.scratch_dir}/qdpy_jax"
 #-----------------------------------------------------------------#
 # precomputing the perform tests and checks and generate true synthetic eigvals
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr, sp_indices_all =\
@@ -140,11 +141,11 @@ if __name__ == "__main__":
 
     #--------saving miscellaneous files of eigvals and acoeffs---------#                      
     # saving the synthetic eigvals and their uncertainties
-    np.save("eigvals_model.npy", eigvals_true) 
-    np.save('eigvals_sigma_model.npy', eigvals_sigma)
+    np.save(f"{outdir}/eigvals_model.npy", eigvals_true) 
+    np.save(f'{outdir}/eigvals_sigma_model.npy', eigvals_sigma)
     
     # saving the HMI acoeffs and their uncertainties
-    np.save('acoeffs_sigma_HMI.npy', GVARS.acoeffs_sigma)
-    np.save('acoeffs_HMI.npy', GVARS.acoeffs_true)
+    np.save(f'{outdir}/acoeffs_sigma_HMI.npy', GVARS.acoeffs_sigma)
+    np.save(f'{outdir}/acoeffs_HMI.npy', GVARS.acoeffs_true)
     
     
