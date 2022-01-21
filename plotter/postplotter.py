@@ -118,11 +118,12 @@ class postplotter:
         plt.savefig(f'{self.tag}_wsr_zoom.pdf')
         plt.close()
 
-    def plot_omega_rtheta(self, theta=np.linspace(0, 90, 20)):
+    def plot_omega_rtheta(self, theta=np.arange(0, 90, 15)):
         fig, ax = plt.subplots(3, 3, figsize=(15, 7), sharex=True)
 
         # rth_idx = np.argmin(abs(self.r - self.GVARS.rth - 0.1))
-        rth_idx = np.argmin(abs(self.r - 0.98))
+        rth_idx = np.argmin(abs(self.r - 0.5))
+        rlist = self.r[rth_idx:]
         # plot the wsr from dpt (no-spline)
         ax[0, 0].plot(self.r[rth_idx:], self.wsr_dpt[0][rth_idx:], 'k')
         ax[1, 0].plot(self.r[rth_idx:], self.wsr_dpt[1][rth_idx:], 'k')
@@ -132,24 +133,40 @@ class postplotter:
         wsr_spl_full = gen_wsr.get_wsr_from_spline(self.r, self.ctrl_arr_dpt_full,
                                                    self.t_internal, self.spl_deg)
 
+        s = np.array([1, 3, 5])
+        scale_fac = np.sqrt((2*s + 1)/4./np.pi)
+        unitconv = self.GVARS.OM * 1e9
+
         omega_dpt = []
         omega_fit = []
+        fig1, axs1 = plt.subplots()
         for th in tqdm(theta, desc='Latitude plots'):
-            legpoly = lpmn(0, 5, np.cos(th*np.pi/180.))[0][0, 1::2]
-            omega_dpt.append(legpoly @ self.wsr_dpt)
-            omega_fit.append(legpoly @ wsr_spl_full)
+            legpoly = lpmn(0, 5, np.cos(th*np.pi/180.))[1][0, 1::2]
+            omega_dpt.append((legpoly*scale_fac) @ self.wsr_dpt / self.r * unitconv)
+            omega_fit.append((legpoly*scale_fac) @ wsr_spl_full / self.r * unitconv)
 
-            fig = plt.figure()
-            plt.plot(self.r[rth_idx:], omega_dpt[-1][rth_idx:],
+            fig, axs = plt.subplots()
+            axs.plot(self.r[rth_idx:], omega_dpt[-1][rth_idx:],
                      'k', label='DPT', linewidth=0.7)
-            plt.plot(self.r[rth_idx:], omega_fit[-1][rth_idx:],
+            axs.plot(self.r[rth_idx:], omega_fit[-1][rth_idx:],
                      '--r', label='Fit', linewidth=0.7)
-            plt.ylabel("$\\Omega(r)$")
-            plt.xlabel("$r$ in $R_{\odot}$", size=16)
-            plt.title(f"$\\Omega(r)$ at $\\theta=${th:.1f}")
-            plt.legend()
-            plt.savefig(f"{self.tag}_omega_th{th:04.1f}.pdf")
-            plt.close()
+
+            axs1.plot(self.r[rth_idx:], omega_dpt[-1][rth_idx:],
+                     'k', label='DPT - $\\theta=$'+f'{th:.1f}', linewidth=0.7)
+            axs1.plot(self.r[rth_idx:], omega_fit[-1][rth_idx:],
+                     '--r', label='Fit - $\\theta=$'+f'{th:.1f}', linewidth=0.7)
+            axs1.set_ylabel("$\\Omega(r)$")
+            axs1.set_xlabel("$r$ in $R_{\odot}$", size=16)
+            axs1.legend()
+
+            axs.set_ylabel("$\\Omega(r)$")
+            axs.set_xlabel("$r$ in $R_{\odot}$", size=16)
+            axs.set_title(f"$\\Omega(r)$ at $\\theta=${th:.1f}")
+            axs.legend()
+            fig.savefig(f"{self.tag}_omega_th{th:04.1f}.pdf")
+            plt.close(fig)
+        fig1.savefig(f"{self.tag}_omega_all.pdf")
+        plt.close(fig1)
 
         # converting to muHz
         # wsr_spl_full *= self.OM * 1e6
