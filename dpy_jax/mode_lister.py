@@ -72,4 +72,4 @@ print(nl_arr)
 print(f'Total multiplets: {len(nl_arr)}')
 
 # saving the nl_arr
-np.save(f'qdpy_multiplets.npy', nl_arr)
+np.save(f'{outdir}/qdpy_multiplets.npy', nl_arr)
