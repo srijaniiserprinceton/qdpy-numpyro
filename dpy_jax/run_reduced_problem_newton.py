@@ -375,12 +375,12 @@ def print_summary(samples, ctrl_arr):
 # plotting the hessians for analysis
 fig, ax = plt.subplots(1, 2, figsize=(10,5))
 
-im1 = ax[0].pcolormesh(hess)
+im1 = ax[0].pcolormesh(total_hess)
 divider = make_axes_locatable(ax[0])
 cax = divider.append_axes('right', size='5%', pad=0.05)
 fig.colorbar(im1, cax=cax, orientation='vertical')
 
-im2 = ax[1].pcolormesh(data_hess)
+im2 = ax[1].pcolormesh(data_hess_dpy)
 divider = make_axes_locatable(ax[1])
 cax = divider.append_axes('right', size='5%', pad=0.05)
 fig.colorbar(im2, cax=cax, orientation='vertical')

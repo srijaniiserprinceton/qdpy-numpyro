@@ -36,17 +36,6 @@ import plot_model_renorm as plot_renorm
 from jax.lib import xla_bridge
 print('JAX using:', xla_bridge.get_backend().platform)
 
-#-------------------parameters to be inverted for--------------------#
-# the indices of ctrl points that we want to invert for
-ind_min, ind_max = 0, 10
-cind_arr = np.arange(ind_min, ind_max + 1)
-
-# the angular degrees we want to invert for
-smin, smax = 1, 5
-smin_ind, smax_ind = (smin-1)//2, (smax-1)//2
-sind_arr = np.arange(smin_ind, smax_ind+1)
-#---------------------------------------------------------------------#
-
 ARGS = np.loadtxt(".n0-lmin-lmax.dat")
 GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             lmin=int(ARGS[1]),
@@ -56,6 +45,19 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             load_from_file=int(ARGS[5]))
 
 GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
+
+#-------------------parameters to be inverted for--------------------#
+# the indices of ctrl points that we want to invert for
+ind_min, ind_max = 0, GVARS.knot_num-1
+cind_arr = np.arange(ind_min, ind_max + 1)
+
+# the angular degrees we want to invert for
+smin, smax = 1, 5
+smin_ind, smax_ind = (smin-1)//2, (smax-1)//2
+sind_arr = np.arange(smin_ind, smax_ind+1)
+#---------------------------------------------------------------------#
+
+
 
 #-----------------loading miscellaneous files--------------------------#
 eigvals_model = jnp.asarray(np.load('eigvals_model.npy'))

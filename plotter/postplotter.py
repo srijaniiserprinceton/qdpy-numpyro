@@ -118,7 +118,7 @@ class postplotter:
         plt.savefig(f'{self.tag}_wsr_zoom.pdf')
         plt.close()
 
-    def plot_omega_rtheta(self, theta=np.arange(0, 90, 15)):
+    def plot_omega_rtheta(self, theta=np.arange(0, 105, 15)):
         fig, ax = plt.subplots(3, 3, figsize=(15, 7), sharex=True)
 
         # rth_idx = np.argmin(abs(self.r - self.GVARS.rth - 0.1))
@@ -152,18 +152,18 @@ class postplotter:
                      '--r', label='Fit', linewidth=0.7)
 
             axs1.plot(self.r[rth_idx:], omega_dpt[-1][rth_idx:],
-                     'k', label='DPT - $\\theta=$'+f'{th:.1f}', linewidth=0.7)
+                     'k', label='DPT - $\\theta=$'+f'{(90-th):.1f}', linewidth=0.7)
             axs1.plot(self.r[rth_idx:], omega_fit[-1][rth_idx:],
-                     '--r', label='Fit - $\\theta=$'+f'{th:.1f}', linewidth=0.7)
+                     '--', label='Fit - $\\theta=$'+f'{(90-th):.1f}', linewidth=0.7)
             axs1.set_ylabel("$\\Omega(r)$")
             axs1.set_xlabel("$r$ in $R_{\odot}$", size=16)
             axs1.legend()
 
             axs.set_ylabel("$\\Omega(r)$")
             axs.set_xlabel("$r$ in $R_{\odot}$", size=16)
-            axs.set_title(f"$\\Omega(r)$ at $\\theta=${th:.1f}")
+            axs.set_title(f"$\\Omega(r)$ at $\\theta=${(90-th):.1f}")
             axs.legend()
-            fig.savefig(f"{self.tag}_omega_th{th:04.1f}.pdf")
+            fig.savefig(f"{self.tag}_omega_th{(90-th):04.1f}.pdf")
             plt.close(fig)
         fig1.savefig(f"{self.tag}_omega_all.pdf")
         plt.close(fig1)
