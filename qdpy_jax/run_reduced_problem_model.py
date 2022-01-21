@@ -212,11 +212,6 @@ while ((abs(loss_diff) > loss_threshold) and
     t1 = time.time()
     loss_prev = loss
     
-    print('Calculating gradient...')
-    grads = _grad_fn(c_arr_renorm)
-    grad_it_arr = np.append(grad_it_arr,
-                            np.reshape(grads, (1,len_c)), axis=0)
-
     print('Calculating hessian...')
     hess = _data_hess_fn(c_arr_renorm)
     # adding some regularization to make it well conditioned
@@ -224,12 +219,19 @@ while ((abs(loss_diff) > loss_threshold) and
     H_arr = np.append(H_arr,
                       np.reshape(hess,(1, len_c, len_c)),
                       axis=0)
-    hess_inv = jnp.linalg.inv(hess)
+    # hess_inv = jnp.linalg.inv(hess)
+    hess_inv = jnp.linalg.inv(B_arr[-1])
     
     print('Updating c_arr_renorm...')
-    c_arr_renorm = _update_H(c_arr_renorm, grads, hess_inv)
+    c_arr_renorm = _update_H(c_arr_renorm, grad_it_arr[-1], hess_inv)
     c_arr_it = np.append(c_arr_it,
                          np.reshape(c_arr_renorm, (1, len_c)), axis=0)
+
+    print('Calculating gradient...')
+    grads = _grad_fn(c_arr_renorm)
+    grad_it_arr = np.append(grad_it_arr,
+                            np.reshape(grads, (1,len_c)), axis=0)
+
     
     print('Calculating loss...')
     loss = _loss_fn(c_arr_renorm)
