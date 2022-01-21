@@ -279,7 +279,7 @@ plot_acoeffs.plot_acoeffs_datavsmodel(init_acoeffs, data_acoeffs,
                                       data_acoeffs_out_HMI,
                                       acoeffs_sigma_HMI, 'init')
 #----------------------------------------------------------------------#
-sys.exit()
+# sys.exit()
 
 N = len(data_acoeffs)
 
@@ -349,7 +349,7 @@ print(c_arr_fit)
 c_arr_fit_full = jf.c4fit_2_c4plot(GVARS, c_arr_fit*true_params_flat,
                                    sind_arr, cind_arr)
 
-# converting ctrl points to wsr and plotting                                                  
+# converting ctrl points to wsr and plotting
 fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full, 'fit')
 
 #------------------------------------------------------------------------#

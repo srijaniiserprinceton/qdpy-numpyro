@@ -128,7 +128,7 @@ class GlobalVars():
 
         # self.wsr = np.ones_like(self.wsr) #!!
         # self.wsr = np.load(f'wsr-spline.npy')
-        self.wsr_extend()
+        # self.wsr_extend()
 
         # rth = r threshold beyond which the profiles are updated. 
         self.rth = qdPars.rth
