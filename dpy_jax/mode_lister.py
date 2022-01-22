@@ -3,10 +3,12 @@ import numpy as np
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--nmin", help="radial order", type=int)
-parser.add_argument("--nmax", help="radial order", type=int)
-parser.add_argument("--lmin", help="radial order", type=int)
-parser.add_argument("--lmax", help="radial order", type=int)
+parser.add_argument("--nmin", help="min radial order", type=int)
+parser.add_argument("--nmax", help="max radial order", type=int)
+parser.add_argument("--lmin", help="min angular degree", type=int)
+parser.add_argument("--lmax", help="max angular degree", type=int)
+parser.add_argument("--exclude_qdpy", help="choose modes not in qdpy",
+                    type=bool, default=False)
 
 args = parser.parse_args()
 
@@ -58,11 +60,24 @@ def findfreq(data, l, n, m):
         return nu + totsplit, fwhm, amp
 # }}} findfreq(data, l, n, m) 
 
-for n in range(nmin, nmax+1):
-    for l in range(lmin, lmax+1):
-        a, b, c = findfreq(data, l, n, 0)
-        if (a != None):
-            nl_arr = np.vstack((nl_arr, np.array([n,l])))
+if(exclude_qdpy):
+    qdpy_mults = np.load('../qdpy_jax/qdpy_multiplets.npy')
+    for n in range(nmin, nmax+1):
+        for l in range(lmin, lmax+1):
+            # checking if mult exists in qdpy
+            mult_idx = np.where((qdpy_mults[:,0] == n) *\
+                                (qdpy_mults[:,1] == l))[0]
+            if(len(mult_idx) > 0): continue
+            a, b, c = findfreq(data, l, n, 0)
+            if (a != None):
+                nl_arr = np.vstack((nl_arr, np.array([n,l])))
+
+else:
+    for n in range(nmin, nmax+1):
+        for l in range(lmin, lmax+1):
+            a, b, c = findfreq(data, l, n, 0)
+            if (a != None):
+                nl_arr = np.vstack((nl_arr, np.array([n,l])))
 
 # rejecting the first dummy entry
 nl_arr = nl_arr[1:]
