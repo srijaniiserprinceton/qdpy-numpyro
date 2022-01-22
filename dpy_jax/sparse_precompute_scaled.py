@@ -12,7 +12,7 @@ from dpy_jax import load_multiplets
 from dpy_jax import prune_multiplets
 from dpy_jax import jax_functions as jf
 from dpy_jax import wigner_map2 as wigmap
-from dpy_jax import globalvars as gvar_jax
+from dpyjax import globalvars as gvar_jax
 from dpy_jax import build_cenmults as build_cnm
 
 

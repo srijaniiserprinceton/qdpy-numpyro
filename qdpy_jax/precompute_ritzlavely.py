@@ -1,7 +1,14 @@
 from ritzLavelyPy import rlclass as RLC
 from qdpy_jax import globalvars as gvar_jax
 import numpy as np
+import os
 
+current_dir = os.path.dirname(os.path.realpath(__file__))
+package_dir = os.path.dirname(current_dir)
+with open(f"{package_dir}/.config", "r") as f:
+    dirnames = f.read().splitlines()
+scratch_dir = dirnames[1]
+outdir = f"{scratch_dir}/qdpy_jax"
 
 def gen_RL_poly():
     ellmax = np.max(GVARS.ell0_arr)
@@ -21,8 +28,8 @@ if __name__ == '__main__':
                                 lmax=int(ARGS[2]),
                                 rth=ARGS[3],
                                 knot_num=int(ARGS[4]),
-                                load_from_file=int(ARGS[5]))
-    outdir = f"{GVARS.scratch_dir}/qdpy_jax"
+                                load_from_file=int(ARGS[5]),
+                                relpath=outdir)
 
     jmax = GVARS.smax
     RL_poly = gen_RL_poly()

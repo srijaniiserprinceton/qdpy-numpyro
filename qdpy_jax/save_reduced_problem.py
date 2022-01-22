@@ -20,6 +20,12 @@ print('JAX using:', xla_bridge.get_backend().platform)
 config.update('jax_platform_name', 'cpu')
 config.update('jax_enable_x64', True)
 
+current_dir = os.path.dirname(os.path.realpath(__file__))
+package_dir = os.path.dirname(current_dir)
+with open(f"{package_dir}/.config", "r") as f:
+    dirnames = f.read().splitlines()
+scratch_dir = dirnames[1]
+outdir = f"{scratch_dir}/qdpy_jax"
 #-----------------------------------------------------------------#
 parser = argparse.ArgumentParser()
 parser.add_argument("--n0", help="radial order",
@@ -55,10 +61,10 @@ GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
                             lmax=ARGS.lmax,
                             rth=ARGS.rth,
                             knot_num=ARGS.knot_num,
-                            load_from_file=ARGS.load_mults)
+                            load_from_file=ARGS.load_mults,
+                            relpath=outdir)
 
 __, GVARS_TR, __ = GVARS.get_all_GVAR()
-outdir = f"{GVARS.scratch_dir}/qdpy_jax"
 #-------------------parameters to be inverted for--------------------# 
 # the indices of ctrl points that we want to invert for
 ind_min, ind_max = 0, GVARS.knot_num-1
