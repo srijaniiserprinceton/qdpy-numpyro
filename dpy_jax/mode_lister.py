@@ -61,7 +61,7 @@ def findfreq(data, l, n, m):
 # }}} findfreq(data, l, n, m) 
 
 if (args.exclude_qdpy):
-    qdpy_mults = np.load('../qdpy_jax/qdpy_multiplets.npy')
+    qdpy_mults = np.load(f'{gvar.scratch_dir}/qdpy_jax/qdpy_multiplets.npy')
     for n in range(nmin, nmax+1):
         for l in range(lmin, lmax+1):
             # checking if mult exists in qdpy
