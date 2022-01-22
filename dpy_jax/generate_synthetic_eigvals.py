@@ -107,11 +107,12 @@ if __name__ == "__main__":
 
     #--------saving miscellaneous files of eigvals and acoeffs---------#
     # saving the synthetic eigvals and their uncertainties
-    np.save("eigvals_model.npy", eigvals_true/2./omega0_arr*GVARS.OM*1e6)
-    np.save('eigvals_sigma_model.npy', eigvals_sigma)
+    outdir = f"{GVARS.scratch_dir}/dpy_jax"
+    np.save(f"{outdir}/eigvals_model.npy", eigvals_true/2./omega0_arr*GVARS.OM*1e6)
+    np.save(f'{outdir}/eigvals_sigma_model.npy', eigvals_sigma)
     
     # saving the HMI acoeffs and their uncertainties
-    np.save('acoeffs_sigma_HMI.npy', GVARS.acoeffs_sigma)
-    np.save('acoeffs_HMI.npy', GVARS.acoeffs_true)
+    np.save(f'{outdir}/acoeffs_sigma_HMI.npy', GVARS.acoeffs_sigma)
+    np.save(f'{outdir}/acoeffs_HMI.npy', GVARS.acoeffs_true)
 
     #-----------------------------------------------------------------#

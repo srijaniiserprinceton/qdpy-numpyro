@@ -58,9 +58,10 @@ GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
                             load_from_file=ARGS.load_mults)
 
 __, GVARS_TR, __ = GVARS.get_all_GVAR()
+outdir = f"{GVARS.scratch_dir}/qdpy_jax"
 #-------------------parameters to be inverted for--------------------# 
 # the indices of ctrl points that we want to invert for
-ind_min, ind_max = 0, 10
+ind_min, ind_max = 0, GVARS.knot_num-1
 cind_arr = np.arange(ind_min, ind_max + 1)
 
 # the angular degrees we want to invert for
@@ -139,14 +140,14 @@ del param_coeff
 hypmat_idx = np.moveaxis(sp_indices_all, 1, -1)
 
 #----------------saving precomputed parameters------------------------#
-np.save('true_params_flat.npy', true_params_flat)
-np.save('param_coeff_flat.npy', param_coeff_flat)
-np.save('fixed_part.npy', fixed_hypmat_sparse)
-np.save('sparse_idx.npy', hypmat_idx)
-np.save('omega0_arr.npy', omega0_arr)
-np.save('ell0_arr.npy', ell0_arr)
-np.save('cind_arr.npy', cind_arr)
-np.save('sind_arr.npy', sind_arr)
+np.save(f'{outdir}/true_params_flat.npy', true_params_flat)
+np.save(f'{outdir}/param_coeff_flat.npy', param_coeff_flat)
+np.save(f'{outdir}/fixed_part.npy', fixed_hypmat_sparse)
+np.save(f'{outdir}/sparse_idx.npy', hypmat_idx)
+np.save(f'{outdir}/omega0_arr.npy', omega0_arr)
+np.save(f'{outdir}/ell0_arr.npy', ell0_arr)
+np.save(f'{outdir}/cind_arr.npy', cind_arr)
+np.save(f'{outdir}/sind_arr.npy', sind_arr)
 
 # sys.exit()
 #-----------------------------------------------------------------#
@@ -195,9 +196,9 @@ def get_eigs(mat):
 eigvals_true = model()
 
 # saving the synthetic eigvals and HMI acoeffs
-np.save("data_model.npy", eigvals_true)
-np.save('acoeffs_HMI.npy', GVARS.acoeffs_true)
-np.save('acoeffs_sigma_HMI.npy', GVARS.acoeffs_sigma)
+np.save(f"{outdir}/data_model.npy", eigvals_true)
+np.save(f'{outdir}/acoeffs_HMI.npy', GVARS.acoeffs_true)
+np.save(f'{outdir}/acoeffs_sigma_HMI.npy', GVARS.acoeffs_sigma)
 
 sys.exit()
 
@@ -232,6 +233,6 @@ for i, ell0 in enumerate(ell0_arr):
 
 
 #-----------------------COMPARING AGAINST dpy_jax--------------------------#
-eigvals_from_dpy_jax = np.load('eigvals_model_dpy_jax.npy')
+eigvals_from_dpy_jax = np.load(f'{outdir}/eigvals_model_dpy_jax.npy')
 np.testing.assert_array_almost_equal(DPT_eigvals_from_qdpy,
                                      eigvals_from_dpy_jax)

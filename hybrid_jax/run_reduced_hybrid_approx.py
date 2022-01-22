@@ -42,16 +42,25 @@ from dpy_jax import jax_functions_dpy as jf
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
+with open(f"{package_dir}/.config", "r") as f:
+    dirnames = f.read().splitlines()
+scratch_dir = dirnames[1]
+
 sys.path.append(f"{package_dir}/plotter")
 import postplotter
 import plot_acoeffs_datavsmodel as plot_acoeffs
 #------------------------------------------------------------------------# 
 # defining the directories for dpy_jax and qdpy_jax
-dpy_dir = "../dpy_jax"
-qdpy_dir = "../qdpy_jax"
+dpy_dir = f"{scratch_dir}/dpy_jax"
+qdpy_dir = f"{scratch_dir}/qdpy_jax"
 
+# summary dictionary where all results will be stored
+soln_summary = {}
+soln_summary['params'] = {}
+soln_summary['params']['qdpy'] = {}
+soln_summary['params']['dpy'] = {}
 #------------------------------------------------------------------------# 
-ARGS_D = np.loadtxt(f"{dpy_dir}/.n0-lmin-lmax.dat")
+ARGS_D = np.loadtxt(f"../dpy_jax/.n0-lmin-lmax.dat")
 GVARS_D = gvar_jax.GlobalVars(n0=int(ARGS_D[0]),
                               lmin=int(ARGS_D[1]),
                               lmax=int(ARGS_D[2]),
@@ -59,8 +68,13 @@ GVARS_D = gvar_jax.GlobalVars(n0=int(ARGS_D[0]),
                               knot_num=int(ARGS_D[4]),
                               load_from_file=int(ARGS_D[5]),
                               relpath=dpy_dir)
+soln_summary['params']['dpy']['n0'] = int(ARGS_D[0])
+soln_summary['params']['dpy']['lmin'] = int(ARGS_D[1])
+soln_summary['params']['dpy']['lmax'] = int(ARGS_D[2])
+soln_summary['params']['dpy']['rth'] = ARGS_D[3]
+soln_summary['params']['dpy']['knot_num'] = int(ARGS_D[4])
 #------------------------------------------------------------------------# 
-ARGS_Q = np.loadtxt(f"{qdpy_dir}/.n0-lmin-lmax.dat")
+ARGS_Q = np.loadtxt(f"../qdpy_jax/.n0-lmin-lmax.dat")
 GVARS_Q = gvar_jax.GlobalVars(n0=int(ARGS_Q[0]),
                               lmin=int(ARGS_Q[1]),
                               lmax=int(ARGS_Q[2]),
@@ -68,6 +82,11 @@ GVARS_Q = gvar_jax.GlobalVars(n0=int(ARGS_Q[0]),
                               knot_num=int(ARGS_Q[4]),
                               load_from_file=int(ARGS_Q[5]),
                               relpath=qdpy_dir)
+soln_summary['params']['qdpy']['n0'] = int(ARGS_Q[0])
+soln_summary['params']['qdpy']['lmin'] = int(ARGS_Q[1])
+soln_summary['params']['qdpy']['lmax'] = int(ARGS_Q[2])
+soln_summary['params']['qdpy']['rth'] = ARGS_Q[3]
+soln_summary['params']['qdpy']['knot_num'] = int(ARGS_Q[4])
 
 #-------------loading precomputed files for the problem-------------------# 
 data_D = np.load(f'{dpy_dir}/data_model.npy')
@@ -117,7 +136,7 @@ Pjl_D = RL_poly_D[:, smin_D:smax_D+1:2, :]
 #-----------------------------------------------------------------------# 
 nmults_Q = len(GVARS_Q.ell0_arr)
 num_j_Q = len(GVARS_Q.s_arr)
-dim_hyper_Q = int(np.loadtxt(f'{qdpy_dir}/.dimhyper'))
+dim_hyper_Q = int(np.loadtxt(f'../qdpy_jax/.dimhyper'))
 ellmax_Q = np.max(ell0_arr_Q)
 smin_Q = min(GVARS_Q.s_arr)
 smax_Q = max(GVARS_Q.s_arr)
@@ -421,8 +440,8 @@ itercount = 0
 # model_hess = _model_hess_fn(c_arr_renorm)
 # np.save("/scratch/g.samarth/qdpy-numpyro/hessD.npy", hess_D)
 
-data_hess_dpy = np.load("../dpy_jax/data_hess_dpy.npy")
-model_hess_dpy = np.load("../dpy_jax/model_hess_dpy.npy")
+data_hess_dpy = np.load(f"{dpy_dir}/data_hess_dpy.npy")
+model_hess_dpy = np.load(f"{dpy_dir}/model_hess_dpy.npy")
 hess_inv = jnp.linalg.inv(data_hess_dpy + mu * model_hess_dpy)
 
 t1s = time.time()
@@ -489,20 +508,26 @@ with open("reg_misfit.txt", "a") as f:
     opstr = f"{mu:18.12e}, {data_misfit:18.12e}, {model_misfit:18.12e}\n"
     f.write(opstr)
 
-#------------------------------------------------------------------------# 
-def print_summary(samples, ctrl_arr):
-    keys = samples.keys()
-    for key in keys:
-        sample = samples[key]
-        key_split = key.split("_")
-        idx = int(key_split[-1])
-        sidx = int((int(key_split[0][1])-1)//2)
-        obs = ctrl_arr[sidx-1, idx] / 1e-3
-        print(f"[{obs:11.4e}] {key}: {sample.mean():.4e} +/- {sample.std():.4e}:" +
-              f"error/sigma = {(sample.mean()-obs)/sample.std():8.3f}")
-    return None
-#------------------------------------------------------------------------# 
+#------------------------------------------------------------------------
+soln_summary['c_arr_fit'] = c_arr_fit
+soln_summary['true_params_flat'] = true_params_flat
 
+soln_summary['acoeff'] = {}
+soln_summary['acoeff']['fit_D'] = final_acoeffs_D
+soln_summary['acoeff']['fit_Q'] = final_acoeffs_Q
+soln_summary['acoeff']['data_D'] = data_acoeffs_D
+soln_summary['acoeff']['data_Q'] = data_acoeffs_Q
+soln_summary['acoeff']['sigma_D'] = acoeffs_sigma_HMI_D
+soln_summary['acoeff']['sigma_Q'] = acoeffs_sigma_HMI_Q
+
+soln_summary['data_hess'] = data_hess_dpy
+soln_summary['model_hess'] = model_hess_dpy
+soln_summary['loss_arr'] = loss_arr
+
+fsuffix = "21jan"
+jf.save_obj(f"summary.{fsuffix}", soln_summary)
+
+"""
 # plotting the hessians for analysis
 fig, ax = plt.subplots(1, 3, figsize=(15, 5))
 
@@ -525,5 +550,6 @@ cax = divider.append_axes('right', size='5%', pad=0.05)
 fig.colorbar(im2, cax=cax, orientation='vertical')
 
 plt.tight_layout()
-plt.savefig('hessians.png')
+plt.savefig(f'{qdpy_dir}/hessians.png')
 plt.close()
+"""

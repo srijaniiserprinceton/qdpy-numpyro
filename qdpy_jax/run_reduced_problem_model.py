@@ -36,23 +36,24 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             rth=ARGS[3],
                             knot_num=int(ARGS[4]),
                             load_from_file=int(ARGS[5]))
-
+outdir = f"{GVARS.scratch_dir}/qdpy_jax"
+dpy_outdir = f"{GVARS.scratch_dir}/dpy_jax"
 #-------------loading precomputed files for the problem-------------------#
-data = np.load('data_model.npy')
-true_params_flat = np.load('true_params_flat.npy')
-param_coeff_flat = np.load('param_coeff_flat.npy')
-fixed_part = np.load('fixed_part.npy')
-sparse_idx = np.load('sparse_idx.npy')
-acoeffs_sigma_HMI = np.load('acoeffs_sigma_HMI.npy')
-acoeffs_HMI = np.load('acoeffs_HMI.npy')
-cind_arr = np.load('cind_arr.npy')
-sind_arr = np.load('sind_arr.npy')
-ell0_arr = np.load('ell0_arr.npy')
-omega0_arr = np.load('omega0_arr.npy')
+data = np.load(f'{outdir}/data_model.npy')
+true_params_flat = np.load(f'{outdir}/true_params_flat.npy')
+param_coeff_flat = np.load(f'{outdir}/param_coeff_flat.npy')
+fixed_part = np.load(f'{outdir}/fixed_part.npy')
+sparse_idx = np.load(f'{outdir}/sparse_idx.npy')
+acoeffs_sigma_HMI = np.load(f'{outdir}/acoeffs_sigma_HMI.npy')
+acoeffs_HMI = np.load(f'{outdir}/acoeffs_HMI.npy')
+cind_arr = np.load(f'{outdir}/cind_arr.npy')
+sind_arr = np.load(f'{outdir}/sind_arr.npy')
+ell0_arr = np.load(f'{outdir}/ell0_arr.npy')
+omega0_arr = np.load(f'{outdir}/omega0_arr.npy')
 # Reading RL poly from precomputed file
 # shape (nmults x (smax+1) x 2*ellmax+1)
-RL_poly = np.load('RL_poly.npy')
-sigma2scale = np.load('../dpy_jax/sigma2scale.npy')
+RL_poly = np.load(f'{outdir}/RL_poly.npy')
+sigma2scale = np.load(f'{dpy_outdir}/sigma2scale.npy')
 
 #-------------------Miscellaneous parameters---------------------------#
 nmults = len(GVARS.ell0_arr)

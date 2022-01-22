@@ -128,7 +128,7 @@ class GlobalVars():
 
         # self.wsr = np.ones_like(self.wsr) #!!
         # self.wsr = np.load(f'wsr-spline.npy')
-        self.wsr_extend()
+        # self.wsr_extend()
 
         # rth = r threshold beyond which the profiles are updated. 
         self.rth = qdPars.rth
@@ -337,7 +337,7 @@ class GlobalVars():
 
         # loading from a file. Must be saved in the (nmults, 2) shape
         if(load_from_file):
-            mults = np.load('qdpy_multiplets.npy').astype('int')
+            mults = np.load(f'qdpy_multiplets.npy').astype('int')
             n_arr, ell_arr = mults[:, 0], mults[:, 1]
 
         # creating the arrays when the ells are continuous in each radial orders

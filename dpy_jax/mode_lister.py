@@ -15,6 +15,7 @@ lmin, lmax = args.lmin, args.lmax
 
 
 gvar= gvar_jax.GlobalVars()
+outdir = f"{gvar.scratch_dir}/dpy_jax"
 
 # that's all we use gvar for
 data = gvar.hmidata_in
@@ -70,6 +71,5 @@ print(nl_arr)
 
 print(f'Total multiplets: {len(nl_arr)}')
 
-
 # saving the nl_arr
-np.save('qdpy_multiplets.npy', nl_arr)
+np.save(f'{outdir}/qdpy_multiplets.npy', nl_arr)

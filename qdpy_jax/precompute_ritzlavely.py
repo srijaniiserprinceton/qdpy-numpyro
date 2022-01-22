@@ -22,8 +22,9 @@ if __name__ == '__main__':
                                 rth=ARGS[3],
                                 knot_num=int(ARGS[4]),
                                 load_from_file=int(ARGS[5]))
+    outdir = f"{GVARS.scratch_dir}/qdpy_jax"
 
     jmax = GVARS.smax
     RL_poly = gen_RL_poly()
     print(f"Shape = {RL_poly.shape}")
-    np.save('RL_poly.npy', RL_poly)
+    np.save(f'{outdir}/RL_poly.npy', RL_poly)
