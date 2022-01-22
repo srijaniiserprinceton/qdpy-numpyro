@@ -43,6 +43,10 @@ from dpy_jax import jax_functions_dpy as jf
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
+with open(f"{package_dir}/.config", "r") as f:
+    dirnames = f.read().splitlines()
+scratch_dir = dirnames[1]
+outdir = f"{scratch_dir}/dpy_jax"
 sys.path.append(f"{package_dir}/plotter")
 import postplotter
 import plot_acoeffs_datavsmodel as plot_acoeffs
@@ -54,8 +58,8 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             lmax=int(ARGS[2]),
                             rth=ARGS[3],
                             knot_num=int(ARGS[4]),
-                            load_from_file=int(ARGS[5]))
-outdir = f"{GVARS.scratch_dir}/dpy_jax"
+                            load_from_file=int(ARGS[5]),
+                            relpath=outdir)
 #-------------loading precomputed files for the problem-------------------# 
 data = np.load(f'{outdir}/data_model.npy')
 true_params_flat = np.load(f'{outdir}/true_params_flat.npy')
