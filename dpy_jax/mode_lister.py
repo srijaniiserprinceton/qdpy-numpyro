@@ -60,7 +60,7 @@ def findfreq(data, l, n, m):
         return nu + totsplit, fwhm, amp
 # }}} findfreq(data, l, n, m) 
 
-if(exclude_qdpy):
+if (args.exclude_qdpy):
     qdpy_mults = np.load('../qdpy_jax/qdpy_multiplets.npy')
     for n in range(nmin, nmax+1):
         for l in range(lmin, lmax+1):

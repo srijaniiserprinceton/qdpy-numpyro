@@ -3,6 +3,7 @@ from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
+import os
 from scipy.stats import norm
 from scipy import integrate
 
@@ -21,15 +22,18 @@ print('JAX using:', xla_bridge.get_backend().platform)
 config.update('jax_platform_name', 'gpu')
 config.update('jax_enable_x64', True)
 
+current_dir = os.path.dirname(os.path.realpath(__file__))
+package_dir = os.path.dirname(current_dir)
+with open(f"{package_dir}/.config", "r") as f:
+    dirnames = f.read().splitlines()
+scratch_dir = dirnames[1]
+outdir = f"{scratch_dir}/dpy_jax"
 #----------------------import custom packages------------------------#
 from qdpy_jax import globalvars as gvar_jax
 from dpy_jax import jax_functions_dpy as jf
 from dpy_jax import sparse_precompute_acoeff as precompute
 from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
 
-import os
-current_dir = os.path.dirname(os.path.realpath(__file__))
-package_dir = os.path.dirname(current_dir)
 sys.path.append(f"{package_dir}/plotter")
 import plot_model_renorm as plot_renorm
 
@@ -42,7 +46,8 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             lmax=int(ARGS[2]),
                             rth=ARGS[3],
                             knot_num=int(ARGS[4]),
-                            load_from_file=int(ARGS[5]))
+                            load_from_file=int(ARGS[5]),
+                            relpath=outdir)
 
 GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 outdir = f"{GVARS.scratch_dir}/dpy_jax"

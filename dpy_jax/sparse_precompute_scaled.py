@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from scipy import integrate
 from tqdm import tqdm
@@ -13,6 +14,14 @@ from dpy_jax import jax_functions as jf
 from dpy_jax import wigner_map2 as wigmap
 from dpy_jax import globalvars as gvar_jax
 from dpy_jax import build_cenmults as build_cnm
+
+
+current_dir = os.path.dirname(os.path.realpath(__file__))
+package_dir = os.path.dirname(current_dir)
+with open(f"{package_dir}/.config", "r") as f:
+    dirnames = f.read().splitlines()
+scratch_dir = dirnames[1]
+outdir = f"{scratch_dir}/dpy_jax"
 
 # defining functions used in multiplet functions in the script
 getnt4cenmult = build_cnm.getnt4cenmult

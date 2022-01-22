@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from tqdm import tqdm
 from scipy import integrate
@@ -15,6 +16,13 @@ from dpy_jax import wigner_map2 as wigmap
 from dpy_jax import prune_multiplets
 from dpy_jax import build_cenmults as build_cnm
 
+current_dir = os.path.dirname(os.path.realpath(__file__))
+package_dir = os.path.dirname(current_dir)
+with open(f"{package_dir}/.config", "r") as f:
+    dirnames = f.read().splitlines()
+scratch_dir = dirnames[1]
+outdir = f"{scratch_dir}/dpy_jax"
+
 # defining functions used in multiplet functions in the script
 getnt4cenmult = build_cnm.getnt4cenmult
 _find_idx = wigmap.find_idx
@@ -30,7 +38,8 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             lmax=int(ARGS[2]),
                             rth=ARGS[3],
                             knot_num=int(ARGS[4]),
-                            load_from_file=int(ARGS[5]))
+                            load_from_file=int(ARGS[5]),
+                            relpath=outdir)
 GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx =\
                     prune_multiplets.get_pruned_attributes(GVARS)
