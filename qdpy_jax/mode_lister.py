@@ -23,6 +23,9 @@ data = gvar.hmidata_in
 # starting with the desired shape. Will reject this value later
 nl_arr = np.array([-1,-1], dtype=int)
 
+# the frequencies of the selected modes
+omega_arr = np.array([-1.])
+
 # {{{ def findfreq(data, l, n, m):
 def findfreq(data, l, n, m):
     '''
@@ -63,9 +66,11 @@ for n in range(nmin, nmax+1):
         a, b, c = findfreq(data, l, n, 0)
         if (a != None):
             nl_arr = np.vstack((nl_arr, np.array([n,l])))
+            omega_arr = np.append(omega_arr, a)
 
 # rejecting the first dummy entry
 nl_arr = nl_arr[1:]
+omega_arr = omega_arr[1:]
 
 print(nl_arr)
 
@@ -74,3 +79,6 @@ print(f'Total multiplets: {len(nl_arr)}')
 
 # saving the nl_arr
 np.save(f'{outdir}/qdpy_multiplets.npy', nl_arr)
+
+# saving the frequency array
+np.save(f'{outdir}/omega_qdpy_multiplets.npy', omega_arr)

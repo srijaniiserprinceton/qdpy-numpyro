@@ -27,6 +27,9 @@ data = gvar.hmidata_in
 # starting with the desired shape. Will reject this value later
 nl_arr = np.array([-1,-1], dtype=int)
 
+# array to store frequencies of selected modes
+omega_arr = np.array([-1.])
+
 # {{{ def findfreq(data, l, n, m):
 def findfreq(data, l, n, m):
     '''
@@ -62,7 +65,6 @@ def findfreq(data, l, n, m):
         return nu + totsplit, fwhm, amp
 # }}} findfreq(data, l, n, m) 
 
-print(args.exclude_qdpy)
 if(args.exclude_qdpy):
     qdpy_mults = np.load(f'{gvar.scratch_dir}/qdpy_jax/qdpy_multiplets.npy')
     for n in range(nmin, nmax+1):
@@ -74,6 +76,7 @@ if(args.exclude_qdpy):
             a, b, c = findfreq(data, l, n, 0)
             if (a != None):
                 nl_arr = np.vstack((nl_arr, np.array([n,l])))
+                omega_arr = np.append(omega_arr, a)
 
 else:
     for n in range(nmin, nmax+1):
@@ -81,9 +84,11 @@ else:
             a, b, c = findfreq(data, l, n, 0)
             if (a != None):
                 nl_arr = np.vstack((nl_arr, np.array([n,l])))
+                omega_arr = np.append(omega_arr, a)
 
 # rejecting the first dummy entry
 nl_arr = nl_arr[1:]
+omega_arr = omega_arr[1:]
 
 print(nl_arr)
 
@@ -91,3 +96,4 @@ print(f'Total multiplets: {len(nl_arr)}')
 
 # saving the nl_arr
 np.save(f'{outdir}/qdpy_multiplets.npy', nl_arr)
+np.save(f'{outdir}/omega_qdpy_multiplets.npy', omega_arr)
