@@ -1,6 +1,7 @@
 from qdpy_jax import globalvars as gvar_jax
 import numpy as np
 import argparse
+import sys
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--nmin", help="min radial order", type=int)
@@ -8,7 +9,8 @@ parser.add_argument("--nmax", help="max radial order", type=int)
 parser.add_argument("--lmin", help="min angular degree", type=int)
 parser.add_argument("--lmax", help="max angular degree", type=int)
 parser.add_argument("--exclude_qdpy", help="choose modes not in qdpy",
-                    type=bool, default=False)
+                    type=int, default=0)
+
 
 args = parser.parse_args()
 
@@ -60,7 +62,8 @@ def findfreq(data, l, n, m):
         return nu + totsplit, fwhm, amp
 # }}} findfreq(data, l, n, m) 
 
-if (args.exclude_qdpy):
+print(args.exclude_qdpy)
+if(args.exclude_qdpy):
     qdpy_mults = np.load(f'{gvar.scratch_dir}/qdpy_jax/qdpy_multiplets.npy')
     for n in range(nmin, nmax+1):
         for l in range(lmin, lmax+1):
