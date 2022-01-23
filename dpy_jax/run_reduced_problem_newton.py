@@ -147,10 +147,10 @@ np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
 
 #----------------------------------------------------------------------#
 # changing to the HMI acoeffs if doing this for real data 
-# data_acoeffs = GVARS.acoeffs_true
-np.random.seed(3)
-data_acoeffs_err = np.random.normal(loc=0, scale=acoeffs_sigma_HMI)
-data_acoeffs = data_acoeffs + data_acoeffs_err
+data_acoeffs = GVARS.acoeffs_true
+# np.random.seed(3)
+# data_acoeffs_err = np.random.normal(loc=0, scale=acoeffs_sigma_HMI)
+# data_acoeffs = data_acoeffs + data_acoeffs_err
 data_acoeffs_out_HMI = GVARS.acoeffs_out_HMI
 print(f"data_acoeffs = {data_acoeffs[:15]}")
 
@@ -159,6 +159,9 @@ print(f"data_acoeffs = {data_acoeffs[:15]}")
 plot_acoeffs.plot_acoeffs_datavsmodel(pred_acoeffs, data_acoeffs,
                                       data_acoeffs_out_HMI,
                                       acoeffs_sigma_HMI, 'ref')
+plot_acoeffs.plot_acoeffs_dm_scaled(pred_acoeffs, data_acoeffs,
+                                    data_acoeffs_out_HMI,
+                                    acoeffs_sigma_HMI, 'ref')
 # sys.exit()
 #----------------------------------------------------------------------# 
 # the regularizing parameter
@@ -282,6 +285,9 @@ init_acoeffs = data_misfit_arr_fn(c_arr_renorm)*acoeffs_sigma_HMI +\
 plot_acoeffs.plot_acoeffs_datavsmodel(init_acoeffs, data_acoeffs,
                                       data_acoeffs_out_HMI,
                                       acoeffs_sigma_HMI, 'init')
+plot_acoeffs.plot_acoeffs_dm_scaled(init_acoeffs, data_acoeffs,
+                                    data_acoeffs_out_HMI,
+                                    acoeffs_sigma_HMI, 'init')
 #----------------------------------------------------------------------#
 # sys.exit()
 
@@ -341,6 +347,10 @@ final_acoeffs = data_misfit_arr_fn(c_arr_renorm)*acoeffs_sigma_HMI +\
 plot_acoeffs.plot_acoeffs_datavsmodel(final_acoeffs, data_acoeffs,
                                       data_acoeffs_out_HMI,
                                       acoeffs_sigma_HMI, 'final')
+
+plot_acoeffs.plot_acoeffs_dm_scaled(final_acoeffs, data_acoeffs,
+                                    data_acoeffs_out_HMI,
+                                    acoeffs_sigma_HMI, 'final')
 #----------------------------------------------------------------------# 
 
 # reconverting back to model_params in units of true_params_flat

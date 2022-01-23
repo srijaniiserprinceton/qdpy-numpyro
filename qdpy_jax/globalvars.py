@@ -48,7 +48,7 @@ class qdParams():
         # self.ell_bounds = np.array([[lmin, lmax]])
         self.ell_bounds = np.array([[lmin, lmax]])
 
-        self.rmin, self.rth, self.rmax = 0.3, rth, 1.2
+        self.rmin, self.rth, self.rmax = 0.0, rth, 1.2
         self.fwindow =  150.0 
         self.smax = 5
         self.preplot = True
@@ -124,6 +124,7 @@ class GlobalVars():
 
         self.fwindow = qdPars.fwindow
         self.wsr = -1.0*np.loadtxt(f'{self.datadir}/w_s/w.dat')
+        self.err1d = np.loadtxt(f'{self.datadir}/w_s/err1d-hmi.dat')
         # self.wsr = np.loadtxt(f'{self.datadir}/w_s/w_hmi.dat')
         self.wsr_err = np.loadtxt(f'{self.datadir}/w_s/err_hmi.dat')
         # self.wsr_extend()

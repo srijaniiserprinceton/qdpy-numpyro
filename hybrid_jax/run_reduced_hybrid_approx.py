@@ -426,6 +426,14 @@ plot_acoeffs.plot_acoeffs_datavsmodel(init_acoeffs_D, data_acoeffs_D,
 plot_acoeffs.plot_acoeffs_datavsmodel(init_acoeffs_Q, data_acoeffs_Q,
                                       data_acoeffs_out_HMI_Q,
                                       acoeffs_sigma_HMI_Q, 'init_Q')
+
+plot_acoeffs.plot_acoeffs_dm_scaled(init_acoeffs_D, data_acoeffs_D,
+                                    data_acoeffs_out_HMI_D,
+                                    acoeffs_sigma_HMI_D, 'init_D')
+
+plot_acoeffs.plot_acoeffs_dm_scaled(init_acoeffs_Q, data_acoeffs_Q,
+                                    data_acoeffs_out_HMI_Q,
+                                    acoeffs_sigma_HMI_Q, 'init_Q')
 #----------------------------------------------------------------------#
 
 loss = 1e25

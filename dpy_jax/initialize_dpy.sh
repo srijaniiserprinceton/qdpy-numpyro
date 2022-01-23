@@ -5,6 +5,7 @@ LMIN_DEFAULT=5
 LMAX_DEFAULT=295
 KNOTNUM_DEFAULT=15
 RTH_DEFAULT=0.8
+EXCLUDE_QDPY_MODES=0
 
 read -p "nmin (default=$NMIN_DEFAULT)= " NMIN
 read -p "nmax (default=$NMAX_DEFAULT)= " NMAX
@@ -12,6 +13,7 @@ read -p "lmin (default=$LMIN_DEFAULT)= " LMIN
 read -p "lmax (default=$LMAX_DEFAULT)= " LMAX
 read -p "knot_num (default=$KNOTNUM_DEFAULT)= " KNOTNUM
 read -p "rth (default=$RTH_DEFAULT)= " RTH
+read -p "exclude_qdpy (default=$EXCLUDE_QDPY_MODES)= " EXCLUDE_QDPY_MODES
 
 # Setting default values if empty
 NMIN="${NMIN:-$NMIN_DEFAULT}"
@@ -31,7 +33,11 @@ echo "rth      = $RTH"
 echo "-------------------------"
 
 echo "[ 1. ] Creating list of modes ..."
-python mode_lister.py --nmin $NMIN --nmax $NMAX --lmin $LMIN --lmax $LMAX >.mlist.out 2>.mlist.err
+if [[ $EXCLUDE_QDPY_MODES ]]; then
+	python mode_lister.py --nmin $NMIN --nmax $NMAX --lmin $LMIN --lmax $LMAX --exclude_qdpy 1 >.mlist.out 2>.mlist.err
+else
+	python mode_lister.py --nmin $NMIN --nmax $NMAX --lmin $LMIN --lmax $LMAX >.mlist.out 2>.mlist.err
+fi
 echo "       -- `tail -1 .mlist.out`"
 
 echo "[ 2. ] Generating synthetic eigenvalues ..."

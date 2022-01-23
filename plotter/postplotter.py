@@ -2,10 +2,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.special import lpmn
 from tqdm import tqdm
+import os
 
 from qdpy_jax import gen_wsr
 
 plt.rcParams['axes.grid'] = True
+
+current_dir = os.path.dirname(os.path.realpath(__file__))
+package_dir = os.path.dirname(current_dir)
+with open(f"{package_dir}/.config", "r") as f:
+    dirnames = f.read().splitlines()
+scratch_dir = dirnames[1]
+plotdir = f"{scratch_dir}/plots"
 
 class postplotter:
     def __init__(self, GVARS, ctrl_arr_fit_full, tag):
@@ -21,9 +29,11 @@ class postplotter:
 
         # plotting
         self.plot_fit_wsr()
+        self.plot_fit_wsr_zoom()
+        self.plot_omega_rtheta()
 
     def plot_fit_wsr(self):
-        fig, ax = plt.subplots(3, 3, figsize=(15, 7), sharex=True)
+        fig, ax = plt.subplots(3, 2, figsize=(15, 7), sharex=True)
 
         # plot the wsr from dpt (no-spline)
         ax[0, 0].plot(self.r, self.wsr_dpt[0], 'k')
@@ -66,7 +76,7 @@ class postplotter:
         ax[2,1].set_xlim([0, 1])
         
         plt.tight_layout()
-        plt.savefig(f'{self.tag}_wsr.pdf')
+        plt.savefig(f'{plotdir}/{self.tag}_wsr.pdf')
         plt.close()
 
     def plot_fit_wsr_zoom(self):
@@ -102,9 +112,12 @@ class postplotter:
         w3r_errperc = self.get_percent_error(wsr_spl_full[1], self.wsr_dpt[1])
         w5r_errperc = self.get_percent_error(wsr_spl_full[2], self.wsr_dpt[2])
         
-        ax[0, 1].semilogy(self.r[rth_idx:], abs(w1r_errperc)[rth_idx:], 'r', alpha=0.5)
-        ax[1, 1].semilogy(self.r[rth_idx:], abs(w3r_errperc)[rth_idx:], 'r', alpha=0.5)
-        ax[2, 1].semilogy(self.r[rth_idx:], abs(w5r_errperc)[rth_idx:], 'r', alpha=0.5)
+        ax[0, 1].semilogy(self.r[rth_idx:],
+                          abs(w1r_errperc)[rth_idx:], 'r', alpha=0.5)
+        ax[1, 1].semilogy(self.r[rth_idx:],
+                          abs(w3r_errperc)[rth_idx:], 'r', alpha=0.5)
+        ax[2, 1].semilogy(self.r[rth_idx:],
+                          abs(w5r_errperc)[rth_idx:], 'r', alpha=0.5)
         
         # settin axis labels
         ax[0, 1].set_ylabel('% offset in $w_1(r)$', size=14)
@@ -115,14 +128,16 @@ class postplotter:
         ax[2,1].set_xlim([0, 1])
         
         plt.tight_layout()
-        plt.savefig(f'{self.tag}_wsr_zoom.pdf')
+        plt.savefig(f'{plotdir}/{self.tag}_wsr_zoom.pdf')
         plt.close()
 
-    def plot_omega_rtheta(self, theta=np.arange(0, 105, 15)):
+    def plot_omega_rtheta(self, theta=np.arange(15, 105, 15)):
         fig, ax = plt.subplots(3, 3, figsize=(15, 7), sharex=True)
+        err1d = self.GVARS.err1d[:, 1:-1]
 
         # rth_idx = np.argmin(abs(self.r - self.GVARS.rth - 0.1))
-        rth_idx = np.argmin(abs(self.r - 0.5))
+        rthcombined_idx = np.argmin(abs(self.r - 0.4))
+        rth_idx = np.argmin(abs(self.r - 0.9))
         rlist = self.r[rth_idx:]
         # plot the wsr from dpt (no-spline)
         ax[0, 0].plot(self.r[rth_idx:], self.wsr_dpt[0][rth_idx:], 'k')
@@ -140,6 +155,7 @@ class postplotter:
         omega_dpt = []
         omega_fit = []
         fig1, axs1 = plt.subplots()
+        count = 0
         for th in tqdm(theta, desc='Latitude plots'):
             legpoly = lpmn(0, 5, np.cos(th*np.pi/180.))[1][0, 1::2]
             omega_dpt.append((legpoly*scale_fac) @ self.wsr_dpt / self.r * unitconv)
@@ -147,13 +163,23 @@ class postplotter:
 
             fig, axs = plt.subplots()
             axs.plot(self.r[rth_idx:], omega_dpt[-1][rth_idx:],
-                     'k', label='DPT', linewidth=0.7)
+                     'r', label='DPT', linewidth=0.7)
+            axs.fill_between(self.r[rth_idx:],
+                             omega_dpt[-1][rth_idx:] - err1d[count][rth_idx:],
+                             omega_dpt[-1][rth_idx:] + err1d[count][rth_idx:],
+                             color='red', alpha=0.4)
             axs.plot(self.r[rth_idx:], omega_fit[-1][rth_idx:],
-                     '--r', label='Fit', linewidth=0.7)
+                     '--k', label='Fit', linewidth=0.7)
 
-            axs1.plot(self.r[rth_idx:], omega_dpt[-1][rth_idx:],
-                     'k', label='DPT - $\\theta=$'+f'{(90-th):.1f}', linewidth=0.7)
-            axs1.plot(self.r[rth_idx:], omega_fit[-1][rth_idx:],
+            axs1.plot(self.r[rthcombined_idx:], omega_dpt[-1][rthcombined_idx:],
+                     'r', label='DPT - $\\theta=$'+f'{(90-th):.1f}', linewidth=0.7)
+            axs1.fill_between(self.r[rthcombined_idx:],
+                              omega_dpt[-1][rthcombined_idx:] -
+                              err1d[count][rthcombined_idx:],
+                              omega_dpt[-1][rthcombined_idx:] +
+                              err1d[count][rthcombined_idx:],
+                              color='red', alpha=0.4)
+            axs1.plot(self.r[rthcombined_idx:], omega_fit[-1][rthcombined_idx:],
                      '--', label='Fit - $\\theta=$'+f'{(90-th):.1f}', linewidth=0.7)
             axs1.set_ylabel("$\\Omega(r)$")
             axs1.set_xlabel("$r$ in $R_{\odot}$", size=16)
@@ -163,9 +189,9 @@ class postplotter:
             axs.set_xlabel("$r$ in $R_{\odot}$", size=16)
             axs.set_title(f"$\\Omega(r)$ at $\\theta=${(90-th):.1f}")
             axs.legend()
-            fig.savefig(f"{self.tag}_omega_th{(90-th):04.1f}.pdf")
+            fig.savefig(f"{plotdir}/{self.tag}_omega_th{(90-th):04.1f}.pdf")
             plt.close(fig)
-        fig1.savefig(f"{self.tag}_omega_all.pdf")
+        fig1.savefig(f"{plotdir}/{self.tag}_omega_all.pdf")
         plt.close(fig1)
 
         # converting to muHz
@@ -187,9 +213,12 @@ class postplotter:
         w3r_errperc = self.get_percent_error(wsr_spl_full[1], self.wsr_dpt[1])
         w5r_errperc = self.get_percent_error(wsr_spl_full[2], self.wsr_dpt[2])
         
-        ax[0, 1].semilogy(self.r[rth_idx:], abs(w1r_errperc)[rth_idx:], 'r', alpha=0.5)
-        ax[1, 1].semilogy(self.r[rth_idx:], abs(w3r_errperc)[rth_idx:], 'r', alpha=0.5)
-        ax[2, 1].semilogy(self.r[rth_idx:], abs(w5r_errperc)[rth_idx:], 'r', alpha=0.5)
+        ax[0, 1].semilogy(self.r[rth_idx:],
+                          abs(w1r_errperc)[rth_idx:], 'r', alpha=0.5)
+        ax[1, 1].semilogy(self.r[rth_idx:],
+                          abs(w3r_errperc)[rth_idx:], 'r', alpha=0.5)
+        ax[2, 1].semilogy(self.r[rth_idx:],
+                          abs(w5r_errperc)[rth_idx:], 'r', alpha=0.5)
         
         # settin axis labels
         ax[0, 1].set_ylabel('% offset in $w_1(r)$', size=14)
@@ -200,9 +229,8 @@ class postplotter:
         ax[2,1].set_xlim([0, 1])
         
         plt.tight_layout()
-        plt.savefig(f'{self.tag}_wsr_zoom.pdf')
+        plt.savefig(f'{plotdir}/{self.tag}_wsr_zoom.pdf')
         plt.close()
-
 
 
 
