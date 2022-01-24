@@ -398,7 +398,7 @@ _loss_fn = jit(loss_fn)
 #-----------------------initialization of params------------------#
 # c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))
 c_init = (np.ones_like(true_params_flat) +
-          0.3*np.random.uniform(0.0, 1.0, size=len(true_params_flat)))
+          0.0*np.random.uniform(0.0, 1.0, size=len(true_params_flat)))
 
 #------------------plotting the initial profiles-------------------#                     
 c_arr_init_full = jf.c4fit_2_c4plot(GVARS_D, c_init*true_params_flat,
@@ -440,7 +440,7 @@ loss = 1e25
 loss_diff = loss - 1.
 loss_arr = []
 loss_threshold = 1e-9
-maxiter = 15
+maxiter = 50
 itercount = 0
 
 # calculating the DPT & model hessian once since it doesn't depend on c_arr
@@ -532,8 +532,8 @@ soln_summary['data_hess'] = data_hess_dpy
 soln_summary['model_hess'] = model_hess_dpy
 soln_summary['loss_arr'] = loss_arr
 
-fsuffix = "21jan"
-jf.save_obj(f"summary.{fsuffix}", soln_summary)
+fsuffix = "24jan-hma"
+jf.save_obj(soln_summary, f"summary.{fsuffix}")
 
 """
 # plotting the hessians for analysis
