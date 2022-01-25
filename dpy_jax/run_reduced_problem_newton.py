@@ -306,8 +306,8 @@ total_hess = data_hess_dpy + mu*model_hess_dpy
 hess_inv = jnp.linalg.inv(total_hess)
 
 if PARGS.store_hess:
-    np.save(f"{outdir}/data_hess_dpy-hma.npy", data_hess_dpy)
-    np.save(f"{outdir}/model_hess_dpy-hma.npy", model_hess_dpy)
+    np.save(f"{outdir}/data_hess_dpy-jesper.npy", data_hess_dpy)
+    np.save(f"{outdir}/model_hess_dpy-jesper.npy", model_hess_dpy)
 
 
 t1s = time.time()
@@ -367,7 +367,7 @@ c_arr_fit_full = jf.c4fit_2_c4plot(GVARS, c_arr_fit*true_params_flat,
 fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full, 'fit')
 
 #------------------------------------------------------------------------#
-with open("reg_misfit.txt", "a") as f:
+with open(f"{current_dir}/reg_misfit.txt", "a") as f:
     f.seek(0, os.SEEK_END)
     opstr = f"{mu:18.12e}, {data_misfit:18.12e}, {model_misfit:18.12e}\n"
     f.write(opstr)

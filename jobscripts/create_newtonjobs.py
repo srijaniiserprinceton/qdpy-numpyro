@@ -12,7 +12,7 @@ ARGS = parser.parse_args()
 
 muexp_min = np.log10(ARGS.mumax)
 muexp_max = np.log10(ARGS.mumin)
-muexp_list = np.linspace(muexp_min, muexp_max, 60)
+muexp_list = np.linspace(muexp_min, muexp_max, 300)
 mu_list = 10**muexp_list
 print(f"mu = {mu_list}")
 
