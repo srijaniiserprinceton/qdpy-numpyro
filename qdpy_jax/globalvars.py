@@ -66,7 +66,7 @@ class GlobalVars():
                       "hmidata",
                       "OM", "r",
                       "rmin", "rmax", "rmin_ind",
-                      "nl_all", "nl_all_list",
+                      "nl_all", 
                       "omega_list", "fwindow",
                       "smax", "s_arr", "wsr",
                       "pruned_multiplets",
@@ -87,11 +87,11 @@ class GlobalVars():
         self.snrnmais_dir = dirnames[2]
         self.datadir = f"{self.snrnmais_dir}/data_files"
         self.outdir = f"{self.scratch_dir}/output_files"
+        self.ipdir = f"{self.scratch_dir}/input_files"
         self.eigdir = f"{self.snrnmais_dir}/eig_files"
         self.progdir = self.local_dir
-        self.hmidata_in = np.loadtxt(f"{self.snrnmais_dir}/data_files/hmi.6328.5")
-        self.hmidata_out =\
-                    np.loadtxt(f"{self.snrnmais_dir}/data_files/hmirot.out.6328.5")
+        self.hmidata_in = np.loadtxt(f"{self.ipdir}/hmi.6328.5")
+        self.hmidata_out = np.loadtxt(f"{self.ipdir}/hmirot.out.6328.5")
         self.relpath = relpath
 
         qdPars = qdParams(lmin=lmin, lmax=lmax, n0=n0, rth=rth)
@@ -103,11 +103,9 @@ class GlobalVars():
         B_0 = 10e5             # in Gauss (base of convection zone)
         self.OM = np.sqrt(4*np.pi*R_sol*B_0**2/M_sol) 
 
-        # self.rho = np.loadtxt(f"{self.datadir}/rho.dat")
-        self.r = np.loadtxt(f"{self.datadir}/r.dat").astype('float')
+        self.r = np.loadtxt(f"{self.ipdir}/r.dat").astype('float')
         self.nl_all = np.loadtxt(f"{self.datadir}/nl.dat").astype('int')
         self.nl_all = tuple(map(tuple, self.nl_all))
-        # self.nl_all_list = np.loadtxt(f"{self.datadir}/nl.dat").astype('int').tolist()
         self.omega_list = np.loadtxt(f"{self.datadir}/muhz.dat").astype('float')
         self.omega_list *= 1e-6 / self.OM
 
@@ -123,10 +121,9 @@ class GlobalVars():
         self.s_arr = np.arange(1, self.smax+1, 2)
 
         self.fwindow = qdPars.fwindow
-        self.wsr = -1.0*np.loadtxt(f'{self.datadir}/w_s/w.dat')
-        self.err1d = np.loadtxt(f'{self.datadir}/w_s/err1d-hmi.dat')
-        # self.wsr = np.loadtxt(f'{self.datadir}/w_s/w_hmi.dat')
-        self.wsr_err = np.loadtxt(f'{self.datadir}/w_s/err_hmi.dat')
+        self.wsr = -1.0*np.loadtxt(f'{self.ipdir}/w.dat')
+        self.err1d = np.loadtxt(f'{self.ipdir}/err1d-hmi.dat')
+        self.wsr_err = np.loadtxt(f'{self.ipdir}/err_hmi.dat')
         # self.wsr_extend()
 
         # rth = r threshold beyond which the profiles are updated. 
@@ -165,7 +162,6 @@ class GlobalVars():
         self.fac_arr = np.array([[1.03, 1.03, 1.03],
                                  [0.97, 0.97, 0.97]])
 
-        
         # finding the spline params for wsr
         self.spl_deg = 3
         self.knot_num = knot_num
