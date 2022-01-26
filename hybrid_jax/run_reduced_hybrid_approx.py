@@ -448,9 +448,20 @@ itercount = 0
 # model_hess = _model_hess_fn(c_arr_renorm)
 # np.save("/scratch/g.samarth/qdpy-numpyro/hessD.npy", hess_D)
 
-data_hess_dpy = np.load(f"{dpy_dir}/data_hess_dpy.npy")
-model_hess_dpy = np.load(f"{dpy_dir}/model_hess_dpy.npy")
+data_hess_dpy = np.load(f"{dpy_dir}/data_hess_dpy-jesper-360d.npy")
+model_hess_dpy = np.load(f"{dpy_dir}/model_hess_dpy-jesper-360d.npy")
 hess_inv = jnp.linalg.inv(data_hess_dpy + mu * model_hess_dpy)
+
+
+loss = _loss_fn(c_arr_renorm)
+model_misfit = model_misfit_fn(c_arr_renorm)
+data_misfit = loss - model_misfit
+grads = _grad_fn(c_arr_renorm)
+tinit = 0
+print(f'[{itercount:3d} | {tinit:6.1f} sec ] ' +
+      f'data_misfit = {data_misfit:12.5e} loss-diff = {loss_diff:12.5e}; ' +
+      f'max-grads = {abs(grads).max():12.5e} model_misfit={model_misfit:12.5e}')
+
 
 t1s = time.time()
 while ((abs(loss_diff) > loss_threshold) and
@@ -458,7 +469,6 @@ while ((abs(loss_diff) > loss_threshold) and
     t1 = time.time()
 
     loss_prev = loss
-
     grads = _grad_fn(c_arr_renorm)
     # hess_Q = _data_hess_fn_Q(c_arr_renorm) 
     # hess = hess_D + hess_Q + model_hess
@@ -531,8 +541,9 @@ soln_summary['acoeff']['sigma_Q'] = acoeffs_sigma_HMI_Q
 soln_summary['data_hess'] = data_hess_dpy
 soln_summary['model_hess'] = model_hess_dpy
 soln_summary['loss_arr'] = loss_arr
+soln_summary['mu'] = mu
 
-fsuffix = "24jan-hma"
+fsuffix = "26jan-jesper-360d"
 jf.save_obj(soln_summary, f"summary.{fsuffix}")
 
 """

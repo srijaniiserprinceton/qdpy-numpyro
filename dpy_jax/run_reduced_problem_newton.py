@@ -306,8 +306,8 @@ total_hess = data_hess_dpy + mu*model_hess_dpy
 hess_inv = jnp.linalg.inv(total_hess)
 
 if PARGS.store_hess:
-    np.save(f"{outdir}/data_hess_dpy-jesper.npy", data_hess_dpy)
-    np.save(f"{outdir}/model_hess_dpy-jesper.npy", model_hess_dpy)
+    np.save(f"{outdir}/data_hess_dpy-jesper-360d.npy", data_hess_dpy)
+    np.save(f"{outdir}/model_hess_dpy-jesper-360d.npy", model_hess_dpy)
 
 
 t1s = time.time()
