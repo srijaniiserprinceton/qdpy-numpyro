@@ -212,7 +212,7 @@ def data_misfit_arr_fn(c_arr):
     return data_misfit_arr
 
 
-def model_misfit_fn(c_arr, mu_arr=[1., 10., 100.]):
+def model_misfit_fn(c_arr, mu_scale=[1., 1., 1.]):
     # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
     # Djk is the same for s=3 and s=5
     cd = []
@@ -223,7 +223,7 @@ def model_misfit_fn(c_arr, mu_arr=[1., 10., 100.]):
 
     cDc = 0.0
     for i in range(len_s):
-        cDc += mu_arr[i] * cd[i] @ Djk @ cd[i]
+        cDc += mu_scale[i] * cd[i] @ Djk @ cd[i]
     return cDc
 
 
@@ -319,6 +319,7 @@ model_misfit = model_misfit_fn(c_arr_renorm)
 data_misfit = loss - model_misfit * mu
 print(f'[{itercount:3d} | {tdiff:6.1f} sec ] data_misfit = {data_misfit:12.5e} loss-diff = {loss_diff:12.5e}; ' +
       f'max-grads = {abs(grads).max():12.5e} model_misfit={model_misfit:12.5e}')
+
 t1s = time.time()
 while ((abs(loss_diff) > loss_threshold) and
        (itercount < maxiter)):

@@ -348,7 +348,7 @@ def data_misfit_fn_Q(c_arr):
     return jnp.sum(jnp.square(data_misfit_arr_Q))
 
 
-def model_misfit_fn(c_arr, mu_scale=[1., 2., 4.]):
+def model_misfit_fn(c_arr, mu_scale=[1., 1., 1.]):
     # Djk is the same for s=1, 3, 5
     Djk = D_bsp_j_D_bsp_k[0::len_s, 0::len_s]
     cd = []
