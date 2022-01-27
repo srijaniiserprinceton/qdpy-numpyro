@@ -43,13 +43,13 @@ class get_splines:
         # removing end points because of requirement of splrep
         # endpoints are automatically padded up
         t_external = r_filtered[1:-1]
+        t_internal = np.append(t_internal, t_external)
 
         # t_internal = np.append(t_internal,
         #                        np.linspace(self.t_scipy[self.knot_ind_th],
         #                                    self.t_scipy[-(self.spl_deg+2)],
         #                                    self.custom_knot_num))
         
-        t_internal = np.append(t_internal, t_external)
         # creating the carr corresponding to the DPT using custom knots
         t, c_1, __ = splrep(self.r,
                             self.wsr[0],
