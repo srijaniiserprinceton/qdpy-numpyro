@@ -212,7 +212,7 @@ def data_misfit_arr_fn(c_arr):
     return data_misfit_arr
 
 
-def model_misfit_fn(c_arr, mu_arr=[1., 2., 80.]):
+def model_misfit_fn(c_arr, mu_arr=[1., 10., 100.]):
     # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
     # Djk is the same for s=3 and s=5
     cd = []
@@ -237,10 +237,9 @@ def loss_fn(c_arr):
     data_misfit_val = data_misfit_fn(c_arr)
     model_misfit_val = model_misfit_fn(c_arr)
     data_hess = data_hess_fn(c_arr)
-    lambda_factor = jnp.trace(data_hess) / len_data
 
     # total misfit
-    misfit = data_misfit_val + mu * model_misfit_val #* lambda_factor
+    misfit = data_misfit_val + mu * model_misfit_val
     return misfit
 
 grad_fn = jax.grad(loss_fn)

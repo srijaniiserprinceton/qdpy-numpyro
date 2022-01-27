@@ -150,7 +150,7 @@ np.testing.assert_array_almost_equal(cind_arr_D, cind_arr_Q)
 np.testing.assert_array_almost_equal(sind_arr_D, sind_arr_Q)
 np.testing.assert_array_almost_equal(true_params_flat_D,
                                      true_params_flat_Q)
-
+len_s = len(sind_arr_D)
 num_j = num_j_D
 true_params_flat = true_params_flat_D
 
@@ -348,16 +348,17 @@ def data_misfit_fn_Q(c_arr):
     return jnp.sum(jnp.square(data_misfit_arr_Q))
 
 
-def model_misfit_fn(c_arr):
-    # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
-    # Djk is the same for s=3 and s=5
-    cd1 = c_arr[0::3]
-    cd3 = c_arr[1::3]
-    cd5 = c_arr[2::3]
-    Djk = D_bsp_j_D_bsp_k[0::3, 0::3]
-    return mu * (cd1 @ Djk @ cd1 + 
-                 cd3 @ Djk @ cd3 +
-                 cd5 @ Djk @ cd5)
+def model_misfit_fn(c_arr, mu_scale=[1., 2., 4.]):
+    # Djk is the same for s=1, 3, 5
+    Djk = D_bsp_j_D_bsp_k[0::len_s, 0::len_s]
+    cd = []
+    for i in range(len_s):
+        cd.append(c_arr[i::len_s])
+
+    cDc = 0.0
+    for i in range(len_s):
+        cDc += mu_scale[i] * cd[i] @ Djk @ cd[i]
+    return cDc
 
 
 def hessian_D(f):
@@ -378,7 +379,7 @@ def loss_fn(c_arr):
     # total misfit
     misfit = (data_misfit_val_D +
               data_misfit_val_Q +
-              model_misfit_val)
+              mu*model_misfit_val)
     
     return misfit
 
@@ -439,7 +440,7 @@ plot_acoeffs.plot_acoeffs_dm_scaled(init_acoeffs_Q, data_acoeffs_Q,
 loss = 1e25
 loss_diff = loss - 1.
 loss_arr = []
-loss_threshold = 1e-9
+loss_threshold = 1e-1
 maxiter = 50
 itercount = 0
 
@@ -448,14 +449,14 @@ itercount = 0
 # model_hess = _model_hess_fn(c_arr_renorm)
 # np.save("/scratch/g.samarth/qdpy-numpyro/hessD.npy", hess_D)
 
-data_hess_dpy = np.load(f"{dpy_dir}/data_hess_dpy-jesper-360d.npy")
-model_hess_dpy = np.load(f"{dpy_dir}/model_hess_dpy-jesper-360d.npy")
+data_hess_dpy = np.load(f"{dpy_dir}/dhess.{int(ARGS_Q[4])}s.jesper.360d.npy")
+model_hess_dpy = np.load(f"{dpy_dir}/mhess.{int(ARGS_Q[4])}s.jesper.360d.npy")
 hess_inv = jnp.linalg.inv(data_hess_dpy + mu * model_hess_dpy)
 
 
 loss = _loss_fn(c_arr_renorm)
 model_misfit = model_misfit_fn(c_arr_renorm)
-data_misfit = loss - model_misfit
+data_misfit = loss - mu * model_misfit
 grads = _grad_fn(c_arr_renorm)
 tinit = 0
 print(f'[{itercount:3d} | {tinit:6.1f} sec ] ' +
@@ -479,7 +480,7 @@ while ((abs(loss_diff) > loss_threshold) and
     loss = _loss_fn(c_arr_renorm)
 
     model_misfit = model_misfit_fn(c_arr_renorm)
-    data_misfit = loss - model_misfit
+    data_misfit = loss - mu * model_misfit
     loss_diff = loss_prev - loss
     loss_arr.append(loss)
 
@@ -492,6 +493,13 @@ while ((abs(loss_diff) > loss_threshold) and
 
 t2s = time.time()
 print(f"Total time taken = {(t2s-t1s):12.3f} seconds")
+
+data_misfit_val_D = data_misfit_fn_D(c_arr_renorm)
+data_misfit_val_Q = data_misfit_fn_Q(c_arr_renorm)
+total_misfit = data_misfit_val_D + data_misfit_val_Q
+num_data = len(pred_acoeffs_D) + len(pred_acoeffs_Q)
+chisq = total_misfit/num_data
+print(f"chisq = {chisq:.5f}")
 
 
 #----------------------------------------------------------------------#
@@ -542,8 +550,9 @@ soln_summary['data_hess'] = data_hess_dpy
 soln_summary['model_hess'] = model_hess_dpy
 soln_summary['loss_arr'] = loss_arr
 soln_summary['mu'] = mu
+soln_summary['chisq'] = chisq
 
-fsuffix = "26jan-jesper-360d"
+fsuffix = "27jan-jesper-360d"
 jf.save_obj(soln_summary, f"summary.{fsuffix}")
 
 """
