@@ -212,16 +212,19 @@ def data_misfit_arr_fn(c_arr):
     return data_misfit_arr
 
 
-def model_misfit_fn(c_arr, mu_arr=np.ones(3)):
+def model_misfit_fn(c_arr, mu_arr=np.ones(len_s)):
     # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
     # Djk is the same for s=3 and s=5
-    cd1 = c_arr[0::3]
-    cd3 = c_arr[1::3]
-    cd5 = c_arr[2::3]
-    Djk = D_bsp_j_D_bsp_k[0::3, 0::3]
-    return (mu_arr[0] * cd1 @ Djk @ cd1 + 
-            mu_arr[1] * cd3 @ Djk @ cd3 +
-            mu_arr[2] * cd5 @ Djk @ cd5)
+    cd = []
+    for i in range(len_s):
+        cd.append(c_arr[i::len_s])
+
+    Djk = D_bsp_j_D_bsp_k[0::len_s, 0::len_s]
+
+    cDc = 0.0
+    for i in range(len_s):
+        cDc += mu_arr[i] * cd[i] @ Djk @ cd[i]
+    return cDc
 
 
 def hessian(f):
