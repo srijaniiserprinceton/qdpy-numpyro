@@ -212,16 +212,16 @@ def data_misfit_arr_fn(c_arr):
     return data_misfit_arr
 
 
-def model_misfit_fn(c_arr):
+def model_misfit_fn(c_arr, mu_arr=np.ones(3)):
     # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
     # Djk is the same for s=3 and s=5
     cd1 = c_arr[0::3]
     cd3 = c_arr[1::3]
     cd5 = c_arr[2::3]
     Djk = D_bsp_j_D_bsp_k[0::3, 0::3]
-    return (cd1 @ Djk @ cd1 + 
-            cd3 @ Djk @ cd3 +
-            cd5 @ Djk @ cd5)
+    return (mu_arr[0] * cd1 @ Djk @ cd1 + 
+            mu_arr[1] * cd3 @ Djk @ cd3 +
+            mu_arr[2] * cd5 @ Djk @ cd5)
 
 
 def hessian(f):
@@ -260,8 +260,9 @@ _loss_fn = jit(loss_fn)
 
 #-----------------------the main training loop--------------------------#
 # initialization of params
-c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))
-# c_init = np.ones_like(true_params_flat)
+# c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))
+c_init = np.ones_like(true_params_flat)
+print(f"Number of parameters = {len(c_init)}")
 
 #------------------plotting the initial profiles-------------------#                     
 c_arr_init_full = jf.c4fit_2_c4plot(GVARS, c_init*true_params_flat,
@@ -303,13 +304,19 @@ itercount = 0
 data_hess_dpy = data_hess_fn(c_arr_renorm)
 model_hess_dpy = model_hess_fn(c_arr_renorm)
 total_hess = data_hess_dpy + mu*model_hess_dpy
-hess_inv = jnp.linalg.inv(total_hess)
+hess_inv = jnp.linalg.pinv(total_hess, rcond=1e-5)
 
 if PARGS.store_hess:
-    np.save(f"{outdir}/data_hess_dpy-jesper-360d.npy", data_hess_dpy)
-    np.save(f"{outdir}/model_hess_dpy-jesper-360d.npy", model_hess_dpy)
+    np.save(f"{outdir}/dhess.{int(ARGS[4])}s.jesper.360d.npy", data_hess_dpy)
+    np.save(f"{outdir}/mhess.{int(ARGS[4])}s.jesper.360d.npy", model_hess_dpy)
 
-
+tdiff = 0
+grads = _grad_fn(c_arr_renorm)
+loss = _loss_fn(c_arr_renorm)
+model_misfit = model_misfit_fn(c_arr_renorm)
+data_misfit = loss - model_misfit * mu
+print(f'[{itercount:3d} | {tdiff:6.1f} sec ] data_misfit = {data_misfit:12.5e} loss-diff = {loss_diff:12.5e}; ' +
+      f'max-grads = {abs(grads).max():12.5e} model_misfit={model_misfit:12.5e}')
 t1s = time.time()
 while ((abs(loss_diff) > loss_threshold) and
        (itercount < maxiter)):
