@@ -197,10 +197,6 @@ sigma2scale = np.zeros(num_params)
 for i in range(num_params):
     __, sigma2scale[i] = norm.fit(true_params_samples_renormed[i])
 
-# plotting for visual verification of renormalization
-plot_renorm.visualize_model_renorm(true_params_flat, true_params_samples,
-                                   sigma2scale, jf.model_renorm, len(sind_arr))
-
 #-------------saving miscellaneous files-------------------#
 np.save(f'{outdir}/fixed_part.npy', diag_evals_fixed)
 np.save(f'{outdir}/param_coeff_flat.npy', noc_diag_flat)
@@ -212,3 +208,6 @@ np.save(f'{outdir}/cind_arr.npy', cind_arr)
 np.save(f'{outdir}/sind_arr.npy', sind_arr)
 np.save(f'{outdir}/D_bsp_j_D_bsp_k.npy', D_bsp_j_D_bsp_k)
 
+# plotting for visual verification of renormalization
+plot_renorm.visualize_model_renorm(true_params_flat, true_params_samples,
+                                   sigma2scale, jf.model_renorm, len(sind_arr))
