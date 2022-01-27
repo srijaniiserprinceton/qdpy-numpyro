@@ -24,7 +24,7 @@ def plot_model(params, len_s, suptitle, figname):
     fig.subplots_adjust(top=0.92)
     plt.savefig(f'{figname}.png')
     return None
- 
+
 
 def visualize_model_renorm(true_params_flat, true_params_samples, sigma,
                            renorm_fn, len_s):

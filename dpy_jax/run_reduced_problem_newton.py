@@ -212,7 +212,7 @@ def data_misfit_arr_fn(c_arr):
     return data_misfit_arr
 
 
-def model_misfit_fn(c_arr, mu_arr=np.ones(len_s)):
+def model_misfit_fn(c_arr, mu_arr=[1., 2., 80.]):
     # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
     # Djk is the same for s=3 and s=5
     cd = []
@@ -307,7 +307,7 @@ itercount = 0
 data_hess_dpy = data_hess_fn(c_arr_renorm)
 model_hess_dpy = model_hess_fn(c_arr_renorm)
 total_hess = data_hess_dpy + mu*model_hess_dpy
-hess_inv = jnp.linalg.pinv(total_hess, rcond=1e-5)
+hess_inv = jnp.linalg.pinv(total_hess, rcond=1e-10)
 
 if PARGS.store_hess:
     np.save(f"{outdir}/dhess.{int(ARGS[4])}s.jesper.360d.npy", data_hess_dpy)
