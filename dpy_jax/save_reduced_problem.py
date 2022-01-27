@@ -60,6 +60,9 @@ cind_arr = np.arange(ind_min, ind_max + 1)
 smin, smax = 1, 5
 smin_ind, smax_ind = (smin-1)//2, (smax-1)//2
 sind_arr = np.arange(smin_ind, smax_ind+1)
+
+smin, smax = 5, 5
+smin_ind, smax_ind = 2, 2
 sind_arr = np.array([2])
 #---------------------------------------------------------------------#
 
