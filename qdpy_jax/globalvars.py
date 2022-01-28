@@ -19,6 +19,7 @@ package_dir = os.path.dirname(current_dir)
 data_dir = f"{package_dir}/qdpy_jax"
 with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
+eigtype =  dirnames[-1].split('/')[-2].split('_')[1]
 #----------------------------------------------------------------------
 #                       All qts in CGS
 #----------------------------------------------------------------------
@@ -82,6 +83,7 @@ class GlobalVars():
 
     def __init__(self, lmin=200, lmax=200, n0=0, rth=0.9, knot_num=15,
                  load_from_file=0, relpath='.'): 
+        self.tslen = 360
         self.local_dir = dirnames[0]
         self.scratch_dir = dirnames[1]
         self.snrnmais_dir = dirnames[2]
@@ -91,9 +93,10 @@ class GlobalVars():
         self.eigdir = f"{self.snrnmais_dir}/eig_files"
         self.progdir = self.local_dir
         # self.hmidata_in = np.loadtxt(f"{self.ipdir}/hmi.6328.5")
-        self.hmidata_in = np.loadtxt(f"{self.ipdir}/hmiv360d.6328.36")
-        self.hmidata_out = np.loadtxt(f"{self.ipdir}/hmirot.out.6328.5")
+        self.hmidata_in = np.loadtxt(f"{self.ipdir}/hmi.in.{self.tslen}d.6328.36")
+        self.hmidata_out = np.loadtxt(f"{self.ipdir}/hmi.out.{self.tslen}d.6328.5")
         self.relpath = relpath
+        self.eigtype = eigtype
 
         qdPars = qdParams(lmin=lmin, lmax=lmax, n0=n0, rth=rth)
 
