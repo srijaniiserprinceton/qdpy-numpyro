@@ -84,6 +84,7 @@ class GlobalVars():
     def __init__(self, lmin=200, lmax=200, n0=0, rth=0.9, knot_num=15,
                  load_from_file=0, relpath='.'): 
         self.tslen = 72
+        self.numsplits = 5
         self.local_dir = dirnames[0]
         self.scratch_dir = dirnames[1]
         self.snrnmais_dir = dirnames[2]
@@ -92,9 +93,9 @@ class GlobalVars():
         self.ipdir = f"{self.scratch_dir}/input_files"
         self.eigdir = f"{self.snrnmais_dir}/eig_files"
         self.progdir = self.local_dir
-        # self.hmidata_in = np.loadtxt(f"{self.ipdir}/hmi.6328.5")
-        self.hmidata_in = np.loadtxt(f"{self.ipdir}/hmi.in.{self.tslen}d.6328.36")
-        self.hmidata_out = np.loadtxt(f"{self.ipdir}/hmi.out.{self.tslen}d.6328.5")
+        fsuffix = f"{self.tslen}d.6328.{self.numsplits}"
+        self.hmidata_in = np.loadtxt(f"{self.ipdir}/hmi.in.{fsuffix}")
+        self.hmidata_out = np.loadtxt(f"{self.ipdir}/hmi.out.{fsuffix}")
         self.relpath = relpath
         self.eigtype = eigtype
 
