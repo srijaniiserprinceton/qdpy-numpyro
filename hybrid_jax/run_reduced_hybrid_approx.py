@@ -554,7 +554,7 @@ soln_summary['loss_arr'] = loss_arr
 soln_summary['mu'] = mu
 soln_summary['chisq'] = chisq
 
-fsuffix = "27jan-jesper-360d"
+fsuffix = f"28jan-{GVARS_D.eigtype}.{GVARS_D.tslen}d."
 jf.save_obj(soln_summary, f"summary.{fsuffix}")
 
 """
