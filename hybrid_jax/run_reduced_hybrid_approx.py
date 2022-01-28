@@ -10,7 +10,7 @@ parser.add_argument("--synth", help="use synthetic data",
 parser.add_argument("--noise", help="add noise",
                     type=bool, default=True)
 PARGS = parser.parse_args()
-#----------------setting the number of chains to be used-----------------#                    
+#----------------setting the number of chains to be used-----------------#
 # num_chains = 3
 # os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
 #------------------------------------------------------------------------# 
@@ -73,6 +73,7 @@ soln_summary['params']['dpy']['lmin'] = int(ARGS_D[1])
 soln_summary['params']['dpy']['lmax'] = int(ARGS_D[2])
 soln_summary['params']['dpy']['rth'] = ARGS_D[3]
 soln_summary['params']['dpy']['knot_num'] = int(ARGS_D[4])
+soln_summary['params']['dpy']['GVARS'] = GVARS_D
 #------------------------------------------------------------------------# 
 ARGS_Q = np.loadtxt(f"../qdpy_jax/.n0-lmin-lmax.dat")
 GVARS_Q = gvar_jax.GlobalVars(n0=int(ARGS_Q[0]),
@@ -87,6 +88,7 @@ soln_summary['params']['qdpy']['lmin'] = int(ARGS_Q[1])
 soln_summary['params']['qdpy']['lmax'] = int(ARGS_Q[2])
 soln_summary['params']['qdpy']['rth'] = ARGS_Q[3]
 soln_summary['params']['qdpy']['knot_num'] = int(ARGS_Q[4])
+soln_summary['params']['qdpy']['GVARS'] = GVARS_Q
 
 #-------------loading precomputed files for the problem-------------------# 
 data_D = np.load(f'{dpy_dir}/data_model.npy')
@@ -552,7 +554,7 @@ soln_summary['loss_arr'] = loss_arr
 soln_summary['mu'] = mu
 soln_summary['chisq'] = chisq
 
-fsuffix = "27jan-jesper-360d"
+fsuffix = f"28jan-{GVARS_D.eigtype}.{GVARS_D.tslen}d."
 jf.save_obj(soln_summary, f"summary.{fsuffix}")
 
 """
