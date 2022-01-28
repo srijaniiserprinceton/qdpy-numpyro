@@ -93,7 +93,7 @@ class GlobalVars():
         self.ipdir = f"{self.scratch_dir}/input_files"
         self.eigdir = f"{self.snrnmais_dir}/eig_files"
         self.progdir = self.local_dir
-        self.fsuffix = f"{self.tslen}d.6328.{self.numsplits}"
+        fsuffix = f"{self.tslen}d.6328.{self.numsplits}"
         self.hmidata_in = np.loadtxt(f"{self.ipdir}/hmi.in.{fsuffix}")
         self.hmidata_out = np.loadtxt(f"{self.ipdir}/hmi.out.{fsuffix}")
         self.relpath = relpath
