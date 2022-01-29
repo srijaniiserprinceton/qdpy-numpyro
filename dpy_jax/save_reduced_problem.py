@@ -53,16 +53,13 @@ GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 outdir = f"{GVARS.scratch_dir}/dpy_jax"
 #-------------------parameters to be inverted for--------------------#
 # the indices of ctrl points that we want to invert for
-ind_min, ind_max = 0, GVARS.knot_num-1
+ind_min, ind_max = 0, GVARS.knot_num-5
 cind_arr = np.arange(ind_min, ind_max + 1)
 
 # the angular degrees we want to invert for
 smin, smax = 1, 5
 smin_ind, smax_ind = (smin-1)//2, (smax-1)//2
 sind_arr = np.arange(smin_ind, smax_ind+1)
-#---------------------------------------------------------------------#
-
-
 
 #-----------------loading miscellaneous files--------------------------#
 eigvals_model = jnp.asarray(np.load(f'{outdir}/eigvals_model.npy'))

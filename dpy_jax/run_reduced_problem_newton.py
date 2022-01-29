@@ -51,7 +51,6 @@ sys.path.append(f"{package_dir}/plotter")
 import postplotter
 import plot_acoeffs_datavsmodel as plot_acoeffs
 #------------------------------------------------------------------------# 
-
 ARGS = np.loadtxt(".n0-lmin-lmax.dat")
 GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             lmin=int(ARGS[1]),
@@ -76,7 +75,6 @@ RL_poly = np.load(f'{outdir}/RL_poly.npy')
 sigma2scale = np.load(f'{outdir}/sigma2scale.npy')
 D_bsp_j_D_bsp_k = np.load(f'{outdir}/D_bsp_j_D_bsp_k.npy')
 #------------------------------------------------------------------------# 
-
 nmults = len(GVARS.ell0_arr)
 num_j = len(GVARS.s_arr)
 dim_hyper = 2 * np.max(GVARS.ell0_arr) + 1
@@ -89,7 +87,6 @@ nc = len(cind_arr)
 
 # slicing the Pjl correctly in angular degree s
 Pjl = RL_poly[:, smin:smax+1:2, :]
-
 #------------------------------------------------------------------------#
 # calculating the denominator of a-coefficient converion apriori
 # shape (nmults, num_j)
@@ -121,12 +118,10 @@ def loop_in_mults(mult_ind, data_acoeff):
 data_acoeffs = foril(0, nmults, loop_in_mults, data_acoeffs)
 
 #---------------checking that the loaded data are correct----------------#
-pred = fixed_part * 1.0
-
 # adding the contribution from the fitting part
+# and testing that arrays are very close
+pred = fixed_part * 1.0
 pred += true_params_flat @ param_coeff_flat
-
-# these arrays should be very close
 np.testing.assert_array_almost_equal(pred, data)
 
 #-------------checking that the acoeffs match correctly------------------#
@@ -170,11 +165,22 @@ mu = PARGS.mu
 # the length of data
 len_data = len(data_acoeffs)
 
+
+def print_info(itercount, tdiff, data_misfit, loss_diff, max_grads, model_misfit):
+    print(f'[{itercount:3d} | ' +
+          f'{tdiff:6.1f} sec ] ' +
+          f'data_misfit = {data_misfit:12.5e} ' +
+          f'loss-diff = {loss_diff:12.5e}; ' +
+          f'max-grads = {max_grads:12.5e} ' +
+          f'model_misfit={model_misfit:12.5e}')
+    return None
+
+
 # the model function that is used by MCMC kernel
 def data_misfit_fn(c_arr):
     # predicted a-coefficients
     pred_acoeffs = jnp.zeros(num_j * nmults)
-            
+
     # denormalizing to make actual model params
     c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
     pred = fixed_part + c_arr_denorm @ param_coeff_flat
@@ -194,7 +200,7 @@ def data_misfit_fn(c_arr):
 def data_misfit_arr_fn(c_arr):
     # predicted a-coefficients
     pred_acoeffs = jnp.zeros(num_j * nmults)
-            
+
     # denormalizing to make actual model params
     c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
     pred = fixed_part + c_arr_denorm @ param_coeff_flat
@@ -210,7 +216,6 @@ def data_misfit_arr_fn(c_arr):
     data_misfit_arr = (pred_acoeffs - data_acoeffs)/acoeffs_sigma_HMI
 
     return data_misfit_arr
-
 
 def model_misfit_fn(c_arr, mu_scale=[1., 1., 1.]):
     # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
@@ -305,20 +310,22 @@ itercount = 0
 
 data_hess_dpy = data_hess_fn(c_arr_renorm)
 model_hess_dpy = model_hess_fn(c_arr_renorm)
-total_hess = data_hess_dpy + mu*model_hess_dpy
-hess_inv = jnp.linalg.pinv(total_hess, rcond=1e-10)
+# total_hess = data_hess_dpy + mu*model_hess_dpy
+muarr = np.linspace(mu, 5., data_hess_dpy.shape[0])
+total_hess = data_hess_dpy + np.diag(muarr) @ model_hess_dpy
+hess_inv = jnp.linalg.pinv(total_hess, rcond=1e-15)
 
 if PARGS.store_hess:
-    np.save(f"{outdir}/dhess.{int(ARGS[4])}s.jesper.360d.npy", data_hess_dpy)
-    np.save(f"{outdir}/mhess.{int(ARGS[4])}s.jesper.360d.npy", model_hess_dpy)
+    suffix = f"{int(ARGS[4])}s.{GVARS.eigtype}.{GVARS.tslen}d.npy"
+    np.save(f"{outdir}/dhess.{suffix}", data_hess_dpy)
+    np.save(f"{outdir}/mhess.{suffix}", model_hess_dpy)
 
 tdiff = 0
 grads = _grad_fn(c_arr_renorm)
 loss = _loss_fn(c_arr_renorm)
 model_misfit = model_misfit_fn(c_arr_renorm)
 data_misfit = loss - model_misfit * mu
-print(f'[{itercount:3d} | {tdiff:6.1f} sec ] data_misfit = {data_misfit:12.5e} loss-diff = {loss_diff:12.5e}; ' +
-      f'max-grads = {abs(grads).max():12.5e} model_misfit={model_misfit:12.5e}')
+print_info(itercount, tdiff, data_misfit, loss_diff, abs(grads).max(), model_misfit)
 
 t1s = time.time()
 while ((abs(loss_diff) > loss_threshold) and
@@ -340,19 +347,15 @@ while ((abs(loss_diff) > loss_threshold) and
     loss_arr.append(loss)
     itercount += 1
     t2 = time.time()
-    print(f'[{itercount:3d} | {(t2-t1):6.1f} sec ] data_misfit = {data_misfit:12.5e} loss-diff = {loss_diff:12.5e}; ' +
-          f'max-grads = {abs(grads).max():12.5e} model_misfit={model_misfit:12.5e}')
+    print_info(itercount, t2-t1, data_misfit, loss_diff, abs(grads).max(), model_misfit)
 
     t2 = time.time()
 
 t2s = time.time()
 print(f"Total time taken = {(t2s-t1s):12.3f} seconds")
-
-
-#----------------------------------------------------------------------#                      
-# plotting acoeffs from initial data and HMI data                                            
-final_acoeffs = data_misfit_arr_fn(c_arr_renorm)*acoeffs_sigma_HMI +\
-                data_acoeffs
+#----------------------------------------------------------------------#
+# plotting acoeffs from initial data and HMI data
+final_acoeffs = data_misfit_arr_fn(c_arr_renorm)*acoeffs_sigma_HMI + data_acoeffs
 
 plot_acoeffs.plot_acoeffs_datavsmodel(final_acoeffs, data_acoeffs,
                                       data_acoeffs_out_HMI,
@@ -383,19 +386,6 @@ with open(f"{current_dir}/reg_misfit.txt", "a") as f:
     f.write(opstr)
 
 #------------------------------------------------------------------------# 
-def print_summary(samples, ctrl_arr):
-    keys = samples.keys()
-    for key in keys:
-        sample = samples[key]
-        key_split = key.split("_")
-        idx = int(key_split[-1])
-        sidx = int((int(key_split[0][1])-1)//2)
-        obs = ctrl_arr[sidx-1, idx] / 1e-3
-        print(f"[{obs:11.4e}] {key}: {sample.mean():.4e} +/- {sample.std():.4e}:" +
-              f"error/sigma = {(sample.mean()-obs)/sample.std():8.3f}")
-    return None
-#------------------------------------------------------------------------# 
-
 # plotting the hessians for analysis
 fig, ax = plt.subplots(1, 2, figsize=(10,5))
 

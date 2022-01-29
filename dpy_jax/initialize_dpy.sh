@@ -5,7 +5,7 @@ LMIN_DEFAULT=5
 LMAX_DEFAULT=295
 KNOTNUM_DEFAULT=15
 RTH_DEFAULT=0.8
-EXCLUDE_QDPY_MODES=0
+EXCLUDE_QDPY_MODES_DEFAULT=0
 
 read -p "nmin (default=$NMIN_DEFAULT)= " NMIN
 read -p "nmax (default=$NMAX_DEFAULT)= " NMAX
@@ -13,7 +13,7 @@ read -p "lmin (default=$LMIN_DEFAULT)= " LMIN
 read -p "lmax (default=$LMAX_DEFAULT)= " LMAX
 read -p "knot_num (default=$KNOTNUM_DEFAULT)= " KNOTNUM
 read -p "rth (default=$RTH_DEFAULT)= " RTH
-read -p "exclude_qdpy (default=$EXCLUDE_QDPY_MODES)= " EXCLUDE_QDPY_MODES
+read -p "exclude_qdpy (default=$EXCLUDE_QDPY_MODES_DEFAULT)= " EXCLUDE_QDPY_MODES
 
 # Setting default values if empty
 NMIN="${NMIN:-$NMIN_DEFAULT}"
@@ -22,26 +22,33 @@ LMIN="${LMIN:-$LMIN_DEFAULT}"
 LMAX="${LMAX:-$LMAX_DEFAULT}"
 KNOTNUM="${KNOTNUM:-$KNOTNUM_DEFAULT}"
 RTH="${RTH:-$RTH_DEFAULT}"
+EXCLUDE_QDPY_MODES="${EXCLUDE_QDPY_MODES:-$EXCLUDE_QDPY_MODES_DEFAULT}"
 
 echo "---problem parameters ---"
-echo "nmin     = $NMIN"
-echo "nmax     = $NMAX"
-echo "lmin     = $LMIN"
-echo "lmax     = $LMAX"
-echo "knot_num = $KNOTNUM"
-echo "rth      = $RTH"
+echo "nmin      = $NMIN"
+echo "nmax      = $NMAX"
+echo "lmin      = $LMIN"
+echo "lmax      = $LMAX"
+echo "knot_num  = $KNOTNUM"
+echo "rth       = $RTH"
+echo "excl_qdpy = $EXCLUDE_QDPY_MODES"
 echo "-------------------------"
 
 echo "[ 1. ] Creating list of modes ..."
-if [[ $EXCLUDE_QDPY_MODES ]]; then
-	python mode_lister.py --nmin $NMIN --nmax $NMAX --lmin $LMIN --lmax $LMAX --exclude_qdpy 1 >.mlist.out 2>.mlist.err
+if [ $EXCLUDE_QDPY_MODES == '1' ]; then
+	echo "       -- Excluding QDPY modes"
+	python mode_lister.py --nmin $NMIN --nmax $NMAX --lmin $LMIN --lmax $LMAX \
+		   --exclude_qdpy 1 >.mlist.out 2>.mlist.err
 else
-	python mode_lister.py --nmin $NMIN --nmax $NMAX --lmin $LMIN --lmax $LMAX >.mlist.out 2>.mlist.err
+	echo "       -- Including QDPY modes"
+	python mode_lister.py --nmin $NMIN --nmax $NMAX --lmin $LMIN --lmax $LMAX \
+		   >.mlist.out 2>.mlist.err
 fi
 echo "       -- `tail -1 .mlist.out`"
 
 echo "[ 2. ] Generating synthetic eigenvalues ..."
-python generate_synthetic_eigvals.py --load_mults 1 --knot_num $KNOTNUM --rth $RTH 
+python generate_synthetic_eigvals.py --lmin $LMIN --lmax $LMAX \
+	   --load_mults 1 --knot_num $KNOTNUM --rth $RTH 
 echo "       -- DONE"
 
 echo "[ 3. ] Creating Ritzwoller Lavely polynomials ..."

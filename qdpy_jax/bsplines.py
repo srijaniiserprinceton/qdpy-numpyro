@@ -34,6 +34,7 @@ class get_splines:
         
         # making internal knots (excluding the first external point)
         t_internal = self.t_scipy[self.spl_deg+1:self.knot_ind_th]
+        """
         # putting certain number of knots in the surface part
         # (excluding the outermost point)
         rth_idx = np.argmin(abs(self.r - self.rth))
@@ -44,11 +45,12 @@ class get_splines:
         # endpoints are automatically padded up
         t_external = r_filtered[1:-1]
         t_internal = np.append(t_internal, t_external)
+        """
 
-        # t_internal = np.append(t_internal,
-        #                        np.linspace(self.t_scipy[self.knot_ind_th],
-        #                                    self.t_scipy[-(self.spl_deg+2)],
-        #                                    self.custom_knot_num))
+        t_internal = np.append(t_internal,
+                               np.linspace(self.t_scipy[self.knot_ind_th],
+                                           self.t_scipy[-(self.spl_deg+2)],
+                                           self.custom_knot_num))
         
         # creating the carr corresponding to the DPT using custom knots
         t, c_1, __ = splrep(self.r,
