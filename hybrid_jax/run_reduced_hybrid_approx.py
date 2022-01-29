@@ -14,11 +14,10 @@ PARGS = parser.parse_args()
 # num_chains = 3
 # os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
 #------------------------------------------------------------------------# 
-
-import numpy as np
 from collections import namedtuple
-import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+import matplotlib.pyplot as plt
+import numpy as np
 import arviz as az
 import sys
 

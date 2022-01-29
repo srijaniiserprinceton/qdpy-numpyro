@@ -217,7 +217,6 @@ class GlobalVars():
                                                   self.t_internal,
                                                   self.knot_ind_th,
                                                   self.spl_deg)
-
         return None
 
     def get_dom_dell(self):
