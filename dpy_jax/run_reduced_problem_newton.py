@@ -170,7 +170,7 @@ MU = PARGS.mu
 # mu = np.ones_like(len(true_params_flat))
 if PARGS.const_reg:
     print(f"Using constant regularization - {PARGS.const_reg}")
-    mu = np.ones(len(true_params_flat)//len_s)
+    mu = MU * np.ones(len(true_params_flat)//len_s)
 else:
     print(f"Using depth-dependent regularization - {PARGS.const_reg}")
     mu = np.linspace(MU, 10*MU, len(true_params_flat)//len_s)
@@ -229,18 +229,16 @@ def data_misfit_arr_fn(c_arr):
 def model_misfit_fn(c_arr, mu_scale=[1., 1., 1.]):
     # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
     # Djk is the same for s=3 and s=5
-    exclude_edgenum = 3
 
     cd = []
     for i in range(len_s):
-        cd.append(c_arr[i::len_s])#[:-exclude_edgenum])
+        cd.append(c_arr[i::len_s])
 
-    Djk = D_bsp_j_D_bsp_k[0::len_s, 0::len_s]#[:-exclude_edgenum,
-                                             # :-exclude_edgenum]
+    Djk = D_bsp_j_D_bsp_k[0::len_s, 0::len_s]
+                                             
 
     cDc = 0.0
     for i in range(len_s):
-        # cDc += mu_scale[i] * (mu[:-exclude_edgenum] * cd[i]) @ Djk @ cd[i]
         cDc += mu_scale[i] * (mu * cd[i]) @ Djk @ cd[i]
     return cDc
 
