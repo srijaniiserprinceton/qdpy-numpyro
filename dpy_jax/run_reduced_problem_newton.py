@@ -7,6 +7,8 @@ parser.add_argument("--mu", help="regularization",
                     type=float, default=0.)
 parser.add_argument("--store_hess", help="store hessians",
                     type=bool, default=False)
+parser.add_argument("--const_reg", help="const/depth dependent regularization",
+                    type=bool, default=True)
 PARGS = parser.parse_args()
 #----------------setting the number of chains to be used-----------------#
 # num_chains = 3
@@ -166,8 +168,12 @@ len_data = len(data_acoeffs)
 # the regularizing parameter
 MU = PARGS.mu
 # mu = np.ones_like(len(true_params_flat))
-mu = np.linspace(MU, 10*MU, len(true_params_flat)//len_s)
-# mu = np.diag(mu)
+if PARGS.const_reg:
+    print(f"Using constant regularization - {PARGS.const_reg}")
+    mu = np.ones(len(true_params_flat)//len_s)
+else:
+    print(f"Using depth-dependent regularization - {PARGS.const_reg}")
+    mu = np.linspace(MU, 10*MU, len(true_params_flat)//len_s)
 
 def print_info(itercount, tdiff, data_misfit, loss_diff, max_grads, model_misfit):
     print(f'[{itercount:3d} | ' +
