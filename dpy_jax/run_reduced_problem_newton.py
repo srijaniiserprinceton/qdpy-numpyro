@@ -8,7 +8,7 @@ parser.add_argument("--mu", help="regularization",
 parser.add_argument("--store_hess", help="store hessians",
                     type=bool, default=False)
 PARGS = parser.parse_args()
-#----------------setting the number of chains to be used-----------------#                    
+#----------------setting the number of chains to be used-----------------#
 # num_chains = 3
 # os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
 #------------------------------------------------------------------------# 
@@ -159,12 +159,14 @@ plot_acoeffs.plot_acoeffs_dm_scaled(pred_acoeffs, data_acoeffs,
                                     acoeffs_sigma_HMI, 'ref')
 # sys.exit()
 #----------------------------------------------------------------------# 
-# the regularizing parameter
-mu = PARGS.mu
-
 # the length of data
 len_data = len(data_acoeffs)
 
+# the regularizing parameter
+MU = PARGS.mu
+# mu = np.ones_like(len(true_params_flat))
+mu = np.linspace(MU, 40*MU, len(true_params_flat)//len_s)
+# mu = np.diag(mu)
 
 def print_info(itercount, tdiff, data_misfit, loss_diff, max_grads, model_misfit):
     print(f'[{itercount:3d} | ' +
@@ -220,15 +222,19 @@ def data_misfit_arr_fn(c_arr):
 def model_misfit_fn(c_arr, mu_scale=[1., 1., 1.]):
     # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
     # Djk is the same for s=3 and s=5
+    exclude_edgenum = 3
+
     cd = []
     for i in range(len_s):
-        cd.append(c_arr[i::len_s])
+        cd.append(c_arr[i::len_s])#[:-exclude_edgenum])
 
-    Djk = D_bsp_j_D_bsp_k[0::len_s, 0::len_s]
+    Djk = D_bsp_j_D_bsp_k[0::len_s, 0::len_s]#[:-exclude_edgenum,
+                                             # :-exclude_edgenum]
 
     cDc = 0.0
     for i in range(len_s):
-        cDc += mu_scale[i] * cd[i] @ Djk @ cd[i]
+        # cDc += mu_scale[i] * (mu[:-exclude_edgenum] * cd[i]) @ Djk @ cd[i]
+        cDc += mu_scale[i] * (mu * cd[i]) @ Djk @ cd[i]
     return cDc
 
 
@@ -244,7 +250,7 @@ def loss_fn(c_arr):
     data_hess = data_hess_fn(c_arr)
 
     # total misfit
-    misfit = data_misfit_val + mu * model_misfit_val
+    misfit = data_misfit_val + model_misfit_val
     return misfit
 
 grad_fn = jax.grad(loss_fn)
@@ -269,13 +275,14 @@ _loss_fn = jit(loss_fn)
 # initialization of params
 # c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))
 c_init = np.ones_like(true_params_flat)
+c_init += np.random.rand(len(c_init))
 print(f"Number of parameters = {len(c_init)}")
 
 #------------------plotting the initial profiles-------------------#                     
 c_arr_init_full = jf.c4fit_2_c4plot(GVARS, c_init*true_params_flat,
                                     sind_arr, cind_arr)
 
-# converting ctrl points to wsr and plotting                                                  
+# converting ctrl points to wsr and plotting
 init_plot = postplotter.postplotter(GVARS, c_arr_init_full, 'init')
 #------------------------------------------------------------------------# 
 
@@ -285,7 +292,7 @@ c_arr_renorm = jf.model_renorm(c_init*true_params_flat,
                                sigma2scale)
 c_arr_renorm = jnp.asarray(c_arr_renorm)
 
-#----------------------------------------------------------------------#                      
+#----------------------------------------------------------------------#
 # plotting acoeffs from initial data and HMI data
 init_acoeffs = data_misfit_arr_fn(c_arr_renorm)*acoeffs_sigma_HMI +\
                data_acoeffs
@@ -304,15 +311,15 @@ N = len(data_acoeffs)
 loss = 1e25
 loss_diff = loss - 1.
 loss_arr = []
-loss_threshold = 1e-19
-maxiter = 15
+loss_threshold = 1e-2
+maxiter = 150
 itercount = 0
 
 data_hess_dpy = data_hess_fn(c_arr_renorm)
 model_hess_dpy = model_hess_fn(c_arr_renorm)
-# total_hess = data_hess_dpy + mu*model_hess_dpy
-muarr = np.linspace(mu, 5., data_hess_dpy.shape[0])
-total_hess = data_hess_dpy + np.diag(muarr) @ model_hess_dpy
+total_hess = data_hess_dpy + model_hess_dpy
+# muarr = np.linspace(mu, 5., data_hess_dpy.shape[0])
+# total_hess = data_hess_dpy + np.diag(muarr) @ model_hess_dpy
 hess_inv = jnp.linalg.pinv(total_hess, rcond=1e-15)
 
 if PARGS.store_hess:
@@ -324,7 +331,7 @@ tdiff = 0
 grads = _grad_fn(c_arr_renorm)
 loss = _loss_fn(c_arr_renorm)
 model_misfit = model_misfit_fn(c_arr_renorm)
-data_misfit = loss - model_misfit * mu
+data_misfit = loss - model_misfit
 print_info(itercount, tdiff, data_misfit, loss_diff, abs(grads).max(), model_misfit)
 
 t1s = time.time()
@@ -341,7 +348,7 @@ while ((abs(loss_diff) > loss_threshold) and
     model_misfit = model_misfit_fn(c_arr_renorm)
     # data_hess = data_hess_fn(c_arr_renorm)
     # model_misfit = model_misfit * jnp.trace(data_hess) / len_data
-    data_misfit = loss - model_misfit * mu
+    data_misfit = loss - model_misfit
 
     loss_diff = loss_prev - loss
     loss_arr.append(loss)
@@ -382,7 +389,7 @@ fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full, 'fit')
 #------------------------------------------------------------------------#
 with open(f"{current_dir}/reg_misfit.txt", "a") as f:
     f.seek(0, os.SEEK_END)
-    opstr = f"{mu:18.12e}, {data_misfit:18.12e}, {model_misfit:18.12e}\n"
+    opstr = f"{MU:18.12e}, {data_misfit:18.12e}, {model_misfit:18.12e}\n"
     f.write(opstr)
 
 #------------------------------------------------------------------------# 

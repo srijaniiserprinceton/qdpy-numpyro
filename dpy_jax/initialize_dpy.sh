@@ -36,11 +36,11 @@ echo "-------------------------"
 
 echo "[ 1. ] Creating list of modes ..."
 if [ $EXCLUDE_QDPY_MODES == '1' ]; then
-	echo "       -- Excluding QDPY modes"
+	echo "       -- Using only DPY modes"
 	python mode_lister.py --nmin $NMIN --nmax $NMAX --lmin $LMIN --lmax $LMAX \
 		   --exclude_qdpy 1 >.mlist.out 2>.mlist.err
 else
-	echo "       -- Including QDPY modes"
+	echo "       -- Using QDPY+DPY modes"
 	python mode_lister.py --nmin $NMIN --nmax $NMAX --lmin $LMIN --lmax $LMAX \
 		   >.mlist.out 2>.mlist.err
 fi
