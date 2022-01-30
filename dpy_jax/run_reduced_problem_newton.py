@@ -47,6 +47,7 @@ with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
 outdir = f"{scratch_dir}/dpy_jax"
+plotdir = f"{scratch_dir}/plots"
 sys.path.append(f"{package_dir}/plotter")
 import postplotter
 import plot_acoeffs_datavsmodel as plot_acoeffs
@@ -165,7 +166,7 @@ len_data = len(data_acoeffs)
 # the regularizing parameter
 MU = PARGS.mu
 # mu = np.ones_like(len(true_params_flat))
-mu = np.linspace(MU, 40*MU, len(true_params_flat)//len_s)
+mu = np.linspace(MU, 10*MU, len(true_params_flat)//len_s)
 # mu = np.diag(mu)
 
 def print_info(itercount, tdiff, data_misfit, loss_diff, max_grads, model_misfit):
@@ -407,5 +408,5 @@ cax = divider.append_axes('right', size='5%', pad=0.05)
 fig.colorbar(im2, cax=cax, orientation='vertical')
 
 plt.tight_layout()
-plt.savefig(f'{outdir}/hessians.png')
+plt.savefig(f'{plotdir}/hessians.png')
 plt.close()
