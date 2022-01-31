@@ -1,7 +1,15 @@
+import os
 import numpy as np
 import matplotlib.pyplot as plt
-
 from qdpy_jax import gen_wsr
+
+
+current_dir = os.path.dirname(os.path.realpath(__file__))
+package_dir = os.path.dirname(current_dir)
+with open(f"{package_dir}/.config", "r") as f:
+    dirnames = f.read().splitlines()
+scratch_dir = dirnames[1]
+plotdir = f"{scratch_dir}/plots"
 
 plt.rcParams['axes.grid'] = True
 
@@ -28,81 +36,50 @@ class preplotter:
         self.plot_wsr_extreme()
 
     def plot_wsr_spline_accuracy(self):
-        
         fig, ax = plt.subplots(3, 2, figsize=(15,7), sharex=True)
 
         # plot the wsr from dpt (no-spline)
-        ax[0,0].plot(self.r, self.wsr_dpt[0], 'k')
-        ax[1,0].plot(self.r, self.wsr_dpt[1], 'k')
-        ax[2,0].plot(self.r, self.wsr_dpt[2], 'k')
-        
-        '''
-        # constructing f_filtered to cross-check
-        knot_num = 100
-        r_spacing = len(self.r)//knot_num
-        r_filtered = self.r[::r_spacing]
-        '''
-        
+        ax[0, 0].plot(self.r, self.wsr_dpt[0], 'k')
+        ax[1, 0].plot(self.r, self.wsr_dpt[1], 'k')
+        ax[2, 0].plot(self.r, self.wsr_dpt[2], 'k')
+
         # construct the spline from ctrl_arr_dpt_full
         wsr_spl_full = gen_wsr.get_wsr_from_spline(self.r, self.ctrl_arr_dpt_full,
                                                    self.t_internal, self.spl_deg)
 
-        '''
-        wsr_spl_full = gen_wsr.get_wsr_from_spline(r_filtered, self.ctrl_arr_dpt_full,
-                                                   self.t_internal, self.spl_deg)
-        '''
-
         # converting to muHz
         # wsr_spl_full *= self.OM * 1e6
-        
+
         # overplotting the reconstructed profile
-        ax[0,0].plot(self.r, wsr_spl_full[0], '--r', alpha=0.5)
-        ax[1,0].plot(self.r, wsr_spl_full[1], '--r', alpha=0.5)
-        ax[2,0].plot(self.r, wsr_spl_full[2], '--r', alpha=0.5)
-        
-        '''
-        ax[0].plot(r_filtered, wsr_spl_full[0], '--r', alpha=0.5)
-        ax[1].plot(r_filtered, wsr_spl_full[1], '--r', alpha=0.5)
-        ax[2].plot(r_filtered, wsr_spl_full[2], '--r', alpha=0.5)
-        
+        ax[0, 0].plot(self.r, wsr_spl_full[0], '--r', alpha=0.5)
+        ax[1, 0].plot(self.r, wsr_spl_full[1], '--r', alpha=0.5)
+        ax[2, 0].plot(self.r, wsr_spl_full[2], '--r', alpha=0.5)
 
         # settin axis labels
-        ax[2].set_xlabel('$r$ in $R_{\odot}$', size=16)
-        ax[0].set_ylabel('$w_1(r)$ in $\mu$Hz', size=16)
-        ax[1].set_ylabel('$w_3(r)$ in $\mu$Hz', size=16)
-        ax[2].set_ylabel('$w_5(r)$ in $\mu$Hz', size=16)
-        '''
-        
-        # settin axis labels
-        ax[2,0].set_xlabel('$r$ in $R_{\odot}$', size=16)
-        ax[0,0].set_ylabel('$w_1(r)$ in $\mu$Hz', size=16)
-        ax[1,0].set_ylabel('$w_3(r)$ in $\mu$Hz', size=16)
-        ax[2,0].set_ylabel('$w_5(r)$ in $\mu$Hz', size=16)
-
-
-        # ax[2].set_xlim([0, 1])
-        
-        ax[0,0].set_title('Testing spline accuracy', size=16)
+        ax[0, 0].set_title('Testing spline accuracy', size=16)
+        ax[0, 0].set_ylabel('$w_1(r)$ in $\mu$Hz', size=16)
+        ax[1, 0].set_ylabel('$w_3(r)$ in $\mu$Hz', size=16)
+        ax[2, 0].set_ylabel('$w_5(r)$ in $\mu$Hz', size=16)
+        ax[2, 0].set_xlabel('$r$ in $R_{\odot}$', size=16)
         
         # plotting the error percentages
         w1r_errperc = self.get_percent_error(wsr_spl_full[0], self.wsr_dpt[0])
         w3r_errperc = self.get_percent_error(wsr_spl_full[1], self.wsr_dpt[1])
         w5r_errperc = self.get_percent_error(wsr_spl_full[2], self.wsr_dpt[2])
         
-        ax[0,1].semilogy(self.r, abs(w1r_errperc), 'r', alpha=0.5)
-        ax[1,1].semilogy(self.r, abs(w3r_errperc), 'r', alpha=0.5)
-        ax[2,1].semilogy(self.r, abs(w5r_errperc), 'r', alpha=0.5)
+        ax[0, 1].semilogy(self.r, abs(w1r_errperc), 'r', alpha=0.5)
+        ax[1, 1].semilogy(self.r, abs(w3r_errperc), 'r', alpha=0.5)
+        ax[2, 1].semilogy(self.r, abs(w5r_errperc), 'r', alpha=0.5)
         
         # settin axis labels
-        ax[2,1].set_xlabel('$r$ in $R_{\odot}$', size=16)
-        ax[0,1].set_ylabel('% offset in $w_1(r)$', size=14)
-        ax[1,1].set_ylabel('% offset in $w_3(r)$', size=14)
-        ax[2,1].set_ylabel('% offset in $w_5(r)$', size=14)
-
-        ax[2,1].set_xlim([0, 1])
+        ax[0, 1].set_ylabel('% offset in $w_1(r)$', size=14)
+        ax[1, 1].set_ylabel('% offset in $w_3(r)$', size=14)
+        ax[2, 1].set_ylabel('% offset in $w_5(r)$', size=14)
+        ax[2, 1].set_xlabel('$r$ in $R_{\odot}$', size=16)
+        ax[2, 1].set_xlim([0, 1])
         
         plt.tight_layout()
-        plt.savefig('wsr_splined.pdf')
+        plt.savefig(f'{plotdir}/wsr_splined.pdf')
         plt.close()
 
     def plot_wsr_extreme(self):
@@ -155,7 +132,7 @@ class preplotter:
                            color='gray', alpha=0.5)
 
         plt.tight_layout()
-        plt.savefig('wsr_extreme.pdf')
+        plt.savefig(f'{plotdir}/wsr_extreme.pdf')
         plt.close()
 
     def get_percent_error(self, a1, a2):
@@ -164,5 +141,3 @@ class preplotter:
         mask0 = abs(a1) < 1e-6
         errperc[~mask0] = abs(diff)[~mask0]*100/abs(a1)[~mask0]
         return errperc
-
-    

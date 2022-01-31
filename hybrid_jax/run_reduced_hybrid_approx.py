@@ -46,6 +46,7 @@ package_dir = os.path.dirname(current_dir)
 with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
+outdir = f"{scratch_dir}/hybrid_jax"
 
 sys.path.append(f"{package_dir}/plotter")
 import postplotter
@@ -541,6 +542,8 @@ with open("reg_misfit.txt", "a") as f:
 #------------------------------------------------------------------------
 soln_summary['c_arr_fit'] = c_arr_fit
 soln_summary['true_params_flat'] = true_params_flat
+soln_summary['cind_arr'] = cind_arr_D
+soln_summary['sind_arr'] = sind_arr_D
 
 soln_summary['acoeff'] = {}
 soln_summary['acoeff']['fit_D'] = final_acoeffs_D
@@ -560,7 +563,7 @@ todays_date = date.today()
 timeprefix = datetime.now().strftime("%H.%M")
 dateprefix = f"{todays_date.day:02d}.{todays_date.month:02d}.{todays_date.year:04d}"
 fsuffix = f"{dateprefix}-{timeprefix}-{suffix}"
-jf.save_obj(soln_summary, f"summary-{fsuffix}")
+jf.save_obj(soln_summary, f"{outdir}/summary-{fsuffix}")
 
 """
 # plotting the hessians for analysis
