@@ -3,6 +3,7 @@ import numpy as np
 from datetime import date
 from datetime import datetime
 from dpy_jax import jax_functions_dpy as jf
+from plotter import postplotter
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
@@ -33,6 +34,7 @@ true_params_flat = summary['true_params_flat']
 cind_arr = summary['cind_arr']
 sind_arr = summary['sind_arr']
 
+suffix = f"{int(ARGS.knot_num)}s.{GVARS.eigtype}.{GVARS.tslen}d"
 c_arr_fit_full = jf.c4fit_2_c4plot(GVARS, c_arr_fit*true_params_flat,
                                    sind_arr, cind_arr)
-fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full, 'summary')
+fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full, f'summary-{suffix}')
