@@ -127,6 +127,9 @@ class GlobalVars():
 
         self.fwindow = qdPars.fwindow
         self.wsr = -1.0*np.loadtxt(f'{self.ipdir}/w.dat')
+        # temporary modifications
+        # self.wsr[1] += 1e-4
+        # self.wsr[2] += 1e-5
         self.err1d = np.loadtxt(f'{self.ipdir}/err1d-hmi.dat')
         self.wsr_err = np.loadtxt(f'{self.ipdir}/err_hmi.dat')
         # self.wsr_extend()

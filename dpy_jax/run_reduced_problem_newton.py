@@ -167,7 +167,7 @@ len_data = len(data_acoeffs)
 
 # the regularizing parameter
 MU = PARGS.mu
-# mu = np.ones_like(len(true_params_flat))
+
 if PARGS.const_reg:
     print(f"Using constant regularization - {PARGS.const_reg}")
     mu = MU * np.ones(len(true_params_flat)//len_s)
@@ -278,13 +278,13 @@ _loss_fn = jit(loss_fn)
 
 #-----------------------the main training loop--------------------------#
 # initialization of params
-# c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))
-c_init = np.ones_like(true_params_flat)
-c_init += np.random.rand(len(c_init))
+c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))
+# c_init = np.ones_like(true_params_flat)
+# c_init += np.random.rand(len(c_init))
 print(f"Number of parameters = {len(c_init)}")
 
 #------------------plotting the initial profiles-------------------#                     
-c_arr_init_full = jf.c4fit_2_c4plot(GVARS, c_init*true_params_flat,
+c_arr_init_full = jf.c4fit_2_c4plot(GVARS, c_init,#*true_params_flat,
                                     sind_arr, cind_arr)
 
 # converting ctrl points to wsr and plotting
@@ -292,7 +292,7 @@ init_plot = postplotter.postplotter(GVARS, c_arr_init_full, 'init')
 #------------------------------------------------------------------------# 
 
 # getting the renormalized model parameters
-c_arr_renorm = jf.model_renorm(c_init*true_params_flat,
+c_arr_renorm = jf.model_renorm(c_init,#*true_params_flat,
                                true_params_flat,
                                sigma2scale)
 c_arr_renorm = jnp.asarray(c_arr_renorm)
