@@ -22,7 +22,7 @@ def select_and_load():
         print(f"{i:^5d} | {fnames[i]}")
 
     selector = input("Enter the index for filename: ")
-    summary = jf.loadobj(f"{outdir}/{fnames[selector]}")
+    summary = jf.load_obj(f"{fnames[selector]}")
     return summary
 
 summary = select_and_load()
