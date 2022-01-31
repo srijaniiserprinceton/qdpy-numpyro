@@ -13,7 +13,7 @@ current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
 data_dir = f"{package_dir}/dpy_jax"
 
-reg_data = pd.read_csv(f"{package_dir}/dpy_jax/reg_misfit.txt")
+reg_data = pd.read_csv(f"{package_dir}/dpy_jax/reg_misfit2.txt")
 
 mask = (reg_data['mu'] > 1e-5) * (reg_data['mu'] < 1e10)
 data_misfit = reg_data['data-misfit'][mask].values
@@ -48,4 +48,4 @@ axs[1].set_xlabel('Regularization parameter $\\mu$')
 axs[1].set_ylabel('Count')
 axs[1].set_title('Distribution of $\\mu$ in the L-curve knee region')
 fig.tight_layout()
-plt.show(fig)
+fig.show()
