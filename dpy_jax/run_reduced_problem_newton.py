@@ -140,7 +140,6 @@ pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
 
 # these arrays should be very close
 np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
-
 #----------------------------------------------------------------------#
 # changing to the HMI acoeffs if doing this for real data 
 data_acoeffs = GVARS.acoeffs_true
@@ -269,8 +268,8 @@ _loss_fn = jit(loss_fn)
 
 #-----------------------the main training loop--------------------------#
 # initialization of params
-c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))
-# c_init = np.ones_like(true_params_flat)
+# c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))
+c_init = 2.0 * np.ones_like(true_params_flat)
 # c_init += np.random.rand(len(c_init))
 print(f"Number of parameters = {len(c_init)}")
 
@@ -305,7 +304,7 @@ N = len(data_acoeffs)
 loss = 1e25
 loss_diff = loss - 1.
 loss_arr = []
-loss_threshold = 1e-2
+loss_threshold = 1e-25
 maxiter = 150
 itercount = 0
 

@@ -53,7 +53,7 @@ GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 outdir = f"{GVARS.scratch_dir}/dpy_jax"
 #-------------------parameters to be inverted for--------------------#
 # the indices of ctrl points that we want to invert for
-ind_min, ind_max = 0, GVARS.knot_num-1
+ind_min, ind_max = 0, 3#GVARS.knot_num-1
 cind_arr = np.arange(ind_min, ind_max+1)
 
 # the angular degrees we want to invert for
@@ -169,7 +169,7 @@ np.testing.assert_array_almost_equal(pred, eigvals_model)
 
 #---------finding sigma of renorm params-------------------#
 num_params = len(true_params_flat)
-num_samples = int(1e3)
+num_samples = int(1e6)
 true_params_samples = np.zeros((num_params, num_samples))
 true_params_flat_shaped = np.reshape(true_params_flat, (num_params, 1))
 
