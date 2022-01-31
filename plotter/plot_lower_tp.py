@@ -225,8 +225,6 @@ def build_hypmat_all_cenmults():
         ax[1].axvline(r_shift, color='k')
         
     plt.tight_layout()
-        
-
     plt.savefig('mult_rlp.pdf')
 
 build_hypmat_all_cenmults()
