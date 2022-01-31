@@ -451,7 +451,7 @@ itercount = 0
 # model_hess = _model_hess_fn(c_arr_renorm)
 # np.save("/scratch/g.samarth/qdpy-numpyro/hessD.npy", hess_D)
 
-suffix = f"{int(ARGS[4])}s.{GVARS.eigtype}.{GVARS.tslen}d"
+suffix = f"{int(ARGS_Q[4])}s.{GVARS_Q.eigtype}.{GVARS_Q.tslen}d"
 data_hess_dpy = np.load(f"{dpy_dir}/dhess.{suffix}.npy")
 model_hess_dpy = np.load(f"{dpy_dir}/mhess.{suffix}.npy")
 hess_inv = jnp.linalg.inv(data_hess_dpy + mu * model_hess_dpy)
