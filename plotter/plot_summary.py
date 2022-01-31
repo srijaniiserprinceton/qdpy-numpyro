@@ -34,7 +34,7 @@ true_params_flat = summary['true_params_flat']
 cind_arr = summary['cind_arr']
 sind_arr = summary['sind_arr']
 
-suffix = f"{int(ARGS.knot_num)}s.{GVARS.eigtype}.{GVARS.tslen}d"
+suffix = f"{int(GVARS.knot_num)}s.{GVARS.eigtype}.{GVARS.tslen}d"
 c_arr_fit_full = jf.c4fit_2_c4plot(GVARS, c_arr_fit*true_params_flat,
                                    sind_arr, cind_arr)
 fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full, f'summary-{suffix}')
