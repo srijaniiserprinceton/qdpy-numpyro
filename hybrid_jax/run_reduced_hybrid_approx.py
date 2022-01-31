@@ -1,6 +1,7 @@
 import os
 import time
 import argparse
+from datetime import date
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--mu", help="regularization",
@@ -450,8 +451,9 @@ itercount = 0
 # model_hess = _model_hess_fn(c_arr_renorm)
 # np.save("/scratch/g.samarth/qdpy-numpyro/hessD.npy", hess_D)
 
-data_hess_dpy = np.load(f"{dpy_dir}/dhess.{int(ARGS_Q[4])}s.jesper.360d.npy")
-model_hess_dpy = np.load(f"{dpy_dir}/mhess.{int(ARGS_Q[4])}s.jesper.360d.npy")
+suffix = f"{int(ARGS[4])}s.{GVARS.eigtype}.{GVARS.tslen}d"
+data_hess_dpy = np.load(f"{dpy_dir}/dhess.{suffix}.npy")
+model_hess_dpy = np.load(f"{dpy_dir}/mhess.{suffix}.npy")
 hess_inv = jnp.linalg.inv(data_hess_dpy + mu * model_hess_dpy)
 
 
@@ -553,8 +555,11 @@ soln_summary['loss_arr'] = loss_arr
 soln_summary['mu'] = mu
 soln_summary['chisq'] = chisq
 
-fsuffix = f"28jan-{GVARS_D.eigtype}.{GVARS_D.tslen}d."
-jf.save_obj(soln_summary, f"summary.{fsuffix}")
+todays_date = date.today()
+timeprefix = datetime.datetime.now().strftime("%H.%M")
+dateprefix = f"{todays_date.day:02d}.{todays_date.month:02d}.{todays_date.year:04d}"
+fsuffix = f"{dateprefix}-{timeprefix}-{suffix}"
+jf.save_obj(soln_summary, f"summary-{fsuffix}")
 
 """
 # plotting the hessians for analysis
