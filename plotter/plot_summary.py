@@ -21,7 +21,7 @@ def select_and_load():
     for i in range(len(fnames)):
         print(f"{i:^5d} | {fnames[i]}")
 
-    selector = raw_input("Enter the index for filename: ")
+    selector = input("Enter the index for filename: ")
     summary = jf.loadobj(f"{outdir}/{fnames[selector]}")
     return summary
 
@@ -35,4 +35,4 @@ sind_arr = summary['sind_arr']
 
 c_arr_fit_full = jf.c4fit_2_c4plot(GVARS, c_arr_fit*true_params_flat,
                                    sind_arr, cind_arr)
-fit_plot = postplotter.postplotter(GVARS_D, c_arr_fit_full, 'fit')
+fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full, 'summary')
