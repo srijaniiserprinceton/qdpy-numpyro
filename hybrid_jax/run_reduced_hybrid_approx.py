@@ -2,6 +2,7 @@ import os
 import time
 import argparse
 from datetime import date
+from datetime import datetime
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--mu", help="regularization",
@@ -556,7 +557,7 @@ soln_summary['mu'] = mu
 soln_summary['chisq'] = chisq
 
 todays_date = date.today()
-timeprefix = datetime.datetime.now().strftime("%H.%M")
+timeprefix = datetime.now().strftime("%H.%M")
 dateprefix = f"{todays_date.day:02d}.{todays_date.month:02d}.{todays_date.year:04d}"
 fsuffix = f"{dateprefix}-{timeprefix}-{suffix}"
 jf.save_obj(soln_summary, f"summary-{fsuffix}")
