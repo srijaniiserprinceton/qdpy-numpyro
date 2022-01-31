@@ -21,8 +21,8 @@ def select_and_load():
     for i in range(len(fnames)):
         print(f"{i:^5d} | {fnames[i]}")
 
-    selector = input("Enter the index for filename: ")
-    summary = jf.load_obj(f"{fnames[selector]}")
+    selector = int(input("Enter the index for filename: "))
+    summary = jf.load_obj(f"{fnames[selector][:-4]}")
     return summary
 
 summary = select_and_load()
