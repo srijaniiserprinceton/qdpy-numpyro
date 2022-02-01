@@ -12,13 +12,26 @@ def get_slope(y, x):
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
 data_dir = f"{package_dir}/dpy_jax"
+with open(f"{package_dir}/.config", "r") as f:
+    dirnames = f.read().splitlines()
+scratch_dir = dirnames[1]
+plotdir = f"{scratch_dir}/plots"
 
 reg_data = pd.read_csv(f"{package_dir}/dpy_jax/reg_misfit.txt")
 
-mask = (reg_data['mu'] > 1e-5) * (reg_data['mu'] < 1e10)
-data_misfit = reg_data['data-misfit'][mask].values
-model_misfit = reg_data['model-misfit'][mask].values
-mu = reg_data['mu'][mask].values
+data_misfit = reg_data['data-misfit']
+model_misfit = reg_data['model-misfit']
+mu = reg_data['mu']
+sort_idx = np.argsort(mu.values)
+
+mu = mu.values[sort_idx]
+data_misfit = data_misfit.values[sort_idx]
+model_misfit = model_misfit.values[sort_idx]
+
+mask = (mu > 1e-15) * (mu < 1e15)
+data_misfit = data_misfit[mask]
+model_misfit = model_misfit[mask]
+mu = mu[mask]
 
 data_mf_rescaled = rescale(data_misfit)
 model_mf_rescaled = rescale(model_misfit)
@@ -48,4 +61,5 @@ axs[1].set_xlabel('Regularization parameter $\\mu$')
 axs[1].set_ylabel('Count')
 axs[1].set_title('Distribution of $\\mu$ in the L-curve knee region')
 fig.tight_layout()
+fig.savefig(f"{plotdir}/regplot.png")
 fig.show()
