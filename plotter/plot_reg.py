@@ -12,6 +12,10 @@ def get_slope(y, x):
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
 data_dir = f"{package_dir}/dpy_jax"
+with open(f"{package_dir}/.config", "r") as f:
+    dirnames = f.read().splitlines()
+scratch_dir = dirnames[1]
+plotdir = f"{scratch_dir}/plots"
 
 reg_data = pd.read_csv(f"{package_dir}/dpy_jax/reg_misfit.txt")
 
@@ -57,4 +61,5 @@ axs[1].set_xlabel('Regularization parameter $\\mu$')
 axs[1].set_ylabel('Count')
 axs[1].set_title('Distribution of $\\mu$ in the L-curve knee region')
 fig.tight_layout()
+fig.savefig(f"{plotdir}/regplot.png")
 fig.show()
