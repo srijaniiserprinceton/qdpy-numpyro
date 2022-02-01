@@ -28,7 +28,7 @@ mu = mu.values[sort_idx]
 data_misfit = data_misfit.values[sort_idx]
 model_misfit = model_misfit.values[sort_idx]
 
-mask = (mu > 1e-5) * (mu < 1e10)
+mask = (mu > 1e-15) * (mu < 1e15)
 data_misfit = data_misfit[mask]
 model_misfit = model_misfit[mask]
 mu = mu[mask]
