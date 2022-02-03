@@ -17,7 +17,7 @@ class preplotter:
     def __init__(self, r, OM, wsr_dpt, wsr_fixed,
                  ctrl_arr_up, ctrl_arr_lo,
                  ctrl_arr_dpt_full, ctrl_arr_dpt_clipped,
-                 t_internal, knot_ind_th, spl_deg=3):
+                 t_internal, knot_ind_th, wsr_err, spl_deg=3):
     
         self.r = r
         self.OM = OM
@@ -30,6 +30,7 @@ class preplotter:
         self.t_internal = t_internal
         self.knot_ind_th = knot_ind_th
         self.spl_deg = spl_deg
+        self.wsr_err = wsr_err
 
         # plotting
         self.plot_wsr_spline_accuracy()
@@ -52,8 +53,22 @@ class preplotter:
 
         # overplotting the reconstructed profile
         ax[0, 0].plot(self.r, wsr_spl_full[0], '--r', alpha=0.5)
+        ax[0, 0].fill_between(self.r,
+                              wsr_spl_full[0]-self.wsr_err[0],
+                              wsr_spl_full[0]+self.wsr_err[0],
+                              alpha=0.5, color='gray')
+                              
         ax[1, 0].plot(self.r, wsr_spl_full[1], '--r', alpha=0.5)
+        ax[1, 0].fill_between(self.r,
+                              wsr_spl_full[1]-self.wsr_err[1],
+                              wsr_spl_full[1]+self.wsr_err[1],
+                              alpha=0.5, color='gray')
+
         ax[2, 0].plot(self.r, wsr_spl_full[2], '--r', alpha=0.5)
+        ax[2, 0].fill_between(self.r,
+                              wsr_spl_full[2]-self.wsr_err[2],
+                              wsr_spl_full[2]+self.wsr_err[2],
+                              alpha=0.5, color='gray')
 
         # settin axis labels
         ax[0, 0].set_title('Testing spline accuracy', size=16)
@@ -81,6 +96,7 @@ class preplotter:
         plt.tight_layout()
         plt.savefig(f'{plotdir}/wsr_splined.pdf')
         plt.close()
+
 
     def plot_wsr_extreme(self):
         # getting the dpt profile from clipped dpt

@@ -7,6 +7,8 @@ parser.add_argument("--mu", help="regularization",
                     type=float, default=0.)
 parser.add_argument("--store_hess", help="store hessians",
                     type=bool, default=False)
+parser.add_argument("--read_hess", help="store hessians",
+                    type=bool, default=False)
 PARGS = parser.parse_args()
 #----------------setting the number of chains to be used-----------------#
 # num_chains = 3
@@ -244,9 +246,11 @@ def loss_fn(c_arr):
     data_misfit_val = data_misfit_fn(c_arr)
     model_misfit_val = model_misfit_fn(c_arr)
     data_hess = data_hess_fn(c_arr)
+    lambda_factor = jnp.trace(data_hess) / len_data
+    # lambda_factor = 1.0
 
     # total misfit
-    misfit = data_misfit_val + mu*model_misfit_val
+    misfit = data_misfit_val + mu*model_misfit_val*lambda_factor
     return misfit
 
 grad_fn = jax.grad(loss_fn)
@@ -300,7 +304,6 @@ plot_acoeffs.plot_acoeffs_dm_scaled(init_acoeffs, data_acoeffs,
                                     data_acoeffs_out_HMI,
                                     acoeffs_sigma_HMI, 'init')
 #----------------------------------------------------------------------#
-
 N = len(data_acoeffs)
 loss = 1e25
 loss_diff = loss - 1.
@@ -309,21 +312,31 @@ loss_threshold = 1e-5
 maxiter = 50
 itercount = 0
 
-data_hess_dpy = data_hess_fn(c_arr_renorm)
-model_hess_dpy = model_hess_fn(c_arr_renorm)
-total_hess = data_hess_dpy + mu*model_hess_dpy
+hsuffix = f"{int(ARGS[4])}s.{GVARS.eigtype}.{GVARS.tslen}d.npy"
+print(hsuffix)
+if PARGS.read_hess:
+    data_hess_dpy = np.load(f"{outdir}/dhess.{hsuffix}")
+    model_hess_dpy = np.load(f"{outdir}/mhess.{hsuffix}")
+else:
+    data_hess_dpy = data_hess_fn(c_arr_renorm)
+    model_hess_dpy = model_hess_fn(c_arr_renorm)
+
+lambda_factor = jnp.trace(data_hess_dpy)/len_data
+# lambda_factor = 1.0
+total_hess = data_hess_dpy + mu*model_hess_dpy*lambda_factor
 hess_inv = jnp.linalg.inv(total_hess)
 
+
 if PARGS.store_hess:
-    suffix = f"{int(ARGS[4])}s.{GVARS.eigtype}.{GVARS.tslen}d.npy"
-    np.save(f"{outdir}/dhess.{suffix}", data_hess_dpy)
-    np.save(f"{outdir}/mhess.{suffix}", model_hess_dpy)
+    np.save(f"{outdir}/dhess.{hsuffix}", data_hess_dpy)
+    np.save(f"{outdir}/mhess.{hsuffix}", model_hess_dpy)
+
 
 tdiff = 0
 grads = _grad_fn(c_arr_renorm)
 loss = _loss_fn(c_arr_renorm)
 model_misfit = model_misfit_fn(c_arr_renorm)
-data_misfit = loss - mu*model_misfit
+data_misfit = loss - mu*model_misfit*lambda_factor
 print_info(itercount, tdiff, data_misfit, loss_diff, abs(grads).max(), model_misfit)
 
 t1s = time.time()
@@ -336,7 +349,7 @@ while ((abs(loss_diff) > loss_threshold) and
     loss = _loss_fn(c_arr_renorm)
 
     model_misfit = model_misfit_fn(c_arr_renorm)
-    data_misfit = loss - mu*model_misfit
+    data_misfit = loss - mu*model_misfit*lambda_factor
 
     loss_diff = loss_prev - loss
     loss_arr.append(loss)

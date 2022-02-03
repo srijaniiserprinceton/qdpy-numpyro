@@ -225,6 +225,7 @@ class GlobalVars():
                                                   self.ctrl_arr_dpt_clipped,
                                                   self.t_internal,
                                                   self.knot_ind_th,
+                                                  self.wsr_err,
                                                   self.spl_deg)
         return None
 
