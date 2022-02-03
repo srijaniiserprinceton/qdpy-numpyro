@@ -173,7 +173,7 @@ def print_info(itercount, tdiff, data_misfit, loss_diff, max_grads, model_misfit
           f'data_misfit = {data_misfit:12.5e} ' +
           f'loss-diff = {loss_diff:12.5e}; ' +
           f'max-grads = {max_grads:12.5e} ' +
-          f'model_misfit={model_misfit:12.5e}')
+          f'model_misfit={model_misfit*lambda_factor:12.5e}')
     return None
 
 
@@ -390,7 +390,7 @@ fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full, 'fit')
 #------------------------------------------------------------------------#
 with open(f"{current_dir}/reg_misfit.txt", "a") as f:
     f.seek(0, os.SEEK_END)
-    opstr = f"{mu:18.12e}, {data_misfit:18.12e}, {model_misfit:18.12e}\n"
+    opstr = f"{mu:18.12e}, {data_misfit:18.12e}, {model_misfit*lambda_factor:18.12e}\n"
     f.write(opstr)
 
 #------------------------------------------------------------------------# 
