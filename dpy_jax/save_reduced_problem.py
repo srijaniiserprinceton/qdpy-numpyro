@@ -53,7 +53,7 @@ GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 outdir = f"{GVARS.scratch_dir}/dpy_jax"
 #-------------------parameters to be inverted for--------------------#
 # the indices of ctrl points that we want to invert for
-ind_min, ind_max = 0, 3#GVARS.knot_num-1
+ind_min, ind_max = 0, GVARS.knot_num-1
 cind_arr = np.arange(ind_min, ind_max+1)
 
 # the angular degrees we want to invert for
@@ -123,8 +123,8 @@ for sind in range(smin_ind, smax_ind+1):
     for ci, cind in enumerate(cind_arr):
         carr_sigma[sind-smin_ind, ci] = GVARS.ctrl_arr_sig_clipped[sind, cind]
 
-#-------------computing the regularization terms-------------------#                        
-# extracting the entire basis elements once for one s                                        
+#-------------computing the regularization terms-------------------#
+# extracting the entire basis elements once for one s
 bsp_basis_one_s = precompute.get_bsp_basis_elements(GVARS.r)
 
 # retaining the ctrl points needed
@@ -173,7 +173,7 @@ num_samples = int(1e6)
 true_params_samples = np.zeros((num_params, num_samples))
 true_params_flat_shaped = np.reshape(true_params_flat, (num_params, 1))
 
-# looping over model params                                                                   
+# looping over model params
 for i in range(num_params):
     true_params_samples[i, :] = np.random.normal(loc=true_params_flat[i],
                                                  scale=np.abs(carr_sigma_flat[i]),
@@ -184,11 +184,12 @@ true_params_samples_renormed = jf.model_renorm(true_params_samples,
                                                true_params_flat_shaped,
                                                1.)
 
-# array to store the sigma values to rescale renormed model params                           
+# array to store the sigma values to rescale renormed model params
 sigma2scale = np.zeros(num_params)
 
 for i in range(num_params):
     __, sigma2scale[i] = norm.fit(true_params_samples_renormed[i])
+    # sigma2scale[i] = abs(carr_sigma_flat[i])
 
 #-------------saving miscellaneous files-------------------#
 np.save(f'{outdir}/fixed_part.npy', diag_evals_fixed)

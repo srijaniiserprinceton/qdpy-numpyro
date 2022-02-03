@@ -115,7 +115,7 @@ def c4fit_2_c4plot(GVARS, c_arr, sind_arr, cind_arr):
         
     c_arr_plot_full = 1.0 * GVARS.ctrl_arr_dpt_full
         
-    # tiling the fitted values in the larger array of ctrl points                             
+    # tiling the fitted values in the larger array of ctrl points
     c_arr_plot_full[:, GVARS.knot_ind_th:] = c_arr_plot_clipped
     
     return c_arr_plot_full

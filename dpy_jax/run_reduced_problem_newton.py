@@ -220,14 +220,15 @@ def model_misfit_fn(c_arr, mu_scale=[1., 1., 1.]):
     # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
     # Djk is the same for s=3 and s=5
 
+    # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
+    c_arr_denorm = c_arr
     cd = []
     for i in range(len_s):
-        cd.append(c_arr[i::len_s])
+        cd.append(c_arr_denorm[i::len_s])
 
     Djk = D_bsp_j_D_bsp_k[0::len_s, 0::len_s]
-                                             
-
     cDc = 0.0
+
     for i in range(len_s):
         cDc += mu_scale[i] * cd[i] @ Djk @ cd[i]
     return cDc
@@ -304,8 +305,8 @@ N = len(data_acoeffs)
 loss = 1e25
 loss_diff = loss - 1.
 loss_arr = []
-loss_threshold = 1e-25
-maxiter = 150
+loss_threshold = 1e-5
+maxiter = 50
 itercount = 0
 
 data_hess_dpy = data_hess_fn(c_arr_renorm)

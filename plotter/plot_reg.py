@@ -28,7 +28,7 @@ mu = mu.values[sort_idx]
 data_misfit = data_misfit.values[sort_idx]
 model_misfit = model_misfit.values[sort_idx]
 
-mask = (mu > 1e-15) * (mu < 1e15)
+mask = (mu > 1e-12) * (mu < 1e15)
 data_misfit = data_misfit[mask]
 model_misfit = model_misfit[mask]
 mu = mu[mask]
@@ -41,7 +41,7 @@ knee_idx = np.argmin(abs(slope+1))
 range_x = data_misfit.max() - data_misfit.min()
 range_y = model_misfit.max() - model_misfit.min()
 
-max_nbs = 20
+max_nbs = 5
 fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(8, 4))
 axs = axs.flatten()
 axs[0].plot(data_misfit, model_misfit, '+k')
@@ -49,8 +49,8 @@ for i in range(2*max_nbs):
     axs[0].plot(data_misfit[knee_idx-max_nbs+i],
                 model_misfit[knee_idx-max_nbs+i], '+r')
 axs[0].plot(data_misfit[knee_idx], model_misfit[knee_idx], marker='s', color='red')
-axs[0].text(data_misfit[knee_idx]+0.04*range_x, 
-            model_misfit[knee_idx]+0.04*range_y,
+axs[0].text(data_misfit[knee_idx]+0.04*range_x,
+            model_misfit[knee_idx]+0.04*range_y, 
             f"$\\mu$ = {mu[knee_idx]:.5f}")
 axs[0].set_xlabel('Data misfit')
 axs[0].set_ylabel('Roughness')

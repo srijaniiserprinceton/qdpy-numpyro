@@ -131,8 +131,14 @@ class GlobalVars():
         # self.wsr[1] += 1e-4
         # self.wsr[2] += 1e-5
         self.err1d = np.loadtxt(f'{self.ipdir}/err1d-hmi.dat')
-        self.wsr_err = np.loadtxt(f'{self.ipdir}/err_hmi.dat')
+        # self.wsr_err = np.loadtxt(f'{self.ipdir}/err_hmi.dat')
         # self.wsr_extend()
+
+        wsr_err = np.zeros_like(self.wsr)
+        for i in range(self.wsr.shape[0]):
+            maxval = abs(self.wsr[i]).max()
+            wsr_err[i, :] = 0.07*maxval*np.ones(self.wsr.shape[1])
+        self.wsr_err = wsr_err
 
         # rth = r threshold beyond which the profiles are updated. 
         self.rth = qdPars.rth
