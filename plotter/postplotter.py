@@ -21,6 +21,7 @@ class postplotter:
         self.r = GVARS.r
         self.OM = GVARS.OM
         self.wsr_dpt = GVARS.wsr
+        self.wsr_err = GVARS.wsr_err
         self.ctrl_arr_dpt_full = ctrl_arr_fit_full
         self.t_internal = GVARS.t_internal
         self.knot_ind_th = GVARS.knot_ind_th
@@ -35,10 +36,24 @@ class postplotter:
     def plot_fit_wsr(self):
         fig, ax = plt.subplots(3, 2, figsize=(15, 7), sharex=True)
 
+        lw = 0.5
         # plot the wsr from dpt (no-spline)
-        ax[0, 0].plot(self.r, self.wsr_dpt[0], 'k')
-        ax[1, 0].plot(self.r, self.wsr_dpt[1], 'k')
-        ax[2, 0].plot(self.r, self.wsr_dpt[2], 'k')
+        ax[0, 0].plot(self.r, self.wsr_dpt[0], 'k', linewidth=lw)
+        ax[1, 0].plot(self.r, self.wsr_dpt[1], 'k', linewidth=lw)
+        ax[2, 0].plot(self.r, self.wsr_dpt[2], 'k', linewidth=lw)
+
+        ax[0, 0].fill_between(self.r,
+                              self.wsr_dpt[0]-self.wsr_err[0],
+                              self.wsr_dpt[0]+self.wsr_err[0],
+                              alpha=0.5, color='gray')
+        ax[1, 0].fill_between(self.r,
+                              self.wsr_dpt[1]-self.wsr_err[1],
+                              self.wsr_dpt[1]+self.wsr_err[1],
+                              alpha=0.5, color='gray')
+        ax[2, 0].fill_between(self.r,
+                              self.wsr_dpt[2]-self.wsr_err[2],
+                              self.wsr_dpt[2]+self.wsr_err[2],
+                              alpha=0.5, color='gray')
 
         # construct the spline from ctrl_arr_dpt_full
         wsr_spl_full = gen_wsr.get_wsr_from_spline(self.r, self.ctrl_arr_dpt_full,
@@ -47,9 +62,9 @@ class postplotter:
         # converting to muHz
         # wsr_spl_full *= self.OM * 1e6
         # overplotting the reconstructed profile
-        ax[0, 0].plot(self.r, wsr_spl_full[0], '--r', alpha=0.5)
-        ax[1, 0].plot(self.r, wsr_spl_full[1], '--r', alpha=0.5)
-        ax[2, 0].plot(self.r, wsr_spl_full[2], '--r', alpha=0.5)
+        ax[0, 0].plot(self.r, wsr_spl_full[0], '--r', alpha=0.5, linewidth=lw)
+        ax[1, 0].plot(self.r, wsr_spl_full[1], '--r', alpha=0.5, linewidth=lw)
+        ax[2, 0].plot(self.r, wsr_spl_full[2], '--r', alpha=0.5, linewidth=lw)
 
         # settin axis labels and title
         ax[0, 0].set_title(f'$w_s(r)$ DPT vs. {self.tag}', size=16)

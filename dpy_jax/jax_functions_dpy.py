@@ -88,14 +88,16 @@ def jax_gamma(ell):
     return jnp.sqrt((2*ell + 1)/4/jnp.pi)
 
 def model_renorm(model_params, model_params_ref, sigma):
-    model_renorm_arr = model_params / model_params_ref - 1.
-    # model_renorm_arr = model_params - model_params_ref
+    # model_renorm_arr = model_params / model_params_ref - 1.
+    model_renorm_arr = model_params - model_params_ref
+    # model_renorm_arr = model_params
     model_renorm_arr = model_renorm_arr / sigma
     return model_renorm_arr
 
 def model_denorm(model_params, model_params_ref, sigma):
-    model_denorm_arr = (model_params * sigma + 1.) * model_params_ref
-    # model_denorm_arr = model_params * sigma + model_params_ref
+    # model_denorm_arr = (model_params * sigma + 1.) * model_params_ref
+    model_denorm_arr = model_params * sigma + model_params_ref
+    # model_denorm_arr = model_params * sigma
     return model_denorm_arr
 
 def model_renorm_log(model_params, model_params_ref, sigma):
@@ -115,7 +117,7 @@ def c4fit_2_c4plot(GVARS, c_arr, sind_arr, cind_arr):
         
     c_arr_plot_full = 1.0 * GVARS.ctrl_arr_dpt_full
         
-    # tiling the fitted values in the larger array of ctrl points                             
+    # tiling the fitted values in the larger array of ctrl points
     c_arr_plot_full[:, GVARS.knot_ind_th:] = c_arr_plot_clipped
     
     return c_arr_plot_full

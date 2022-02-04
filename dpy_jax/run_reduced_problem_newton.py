@@ -7,6 +7,8 @@ parser.add_argument("--mu", help="regularization",
                     type=float, default=0.)
 parser.add_argument("--store_hess", help="store hessians",
                     type=bool, default=False)
+parser.add_argument("--read_hess", help="store hessians",
+                    type=bool, default=False)
 PARGS = parser.parse_args()
 #----------------setting the number of chains to be used-----------------#
 # num_chains = 3
@@ -171,7 +173,7 @@ def print_info(itercount, tdiff, data_misfit, loss_diff, max_grads, model_misfit
           f'data_misfit = {data_misfit:12.5e} ' +
           f'loss-diff = {loss_diff:12.5e}; ' +
           f'max-grads = {max_grads:12.5e} ' +
-          f'model_misfit={model_misfit:12.5e}')
+          f'model_misfit={model_misfit*lambda_factor:12.5e}')
     return None
 
 
@@ -220,14 +222,15 @@ def model_misfit_fn(c_arr, mu_scale=[1., 1., 1.]):
     # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
     # Djk is the same for s=3 and s=5
 
+    # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
+    c_arr_denorm = c_arr
     cd = []
     for i in range(len_s):
-        cd.append(c_arr[i::len_s])
+        cd.append(c_arr_denorm[i::len_s])
 
     Djk = D_bsp_j_D_bsp_k[0::len_s, 0::len_s]
-                                             
-
     cDc = 0.0
+
     for i in range(len_s):
         cDc += mu_scale[i] * cd[i] @ Djk @ cd[i]
     return cDc
@@ -242,10 +245,12 @@ model_hess_fn = hessian(model_misfit_fn)
 def loss_fn(c_arr):
     data_misfit_val = data_misfit_fn(c_arr)
     model_misfit_val = model_misfit_fn(c_arr)
-    data_hess = data_hess_fn(c_arr)
+    # data_hess = data_hess_fn(c_arr)
+    lambda_factor = jnp.trace(data_hess_dpy) / len_data
+    # lambda_factor = 1.0
 
     # total misfit
-    misfit = data_misfit_val + mu*model_misfit_val
+    misfit = data_misfit_val + mu*model_misfit_val*lambda_factor
     return misfit
 
 grad_fn = jax.grad(loss_fn)
@@ -299,30 +304,39 @@ plot_acoeffs.plot_acoeffs_dm_scaled(init_acoeffs, data_acoeffs,
                                     data_acoeffs_out_HMI,
                                     acoeffs_sigma_HMI, 'init')
 #----------------------------------------------------------------------#
-
 N = len(data_acoeffs)
 loss = 1e25
 loss_diff = loss - 1.
 loss_arr = []
-loss_threshold = 1e-25
-maxiter = 150
+loss_threshold = 1e-5
+maxiter = 50
 itercount = 0
 
-data_hess_dpy = data_hess_fn(c_arr_renorm)
-model_hess_dpy = model_hess_fn(c_arr_renorm)
-total_hess = data_hess_dpy + mu*model_hess_dpy
+hsuffix = f"{int(ARGS[4])}s.{GVARS.eigtype}.{GVARS.tslen}d.npy"
+print(hsuffix)
+if PARGS.read_hess:
+    data_hess_dpy = np.load(f"{outdir}/dhess.{hsuffix}")
+    model_hess_dpy = np.load(f"{outdir}/mhess.{hsuffix}")
+else:
+    data_hess_dpy = data_hess_fn(c_arr_renorm)
+    model_hess_dpy = model_hess_fn(c_arr_renorm)
+
+lambda_factor = jnp.trace(data_hess_dpy)/len_data
+# lambda_factor = 1.0
+total_hess = data_hess_dpy + mu*model_hess_dpy*lambda_factor
 hess_inv = jnp.linalg.inv(total_hess)
 
+
 if PARGS.store_hess:
-    suffix = f"{int(ARGS[4])}s.{GVARS.eigtype}.{GVARS.tslen}d.npy"
-    np.save(f"{outdir}/dhess.{suffix}", data_hess_dpy)
-    np.save(f"{outdir}/mhess.{suffix}", model_hess_dpy)
+    np.save(f"{outdir}/dhess.{hsuffix}", data_hess_dpy)
+    np.save(f"{outdir}/mhess.{hsuffix}", model_hess_dpy)
+
 
 tdiff = 0
 grads = _grad_fn(c_arr_renorm)
 loss = _loss_fn(c_arr_renorm)
 model_misfit = model_misfit_fn(c_arr_renorm)
-data_misfit = loss - mu*model_misfit
+data_misfit = loss - mu*model_misfit*lambda_factor
 print_info(itercount, tdiff, data_misfit, loss_diff, abs(grads).max(), model_misfit)
 
 t1s = time.time()
@@ -335,7 +349,7 @@ while ((abs(loss_diff) > loss_threshold) and
     loss = _loss_fn(c_arr_renorm)
 
     model_misfit = model_misfit_fn(c_arr_renorm)
-    data_misfit = loss - mu*model_misfit
+    data_misfit = loss - mu*model_misfit*lambda_factor
 
     loss_diff = loss_prev - loss
     loss_arr.append(loss)
@@ -376,7 +390,7 @@ fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full, 'fit')
 #------------------------------------------------------------------------#
 with open(f"{current_dir}/reg_misfit.txt", "a") as f:
     f.seek(0, os.SEEK_END)
-    opstr = f"{mu:18.12e}, {data_misfit:18.12e}, {model_misfit:18.12e}\n"
+    opstr = f"{mu:18.12e}, {data_misfit:18.12e}, {model_misfit*lambda_factor:18.12e}\n"
     f.write(opstr)
 
 #------------------------------------------------------------------------# 

@@ -35,8 +35,8 @@ f"""#!/bin/bash
 echo \"Starting at \"`date`
 cd $PBS_O_WORKDIR
 module load GnuParallel
-cd ..
-parallel --jobs 32 < $PBS_O_WORKDIR/ipjobs_dpt_rls.sh
+cd ../dpy_jax
+parallel --jobs 4 < $PBS_O_WORKDIR/ipjobs_dpt_rls.sh
 echo \"Finished at \"`date`
 """
 
@@ -46,7 +46,7 @@ with open(f"{package_dir}/jobscripts/gnup_dpt_rls.pbs", "w") as f:
 with open(f"{package_dir}/jobscripts/ipjobs_dpt_rls.sh", "w") as f:
     for idx, muval in enumerate(mu_list):
         ipjobs_str = f"{pythonpath} {execpath} "
-        job_args = f"--mu {muval}"
+        job_args = f"--mu {muval} --read_hess 1"
         outfile = f" >{package_dir}/jobscripts/logs/qdrls.{idx:03d}.out"
         errfile = f" 2>{package_dir}/jobscripts/logs/qdrls.{idx:03d}.err"
         f.write(ipjobs_str + job_args + outfile + errfile + " \n")
