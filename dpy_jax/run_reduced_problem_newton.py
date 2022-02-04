@@ -245,8 +245,8 @@ model_hess_fn = hessian(model_misfit_fn)
 def loss_fn(c_arr):
     data_misfit_val = data_misfit_fn(c_arr)
     model_misfit_val = model_misfit_fn(c_arr)
-    data_hess = data_hess_fn(c_arr)
-    lambda_factor = jnp.trace(data_hess) / len_data
+    # data_hess = data_hess_fn(c_arr)
+    lambda_factor = jnp.trace(data_hess_dpy) / len_data
     # lambda_factor = 1.0
 
     # total misfit
