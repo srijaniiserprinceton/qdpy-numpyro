@@ -130,27 +130,27 @@ def build_integrated_part(eig_idx, ell, s):
     return post_integral
 
 def integrate_fixed_wsr(eig_idx, ell, s):
-    '''Builds the integrated part of the fixed                                                
-    part of pre-computation for the region below                                              
-    rth.                                                                                      
-    Parameters:                                                                               
-    -----------                                                                               
-    eig_idx : int                                                                             
-              Index of the multiplet in the list of multiplets                                
-              whose eigenfunctions are pre-loaded.                                            
-                                                                                              
-    ell     : int                                                                             
-              Angular degree of the multiplet whose kernel integral                           
-              we want to calculate.                                                           
-                                                                                              
-    s       : int                                                                             
-              Angular degree of the perturbation                                              
-              (differential rotation for now).                                                
-    Returns:                                                                                  
-    --------                                                                                  
-    post_integral: float, ndarray                                                             
-                   Array of shape containing the integrated values using                      
-                   the fixed part of the profile below rth.                                   
+    '''Builds the integrated part of the fixed
+    part of pre-computation for the region below
+    rth.
+
+    Parameters:
+    -----------
+    eig_idx : int
+              Index of the multiplet in the list of multiplets
+              whose eigenfunctions are pre-loaded.
+    ell     : int
+              Angular degree of the multiplet whose kernel integral
+              we want to calculate.
+    s       : int
+              Angular degree of the perturbation
+              (differential rotation for now).
+
+    Returns:
+    --------
+    post_integral: float, ndarray
+                   Array of shape containing the integrated values using
+                   the fixed part of the profile below rth.
     '''
     s_ind = (s-1)//2
     ls2fac = 2*ell*(ell+1) - s*(s+1)
