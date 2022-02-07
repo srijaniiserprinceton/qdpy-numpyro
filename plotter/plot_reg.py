@@ -28,7 +28,7 @@ mu = mu.values[sort_idx]
 data_misfit = data_misfit.values[sort_idx]
 model_misfit = model_misfit.values[sort_idx]
 
-mask = (mu > 1e-12) * (mu < 1e15)
+mask = (mu > 1e-16) * (mu < 1e15)
 data_misfit = data_misfit[mask]
 model_misfit = model_misfit[mask]
 mu = mu[mask]
@@ -38,22 +38,22 @@ model_mf_rescaled = rescale(model_misfit)
 slope = get_slope(model_mf_rescaled, data_mf_rescaled)
 knee_idx = np.argmin(abs(slope+1))
 
-range_x = data_misfit.max() - data_misfit.min()
-range_y = model_misfit.max() - model_misfit.min()
+range_x = model_misfit.max() - model_misfit.min()
+range_y = data_misfit.max() - data_misfit.min()
 
 max_nbs = 5
 fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(8, 4))
 axs = axs.flatten()
-axs[0].plot(data_misfit, model_misfit, '+k')
+axs[0].plot(model_misfit, data_misfit, '+k')
 for i in range(2*max_nbs):
-    axs[0].plot(data_misfit[knee_idx-max_nbs+i],
-                model_misfit[knee_idx-max_nbs+i], '+r')
-axs[0].plot(data_misfit[knee_idx], model_misfit[knee_idx], marker='s', color='red')
-axs[0].text(data_misfit[knee_idx]+0.04*range_x,
-            model_misfit[knee_idx]+0.04*range_y, 
-            f"$\\mu$ = {mu[knee_idx]:.5f}")
-axs[0].set_xlabel('Data misfit')
-axs[0].set_ylabel('Roughness')
+    axs[0].plot(model_misfit[knee_idx-max_nbs+i],
+                data_misfit[knee_idx-max_nbs+i], '+r')
+axs[0].plot(model_misfit[knee_idx], data_misfit[knee_idx], marker='s', color='red')
+axs[0].text(model_misfit[knee_idx]+0.04*range_x,
+            data_misfit[knee_idx]+0.04*range_y, 
+            f"$\\mu$ = {mu[knee_idx]:.5e}")
+axs[0].set_xlabel('Roughness')
+axs[0].set_ylabel('Data misfit')
 axs[0].set_title('L-curve')
 
 axs[1].hist(mu[knee_idx-max_nbs:knee_idx+max_nbs])
@@ -63,3 +63,30 @@ axs[1].set_title('Distribution of $\\mu$ in the L-curve knee region')
 fig.tight_layout()
 fig.savefig(f"{plotdir}/regplot.png")
 fig.show()
+
+y = data_misfit
+x = model_misfit
+slope = np.diff(y)/np.diff(x)
+plt.figure()
+plt.semilogy(model_misfit[1:], abs(slope))
+plt.semilogy(model_misfit[knee_idx], abs(slope)[knee_idx], '*r')
+plt.show()
+
+
+# knee_idx2 = np.argmin(abs(slope+1e-12))
+# fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(8, 4))
+# axs = axs.flatten()
+# axs[0].plot(model_misfit, data_misfit, '+k')
+# for i in range(2*max_nbs):
+#     axs[0].plot(model_misfit[knee_idx2-max_nbs+i],
+#                   data_misfit[knee_idx2-max_nbs+i], '+r')
+# axs[0].plot(model_misfit[knee_idx2], data_misfit[knee_idx2],
+#               marker='s', color='red')
+# axs[0].text(model_misfit[knee_idx2]+0.04*range_x,
+#             data_misfit[knee_idx2]+0.04*range_y, 
+#             f"$\\mu$ = {mu[knee_idx]:.5e}")
+# axs[0].set_xlabel('Roughness')
+# axs[0].set_ylabel('Data misfit')
+# axs[0].set_title('L-curve')
+
+

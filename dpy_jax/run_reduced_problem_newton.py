@@ -147,7 +147,7 @@ np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
 data_acoeffs = GVARS.acoeffs_true
 # np.random.seed(3)
 # data_acoeffs_err = np.random.normal(loc=0, scale=acoeffs_sigma_HMI)
-# data_acoeffs = data_acoeffs + data_acoeffs_err
+# data_acoeffs = data_acoeffs + 2.0*data_acoeffs_err
 data_acoeffs_out_HMI = GVARS.acoeffs_out_HMI
 print(f"data_acoeffs = {data_acoeffs[:15]}")
 
@@ -183,7 +183,8 @@ def data_misfit_fn(c_arr):
     pred_acoeffs = jnp.zeros(num_j * nmults)
 
     # denormalizing to make actual model params
-    c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
+    # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
+    c_arr_denorm = c_arr
     pred = fixed_part + c_arr_denorm @ param_coeff_flat
 
     def loop_in_mults(mult_ind, pred_acoeff):
@@ -203,7 +204,8 @@ def data_misfit_arr_fn(c_arr):
     pred_acoeffs = jnp.zeros(num_j * nmults)
 
     # denormalizing to make actual model params
-    c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
+    # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
+    c_arr_denorm = c_arr
     pred = fixed_part + c_arr_denorm @ param_coeff_flat
 
     def loop_in_mults(mult_ind, pred_acoeff):
@@ -222,11 +224,11 @@ def model_misfit_fn(c_arr, mu_scale=[1., 1., 1.]):
     # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
     # Djk is the same for s=3 and s=5
 
-    # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
-    c_arr_denorm = c_arr
+    # c_arr_renorm = jf.model_renorm(c_arr, true_params_flat, sigma2scale)
+    c_arr_renorm = c_arr
     cd = []
     for i in range(len_s):
-        cd.append(c_arr_denorm[i::len_s])
+        cd.append(c_arr_renorm[i::len_s])
 
     Djk = D_bsp_j_D_bsp_k[0::len_s, 0::len_s]
     cDc = 0.0
@@ -273,28 +275,21 @@ _loss_fn = jit(loss_fn)
 
 #-----------------------the main training loop--------------------------#
 # initialization of params
-# c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))
-c_init = 2.0 * np.ones_like(true_params_flat)
+c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))*1e-4
+# c_init = 2.0 * np.ones_like(true_params_flat)
 # c_init += np.random.rand(len(c_init))
+c_init *= true_params_flat
 print(f"Number of parameters = {len(c_init)}")
 
 #------------------plotting the initial profiles-------------------#                     
-c_arr_init_full = jf.c4fit_2_c4plot(GVARS, c_init,#*true_params_flat,
+c_arr_init_full = jf.c4fit_2_c4plot(GVARS, c_init,
                                     sind_arr, cind_arr)
 
 # converting ctrl points to wsr and plotting
 init_plot = postplotter.postplotter(GVARS, c_arr_init_full, 'init')
-#------------------------------------------------------------------------# 
-
-# getting the renormalized model parameters
-c_arr_renorm = jf.model_renorm(c_init,#*true_params_flat,
-                               true_params_flat,
-                               sigma2scale)
-c_arr_renorm = jnp.asarray(c_arr_renorm)
-
 #----------------------------------------------------------------------#
 # plotting acoeffs from initial data and HMI data
-init_acoeffs = data_misfit_arr_fn(c_arr_renorm)*acoeffs_sigma_HMI +\
+init_acoeffs = data_misfit_arr_fn(c_init)*acoeffs_sigma_HMI +\
                data_acoeffs
 
 plot_acoeffs.plot_acoeffs_datavsmodel(init_acoeffs, data_acoeffs,
@@ -308,8 +303,8 @@ N = len(data_acoeffs)
 loss = 1e25
 loss_diff = loss - 1.
 loss_arr = []
-loss_threshold = 1e-5
-maxiter = 50
+loss_threshold = 1e-8
+maxiter = 150
 itercount = 0
 
 hsuffix = f"{int(ARGS[4])}s.{GVARS.eigtype}.{GVARS.tslen}d.npy"
@@ -318,8 +313,8 @@ if PARGS.read_hess:
     data_hess_dpy = np.load(f"{outdir}/dhess.{hsuffix}")
     model_hess_dpy = np.load(f"{outdir}/mhess.{hsuffix}")
 else:
-    data_hess_dpy = data_hess_fn(c_arr_renorm)
-    model_hess_dpy = model_hess_fn(c_arr_renorm)
+    data_hess_dpy = data_hess_fn(c_init)
+    model_hess_dpy = model_hess_fn(c_init)
 
 lambda_factor = jnp.trace(data_hess_dpy)/len_data
 # lambda_factor = 1.0
@@ -333,22 +328,23 @@ if PARGS.store_hess:
 
 
 tdiff = 0
-grads = _grad_fn(c_arr_renorm)
-loss = _loss_fn(c_arr_renorm)
-model_misfit = model_misfit_fn(c_arr_renorm)
+grads = _grad_fn(c_init)
+loss = _loss_fn(c_init)
+model_misfit = model_misfit_fn(c_init)
 data_misfit = loss - mu*model_misfit*lambda_factor
 print_info(itercount, tdiff, data_misfit, loss_diff, abs(grads).max(), model_misfit)
+c_arr = c_init
 
 t1s = time.time()
 while ((abs(loss_diff) > loss_threshold) and
        (itercount < maxiter)):
     t1 = time.time()
     loss_prev = loss
-    grads = _grad_fn(c_arr_renorm)
-    c_arr_renorm = _update_H(c_arr_renorm, grads, hess_inv)
-    loss = _loss_fn(c_arr_renorm)
+    grads = _grad_fn(c_arr)
+    c_arr = _update_H(c_arr, grads, hess_inv)
+    loss = _loss_fn(c_arr)
 
-    model_misfit = model_misfit_fn(c_arr_renorm)
+    model_misfit = model_misfit_fn(c_arr)
     data_misfit = loss - mu*model_misfit*lambda_factor
 
     loss_diff = loss_prev - loss
@@ -363,7 +359,7 @@ t2s = time.time()
 print(f"Total time taken = {(t2s-t1s):12.3f} seconds")
 #----------------------------------------------------------------------#
 # plotting acoeffs from initial data and HMI data
-final_acoeffs = data_misfit_arr_fn(c_arr_renorm)*acoeffs_sigma_HMI + data_acoeffs
+final_acoeffs = data_misfit_arr_fn(c_arr)*acoeffs_sigma_HMI + data_acoeffs
 
 plot_acoeffs.plot_acoeffs_datavsmodel(final_acoeffs, data_acoeffs,
                                       data_acoeffs_out_HMI,
@@ -375,8 +371,9 @@ plot_acoeffs.plot_acoeffs_dm_scaled(final_acoeffs, data_acoeffs,
 #----------------------------------------------------------------------# 
 
 # reconverting back to model_params in units of true_params_flat
-c_arr_fit = jf.model_denorm(c_arr_renorm, true_params_flat, sigma2scale)\
-            /true_params_flat
+# c_arr_fit = jf.model_denorm(c_arr, true_params_flat, sigma2scale)\
+#             /true_params_flat
+c_arr_fit = c_arr/true_params_flat
 
 print(c_arr_fit)
 

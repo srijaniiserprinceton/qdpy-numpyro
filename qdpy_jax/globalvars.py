@@ -14,6 +14,8 @@ package_dir = os.path.dirname(current_dir)
 sys.path.append(f"{package_dir}/plotter")
 import preplotter as preplotter
 
+NAX = np.newaxis
+
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
 data_dir = f"{package_dir}/qdpy_jax"
@@ -84,7 +86,7 @@ class GlobalVars():
     def __init__(self, lmin=200, lmax=200, n0=0, rth=0.9, knot_num=15,
                  load_from_file=0, relpath='.'): 
         self.tslen = 72
-        self.numsplits = 36
+        self.numsplits = 5
         self.local_dir = dirnames[0]
         self.scratch_dir = dirnames[1]
         self.snrnmais_dir = dirnames[2]
@@ -93,12 +95,13 @@ class GlobalVars():
         self.ipdir = f"{self.scratch_dir}/input_files"
         self.eigdir = f"{self.snrnmais_dir}/eig_files"
         self.progdir = self.local_dir
-        fsuffix = f"{self.tslen}d.6335.{self.numsplits}"
-        self.hmidata_in = np.loadtxt(f"{self.ipdir}/mdi.in.{fsuffix}")
-        self.hmidata_out = np.loadtxt(f"{self.ipdir}/mdi.out.{fsuffix}")
+        fsuffix = f"{self.tslen}d.6328.{self.numsplits}"
+        self.hmidata_in = np.loadtxt(f"{self.ipdir}/hmi.in.{fsuffix}")
+        self.hmidata_out = np.loadtxt(f"{self.ipdir}/hmi.out.{fsuffix}")
         self.relpath = relpath
         self.eigtype = eigtype
 
+        self.sfactor = np.array([1., 20., 100.])
         qdPars = qdParams(lmin=lmin, lmax=lmax, n0=n0, rth=rth)
 
         # Frequency unit conversion factor (in Hz (cgs))
@@ -127,17 +130,17 @@ class GlobalVars():
 
         self.fwindow = qdPars.fwindow
         self.wsr = -1.0*np.loadtxt(f'{self.ipdir}/w.dat')
-        # temporary modifications
-        # self.wsr[1] += 1e-4
-        # self.wsr[2] += 1e-5
         self.err1d = np.loadtxt(f'{self.ipdir}/err1d-hmi.dat')
-        # self.wsr_err = np.loadtxt(f'{self.ipdir}/err_hmi.dat')
+        self.wsr_err = np.loadtxt(f'{self.ipdir}/err_hmi.dat')
+
+        self.wsr = self.sfactor[:, NAX]*self.wsr
+        self.wsr_err = self.sfactor[:, NAX]*self.wsr_err
         # self.wsr_extend()
 
         wsr_err = np.zeros_like(self.wsr)
+        maxval = abs(self.wsr[0]).max()
         for i in range(self.wsr.shape[0]):
-            maxval = abs(self.wsr[i]).max()
-            wsr_err[i, :] = 0.07*maxval*np.ones(self.wsr.shape[1])
+            wsr_err[i, :] = 0.10*maxval*np.ones(self.wsr.shape[1])
         self.wsr_err = wsr_err
 
         # rth = r threshold beyond which the profiles are updated. 
@@ -366,8 +369,8 @@ class GlobalVars():
         split_sigmas = split_sigmas[:smax+1]
 
         if odd:
-            splits = splits[1::2]
-            split_sigmas = split_sigmas[1::2]
+            splits = splits[1::2]*self.sfactor
+            split_sigmas = split_sigmas[1::2]*self.sfactor
             return splits, split_sigmas
         else:
             return splits, split_sigmas
