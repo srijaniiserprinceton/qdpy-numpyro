@@ -144,10 +144,10 @@ pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
 np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
 #----------------------------------------------------------------------#
 # changing to the HMI acoeffs if doing this for real data 
-data_acoeffs = GVARS.acoeffs_true
-# np.random.seed(3)
-# data_acoeffs_err = np.random.normal(loc=0, scale=acoeffs_sigma_HMI)
-# data_acoeffs = data_acoeffs + 2.0*data_acoeffs_err
+# data_acoeffs = GVARS.acoeffs_true
+np.random.seed(3)
+data_acoeffs_err = np.random.normal(loc=0, scale=acoeffs_sigma_HMI)
+data_acoeffs = data_acoeffs + 1.0*data_acoeffs_err
 data_acoeffs_out_HMI = GVARS.acoeffs_out_HMI
 print(f"data_acoeffs = {data_acoeffs[:15]}")
 
@@ -173,7 +173,7 @@ def print_info(itercount, tdiff, data_misfit, loss_diff, max_grads, model_misfit
           f'data_misfit = {data_misfit:12.5e} ' +
           f'loss-diff = {loss_diff:12.5e}; ' +
           f'max-grads = {max_grads:12.5e} ' +
-          f'model_misfit={model_misfit*lambda_factor:12.5e}')
+          f'model_misfit={model_misfit:12.5e}')
     return None
 
 
@@ -220,21 +220,23 @@ def data_misfit_arr_fn(c_arr):
 
     return data_misfit_arr
 
-def model_misfit_fn(c_arr, mu_scale=[1., 1., 1.]):
+def model_misfit_fn(c_arr, mu_scale=[1., 2., 6.]):
     # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
     # Djk is the same for s=3 and s=5
 
     # c_arr_renorm = jf.model_renorm(c_arr, true_params_flat, sigma2scale)
     c_arr_renorm = c_arr
+    lambda_factor = []
     cd = []
     for i in range(len_s):
         cd.append(c_arr_renorm[i::len_s])
+        lambda_factor.append(jnp.trace(data_hess_dpy[i::len_s, i::len_s]) / len_data)
 
     Djk = D_bsp_j_D_bsp_k[0::len_s, 0::len_s]
     cDc = 0.0
 
     for i in range(len_s):
-        cDc += mu_scale[i] * cd[i] @ Djk @ cd[i]
+        cDc += mu_scale[i] * cd[i] @ Djk @ cd[i] * lambda_factor[i]
     return cDc
 
 
@@ -247,12 +249,9 @@ model_hess_fn = hessian(model_misfit_fn)
 def loss_fn(c_arr):
     data_misfit_val = data_misfit_fn(c_arr)
     model_misfit_val = model_misfit_fn(c_arr)
-    # data_hess = data_hess_fn(c_arr)
-    lambda_factor = jnp.trace(data_hess_dpy) / len_data
-    # lambda_factor = 1.0
 
     # total misfit
-    misfit = data_misfit_val + mu*model_misfit_val*lambda_factor
+    misfit = data_misfit_val + mu*model_misfit_val
     return misfit
 
 grad_fn = jax.grad(loss_fn)
@@ -303,8 +302,8 @@ N = len(data_acoeffs)
 loss = 1e25
 loss_diff = loss - 1.
 loss_arr = []
-loss_threshold = 1e-8
-maxiter = 150
+loss_threshold = 1e-12
+maxiter = 50
 itercount = 0
 
 hsuffix = f"{int(ARGS[4])}s.{GVARS.eigtype}.{GVARS.tslen}d.npy"
@@ -313,12 +312,10 @@ if PARGS.read_hess:
     data_hess_dpy = np.load(f"{outdir}/dhess.{hsuffix}")
     model_hess_dpy = np.load(f"{outdir}/mhess.{hsuffix}")
 else:
-    data_hess_dpy = data_hess_fn(c_init)
-    model_hess_dpy = model_hess_fn(c_init)
+    data_hess_dpy = jnp.asarray(data_hess_fn(c_init))
+    model_hess_dpy = jnp.asarray(model_hess_fn(c_init))
 
-lambda_factor = jnp.trace(data_hess_dpy)/len_data
-# lambda_factor = 1.0
-total_hess = data_hess_dpy + mu*model_hess_dpy*lambda_factor
+total_hess = data_hess_dpy + mu*model_hess_dpy
 hess_inv = jnp.linalg.inv(total_hess)
 
 
@@ -331,7 +328,7 @@ tdiff = 0
 grads = _grad_fn(c_init)
 loss = _loss_fn(c_init)
 model_misfit = model_misfit_fn(c_init)
-data_misfit = loss - mu*model_misfit*lambda_factor
+data_misfit = loss - mu*model_misfit
 print_info(itercount, tdiff, data_misfit, loss_diff, abs(grads).max(), model_misfit)
 c_arr = c_init
 
@@ -345,7 +342,7 @@ while ((abs(loss_diff) > loss_threshold) and
     loss = _loss_fn(c_arr)
 
     model_misfit = model_misfit_fn(c_arr)
-    data_misfit = loss - mu*model_misfit*lambda_factor
+    data_misfit = loss - mu*model_misfit
 
     loss_diff = loss_prev - loss
     loss_arr.append(loss)
@@ -375,7 +372,8 @@ plot_acoeffs.plot_acoeffs_dm_scaled(final_acoeffs, data_acoeffs,
 #             /true_params_flat
 c_arr_fit = c_arr/true_params_flat
 
-print(c_arr_fit)
+for i in range(len_s):
+    print(c_arr_fit[i::len_s])
 
 #------------------plotting the post fitting profiles-------------------#
 c_arr_fit_full = jf.c4fit_2_c4plot(GVARS, c_arr_fit*true_params_flat,
@@ -387,7 +385,7 @@ fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full, 'fit')
 #------------------------------------------------------------------------#
 with open(f"{current_dir}/reg_misfit.txt", "a") as f:
     f.seek(0, os.SEEK_END)
-    opstr = f"{mu:18.12e}, {data_misfit:18.12e}, {model_misfit*lambda_factor:18.12e}\n"
+    opstr = f"{mu:18.12e}, {data_misfit:18.12e}, {model_misfit:18.12e}\n"
     f.write(opstr)
 
 #------------------------------------------------------------------------# 

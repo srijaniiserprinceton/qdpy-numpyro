@@ -44,11 +44,11 @@ range_y = data_misfit.max() - data_misfit.min()
 max_nbs = 5
 fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(8, 4))
 axs = axs.flatten()
-axs[0].plot(model_misfit, data_misfit, '+k')
+axs[0].loglog(model_misfit, data_misfit, '+k')
 for i in range(2*max_nbs):
-    axs[0].plot(model_misfit[knee_idx-max_nbs+i],
-                data_misfit[knee_idx-max_nbs+i], '+r')
-axs[0].plot(model_misfit[knee_idx], data_misfit[knee_idx], marker='s', color='red')
+    axs[0].loglog(model_misfit[knee_idx-max_nbs+i],
+                  data_misfit[knee_idx-max_nbs+i], '+r')
+axs[0].loglog(model_misfit[knee_idx], data_misfit[knee_idx], marker='s', color='red')
 axs[0].text(model_misfit[knee_idx]+0.04*range_x,
             data_misfit[knee_idx]+0.04*range_y, 
             f"$\\mu$ = {mu[knee_idx]:.5e}")
@@ -72,7 +72,6 @@ plt.semilogy(model_misfit[1:], abs(slope))
 plt.semilogy(model_misfit[knee_idx], abs(slope)[knee_idx], '*r')
 plt.show()
 
-
 # knee_idx2 = np.argmin(abs(slope+1e-12))
 # fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(8, 4))
 # axs = axs.flatten()
@@ -88,5 +87,3 @@ plt.show()
 # axs[0].set_xlabel('Roughness')
 # axs[0].set_ylabel('Data misfit')
 # axs[0].set_title('L-curve')
-
-
