@@ -30,10 +30,10 @@ class get_splines:
         # decomposing the wsr into splines
         self.t_scipy, c_1, __ = splrep(self.r, self.wsr[0], k=self.spl_deg)
 
-        self.knot_ind_th = np.argmin(np.abs(self.t_scipy - self.rth))
-        
         # making internal knots (excluding the first external point)
+        self.knot_ind_th = np.argmin(np.abs(self.t_scipy - self.rth))
         t_internal = self.t_scipy[self.spl_deg+1:self.knot_ind_th]
+
         """
         # putting certain number of knots in the surface part
         # (excluding the outermost point)
