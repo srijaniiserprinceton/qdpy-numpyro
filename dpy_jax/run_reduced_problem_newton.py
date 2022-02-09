@@ -10,6 +10,7 @@ parser.add_argument("--store_hess", help="store hessians",
 parser.add_argument("--read_hess", help="store hessians",
                     type=bool, default=False)
 PARGS = parser.parse_args()
+
 #----------------setting the number of chains to be used-----------------#
 # num_chains = 3
 # os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
@@ -257,12 +258,11 @@ def loss_fn(c_arr):
 grad_fn = jax.grad(loss_fn)
 hess_fn = hessian(loss_fn)
 
-def update(c_arr, grads, loss):
-    grad_strength = jnp.sqrt(jnp.sum(jnp.square(grads)))
-    return jax.tree_multimap(lambda c, g: c - g / grad_strength, c_arr, grads)
+def update_cgrad(c_arr, grads, steplen):
+    gstr = jnp.sqrt(jnp.sum(jnp.square(grads)))
+    return jax.tree_multimap(lambda c, g, sl: c - sl * g / gstr, c_arr, grads, steplen)
 
 def update_H(c_arr, grads, hess_inv):
-    # grad_strength = jnp.sqrt(jnp.sum(jnp.square(grads)))
     return jax.tree_multimap(lambda c, g, h: c - g @ h, c_arr, grads, hess_inv)
 
 
@@ -270,13 +270,14 @@ def update_H(c_arr, grads, hess_inv):
 _grad_fn = jit(grad_fn)
 _hess_fn = jit(hess_fn)
 _update_H = jit(update_H)
+_update_cgrad = jit(update_cgrad)
 _loss_fn = jit(loss_fn)
 
 #-----------------------the main training loop--------------------------#
 # initialization of params
-c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))*1e-4
-# c_init = 2.0 * np.ones_like(true_params_flat)
+# c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))*1e-4
 # c_init += np.random.rand(len(c_init))
+c_init = np.ones_like(true_params_flat)
 c_init *= true_params_flat
 print(f"Number of parameters = {len(c_init)}")
 
@@ -303,7 +304,7 @@ loss = 1e25
 loss_diff = loss - 1.
 loss_arr = []
 loss_threshold = 1e-12
-maxiter = 50
+maxiter = 20
 itercount = 0
 
 hsuffix = f"{int(ARGS[4])}s.{GVARS.eigtype}.{GVARS.tslen}d.npy"
@@ -331,6 +332,7 @@ model_misfit = model_misfit_fn(c_init)
 data_misfit = loss - mu*model_misfit
 print_info(itercount, tdiff, data_misfit, loss_diff, abs(grads).max(), model_misfit)
 c_arr = c_init
+steplen = 1.0e-2
 
 t1s = time.time()
 while ((abs(loss_diff) > loss_threshold) and
@@ -339,7 +341,10 @@ while ((abs(loss_diff) > loss_threshold) and
     loss_prev = loss
     grads = _grad_fn(c_arr)
     c_arr = _update_H(c_arr, grads, hess_inv)
+    # c_arr = _update_cgrad(c_arr, grads, steplen)
     loss = _loss_fn(c_arr)
+    if loss > loss_prev:
+        steplen /= 0.5
 
     model_misfit = model_misfit_fn(c_arr)
     data_misfit = loss - mu*model_misfit

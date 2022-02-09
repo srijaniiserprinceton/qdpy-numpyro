@@ -1,6 +1,8 @@
+import os
+os.environ["F90"] = "gfortran"
 import sys
 import numpy as np
-from scipy.interpolate import splrep, splev
+from avni.tools.bases import eval_splrem, eval_polynomial
 
 class get_splines:
     def __init__(self, r, rth, wsr, custom_knot_num, fac_arr, spl_deg=3):
@@ -26,85 +28,38 @@ class get_splines:
         self.get_uplo_dpt_carr()
         self.get_fixed_wsr()
 
-    def create_custom_knot_arr(self):
-        # decomposing the wsr into splines
-        self.t_scipy, c_1, __ = splrep(self.r, self.wsr[0], k=self.spl_deg)
+    def create_knots_and_bsp(self):
+        knot_locs = np.linspace(self.r.min(),
+                                self.r.max(),
+                                int(self.custom_knot_num//(1 - self.rth))+1)
+        self.knot_ind_th = np.argmin(abs(knot_locs - self.rth))
+        self.knot_locs = knot_locs
 
-        # making internal knots (excluding the first external point)
-        self.knot_ind_th = np.argmin(np.abs(self.t_scipy - self.rth))
-        t_internal = self.t_scipy[self.spl_deg+1:self.knot_ind_th]
+        vercof1, dvercof1 = eval_polynomial(self.r, [self.r.min(), self.r.max()],
+                                            1, types= ['TOP','BOTTOM'])
+        vercof2, dvercof2 = eval_splrem(self.r, [self.r.min(), self.r.max()],
+                                        len(knot_locs))
+        Bsp = np.column_stack((vercof1, vercof2[:, 1:-1]))
+        dBsp = np.column_stack((dvercof1, dvercof2[:, 1:-1]))
+        Gtg = Bsp.T @ Bsp
+        c = np.linalg.inv(Gtg) @ (Bsp.T @ fn)
+        self.Bsp = Bsp
 
-        """
-        # putting certain number of knots in the surface part
-        # (excluding the outermost point)
-        rth_idx = np.argmin(abs(self.r - self.rth))
-        r_external = self.r[rth_idx:]
-        r_spacing = int(len(r_external)//self.custom_knot_num)
-        r_filtered = r_external[::r_spacing]
-        # removing end points because of requirement of splrep
-        # endpoints are automatically padded up
-        t_external = r_filtered[1:-1]
-        t_internal = np.append(t_internal, t_external)
-        """
-
-        t_internal = np.append(t_internal,
-                               np.linspace(self.t_scipy[self.knot_ind_th],
-                                           self.t_scipy[-(self.spl_deg+2)],
-                                           self.custom_knot_num))
-        
-        # creating the carr corresponding to the DPT using custom knots
-        t, c_1, __ = splrep(self.r,
-                            self.wsr[0],
-                            k=self.spl_deg,
-                            t=t_internal)
-
-        # in the above step we did a dummy run to get the correctly padded knot
-        self.t_internal = t
-
-        '''
-        # next we simply keep the 
-        # the full control vector (s x nc_full) from default scipy knots
-        self.c_arr_full = c_1
-        
-        for s_ind in range(1, self.len_s):
-            __, c, __ = splrep(self.r, self.wsr[s_ind])
-            self.c_arr_full = np.vstack((self.c_arr_full, c))
-        '''
-        
     def get_uplo_dpt_carr(self):
-        # making internal knots (excluding the first external point)
-        t_internal = self.t_scipy[self.spl_deg+1:self.knot_ind_th]
-        # putting certain number of knots in the surface part
-        # (excluding the outermost point)
-        t_internal = np.append(t_internal, np.linspace(self.t_scipy[self.knot_ind_th],
-                                                       self.t_scipy[-(self.spl_deg+2)],
-                                                       self.custom_knot_num))
-        
         # creating the carr corresponding to the DPT using custom knots
-        t, c_1, __ = splrep(self.r,
-                            self.wsr[0],
-                            k=self.spl_deg,
-                            t=t_internal)
+        Gtg = self.Bsp.T @ self.Bsp
+        c_arr_dpt = []
+        for s_ind in range(self.len_s):
+            c_arr_dpt.append(np.linalg.inv(Gtg) @ (self.Bsp.T @ self.wsr[s_ind]))
         
-        c_arr_dpt = c_1
-        
-        # storing all other s
-        for s_ind in range(1, self.len_s):
-            __, c, __ = splrep(self.r,
-                               self.wsr[s_ind],
-                               k=self.spl_deg,
-                               t=t_internal)
-            c_arr_dpt = np.vstack((c_arr_dpt, c))
-
-        self.t_internal = t
-        self.c_arr_dpt_full = c_arr_dpt
+        self.c_arr_dpt_full = np.array(c_arr_dpt)
         
         # clipping it off below rth (approximately)
-        self.c_arr_dpt_clipped = c_arr_dpt[:, self.knot_ind_th:]
+        self.c_arr_dpt_clipped = self.c_arr_dpt_full[:, self.knot_ind_th:]
         
         # creating the upex and loex controls
-        c_arr_up = self.fac_arr[0][:,np.newaxis] * self.c_arr_dpt_clipped
-        c_arr_lo = self.fac_arr[1][:,np.newaxis] * self.c_arr_dpt_clipped
+        c_arr_up = self.fac_arr[0][:, np.newaxis] * self.c_arr_dpt_clipped
+        c_arr_lo = self.fac_arr[1][:, np.newaxis] * self.c_arr_dpt_clipped
         
         # swapping according to which ones are larger
         swap_mask = c_arr_up < c_arr_lo
@@ -120,15 +75,9 @@ class get_splines:
         # creating the fixed control points
         c_arr_fixed = np.zeros_like(self.c_arr_dpt_full)
         c_arr_fixed[:, :self.knot_ind_th] = self.c_arr_dpt_full[:, :self.knot_ind_th]
-        self.wsr_fixed = splev(self.r,
-                               (self.t_internal,
-                                c_arr_fixed[0],
-                                self.spl_deg))
+        wsr_fixed = []
 
-        # creating the fixed wsr
-        for s_ind in range(1, self.len_s):
-            self.wsr_fixed = np.vstack((self.wsr_fixed, 
-                                        splev(self.r,
-                                              (self.t_internal,
-                                               c_arr_fixed[s_ind],
-                                               self.spl_deg))))
+        for i in range(self.len_s):
+            wsr_fixed.append(c_arr_fixed[i, :] @ self.Bsp)
+
+        self.wsr_fixed = np.array(wsr_fixed)
