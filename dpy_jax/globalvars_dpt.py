@@ -1,4 +1,4 @@
-0;276;0cfrom collections import namedtuple
+from collections import namedtuple
 import jax.numpy as jnp
 import numpy as np
 from scipy.interpolate import splrep, splev, interp1d

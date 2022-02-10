@@ -55,6 +55,7 @@ lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
                                      nl_idx_pruned,
                                      omega_pruned)
 
+'''
 def get_bsp_basis_elements(x):
     """Returns the integrated basis polynomials
     forming the B-spline.
@@ -82,6 +83,7 @@ def get_bsp_basis_elements(x):
 
 # extracting the basis elements once 
 bsp_basis = get_bsp_basis_elements(GVARS.r)
+'''
 
 def build_integrated_part(eig_idx, ell, s):
     '''Builds the integrated part of the kernel                                               
@@ -123,7 +125,7 @@ def build_integrated_part(eig_idx, ell, s):
     # nc = number of control points, the additional value indicates the
     # integral between (rmin, rth), which is constant across MCMC iterations
     # shape (nc x r)
-    integrand = -1. * bsp_basis * eigfac / GVARS.r
+    integrand = -1. * GVARS.bsp_basis * eigfac / GVARS.r
 
     # shape (nc,)
     post_integral = integrate.trapz(integrand, GVARS.r, axis=1)

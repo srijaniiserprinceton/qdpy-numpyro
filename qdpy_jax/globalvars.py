@@ -101,7 +101,8 @@ class GlobalVars():
         self.relpath = relpath
         self.eigtype = eigtype
 
-        self.sfactor = np.array([1., 20., 100.])
+        # self.sfactor = np.array([1., 20., 100.])
+        self.sfactor = np.array([1., 1., 1.])
         qdPars = qdParams(lmin=lmin, lmax=lmax, n0=n0, rth=rth)
 
         # Frequency unit conversion factor (in Hz (cgs))
@@ -191,14 +192,23 @@ class GlobalVars():
         self.ctrl_arr_up = bsplines.c_arr_up
         self.ctrl_arr_lo = bsplines.c_arr_lo
         self.ctrl_arr_dpt_clipped = bsplines.c_arr_dpt_clipped
+        self.nc = len(self.ctrl_arr_dpt_clipped[0])
         self.ctrl_arr_dpt_full = bsplines.c_arr_dpt_full
         self.t_internal = bsplines.t_internal
+        self.knot_locs = bsplines.knot_locs
         self.knot_ind_th = bsplines.knot_ind_th
-
+        # all spline basis
+        self.bsp_basis_full = bsplines.bsp_basis
+        self.d_bsp_basis = bsplines.d_bsp_basis
+        np.save('bsp_basis_full.npy', self.bsp_basis_full)
+        # only the splines basis corresponding to the ctrl_clipped
+        self.bsp_basis = self.bsp_basis_full[-self.nc:]
+        
+        '''
         self.bsp_params = (len(self.ctrl_arr_dpt_full),
                            self.t_internal,
                            self.spl_deg)
-        self.nc = len(self.ctrl_arr_dpt_clipped[0])
+        '''
 
         # getting  wsr_err spline_coefficients                                          
         bsplines_err = bsp.get_splines(self.r, self.rth, self.wsr_err,

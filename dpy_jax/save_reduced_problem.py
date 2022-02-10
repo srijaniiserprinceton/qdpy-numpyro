@@ -1,4 +1,4 @@
-BBimport argparse
+import argparse
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
@@ -53,7 +53,7 @@ GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 outdir = f"{GVARS.scratch_dir}/dpy_jax"
 #-------------------parameters to be inverted for--------------------#
 # the indices of ctrl points that we want to invert for
-ind_min, ind_max = 5, GVARS.knot_num-1
+ind_min, ind_max = 0, GVARS.ctrl_arr_dpt_clipped.shape[1]-1
 cind_arr = np.arange(ind_min, ind_max+1)
 
 # the angular degrees we want to invert for
@@ -125,7 +125,8 @@ for sind in range(smin_ind, smax_ind+1):
 
 #-------------computing the regularization terms-------------------#
 # extracting the entire basis elements once for one s
-bsp_basis_one_s = precompute.get_bsp_basis_elements(GVARS.r)
+# bsp_basis_one_s = precompute.get_bsp_basis_elements(GVARS.r)
+bsp_basis_one_s = GVARS.bsp_basis
 
 # retaining the ctrl points needed
 bsp_basis_one_s = bsp_basis_one_s[cind_arr]
@@ -139,10 +140,10 @@ for sind in range(smin_ind, smax_ind+1):
 
 # flattening in the s and c dimension like ctrl_arr_flat
 bsp_basis = np.reshape(bsp_basis, (len(sind_arr) * len(cind_arr), -1), 'F')
-np.save(f'{outdir}/bsp_basis.npy', bsp_basis)
+# np.save(f'{outdir}/bsp_basis.npy', bsp_basis)
 
 # acting the basis elements on with operator D
-D_bsp = jf.D(bsp_basis, GVARS.r)
+D_bsp = jf.D(GVARS.bsp_basis, GVARS.r)
 
 # calculating D_bsp_k * D_bsp_j and then integrating over radius
 D_bsp_j_D_bsp_k_r = D_bsp[:, NAX, :] * D_bsp[NAX, :, :]

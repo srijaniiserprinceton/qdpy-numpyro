@@ -15,42 +15,50 @@ class get_splines:
         self.spl_deg = spl_deg
         
         self.knot_ind_th = None
-        self.t_scipy = None
         self.t_internal = None
         self.c_arr_dpt_full = None
         self.c_arr_dpt_clipped = None
         self.c_arr_up = None
         self.c_arr_lo = None
         self.wsr_fixed = None
+        self.bsp_basis = None
+        self.d_bsp_basis = None
+        self.d2_bsp_basis = None
 
         # performing different tasks
-        self.create_custom_knot_arr()
+        self.create_knots_and_bsp()
         self.get_uplo_dpt_carr()
         self.get_fixed_wsr()
 
     def create_knots_and_bsp(self):
-        knot_locs = np.linspace(self.r.min(),
-                                self.r.max(),
-                                int(self.custom_knot_num//(1 - self.rth))+1)
+        rmin, rmax = self.r.min(), self.r.max()
+        total_knot_num = int(np.round((rmax-rmin)/(1 - self.rth))) \
+                         * self.custom_knot_num
+        
+        knot_locs = np.linspace(rmin, rmax, total_knot_num)
+        
         self.knot_ind_th = np.argmin(abs(knot_locs - self.rth))
         self.knot_locs = knot_locs
 
-        vercof1, dvercof1 = eval_polynomial(self.r, [self.r.min(), self.r.max()],
+        vercof1, dvercof1 = eval_polynomial(self.r, [rmin, rmax],
                                             1, types= ['TOP','BOTTOM'])
-        vercof2, dvercof2 = eval_splrem(self.r, [self.r.min(), self.r.max()],
+        vercof2, dvercof2 = eval_splrem(self.r, [rmin, rmax],
                                         len(knot_locs))
-        Bsp = np.column_stack((vercof1, vercof2[:, 1:-1]))
-        dBsp = np.column_stack((dvercof1, dvercof2[:, 1:-1]))
-        Gtg = Bsp.T @ Bsp
-        c = np.linalg.inv(Gtg) @ (Bsp.T @ fn)
-        self.Bsp = Bsp
+        
+        bsp_basis = np.column_stack((vercof1, vercof2[:, 1:-1]))
+        d_bsp_basis = np.column_stack((dvercof1, dvercof2[:, 1:-1]))
+        
+        # storing the analytically derived B-splines and it first derivatives
+        # making them of shape (n_basis, r)
+        self.bsp_basis = bsp_basis.T
+        self.d_bsp_basis = d_bsp_basis.T
 
     def get_uplo_dpt_carr(self):
         # creating the carr corresponding to the DPT using custom knots
-        Gtg = self.Bsp.T @ self.Bsp
+        Gtg = self.bsp_basis @ self.bsp_basis.T   # shape(n_basis, n_basis)
         c_arr_dpt = []
         for s_ind in range(self.len_s):
-            c_arr_dpt.append(np.linalg.inv(Gtg) @ (self.Bsp.T @ self.wsr[s_ind]))
+            c_arr_dpt.append(np.linalg.inv(Gtg) @ (self.bsp_basis @ self.wsr[s_ind]))
         
         self.c_arr_dpt_full = np.array(c_arr_dpt)
         
@@ -76,8 +84,8 @@ class get_splines:
         c_arr_fixed = np.zeros_like(self.c_arr_dpt_full)
         c_arr_fixed[:, :self.knot_ind_th] = self.c_arr_dpt_full[:, :self.knot_ind_th]
         wsr_fixed = []
-
+        
         for i in range(self.len_s):
-            wsr_fixed.append(c_arr_fixed[i, :] @ self.Bsp)
+            wsr_fixed.append(c_arr_fixed[i, :] @ self.bsp_basis)
 
         self.wsr_fixed = np.array(wsr_fixed)
