@@ -200,6 +200,35 @@ def data_misfit_fn(c_arr):
 
     return jnp.sum(jnp.square(data_misfit_arr))
 
+
+def get_pc_pjl(c_arr):
+    pred = param_coeff_flat
+    pc_pjl = jnp.zeros((len(c_arr), num_j * nmults))
+
+    def loop_in_c(cind, pc):
+        def loop_in_mults(mult_ind, pred_acoeff):
+            pred_omega = jdc(pred[cind], (mult_ind*dim_hyper,), (dim_hyper,))
+            pred_acoeff = jdc_update(pred_acoeff,
+                                    (Pjl[mult_ind] @ pred_omega)/aconv_denom[mult_ind],
+                                    (mult_ind * num_j,))
+            return pred_acoeff
+
+        pcpjl = foril(0, nmults, loop_in_mults, pc[cind])
+        pc = jidx_update(pc,
+                         jidx[cind, :],
+                         pcpjl)
+        return pc
+
+    pc_pjl = foril(0, len(c_arr), loop_in_c, pc_pjl)
+    return pc_pjl
+
+
+def get_dhess_exact(c_arr):
+    pc_pjl = get_pc_pjl(c_arr)
+    gtg = pc_pjl @ (np.diag(1/acoeffs_sigma_HMI**2) @ pc_pjl.T)
+    return 2*gtg
+
+
 def data_misfit_arr_fn(c_arr):
     # predicted a-coefficients
     pred_acoeffs = jnp.zeros(num_j * nmults)
@@ -221,7 +250,7 @@ def data_misfit_arr_fn(c_arr):
 
     return data_misfit_arr
 
-def model_misfit_fn(c_arr, mu_scale=[1., 1., 3.]):
+def model_misfit_fn(c_arr, mu_scale=[1., 2.5, 5.]):
     # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
     # Djk is the same for s=3 and s=5
 
