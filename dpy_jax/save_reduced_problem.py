@@ -142,8 +142,10 @@ for sind in range(smin_ind, smax_ind+1):
 bsp_basis = np.reshape(bsp_basis, (len(sind_arr) * len(cind_arr), -1), 'F')
 # np.save(f'{outdir}/bsp_basis.npy', bsp_basis)
 
+bsp_basis_full = np.load('bsp_basis_full.npy')
 # acting the basis elements on with operator D
-D_bsp = jf.D(GVARS.bsp_basis, GVARS.r)
+# D_bsp = jf.D(GVARS.bsp_basis, GVARS.r)
+D_bsp = jf.D(bsp_basis_full[GVARS.knot_ind_th-4:], GVARS.r)
 
 # calculating D_bsp_k * D_bsp_j and then integrating over radius
 D_bsp_j_D_bsp_k_r = D_bsp[:, NAX, :] * D_bsp[NAX, :, :]

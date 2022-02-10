@@ -221,19 +221,21 @@ def data_misfit_arr_fn(c_arr):
 
     return data_misfit_arr
 
-def model_misfit_fn(c_arr, mu_scale=[1., 2., 6.]):
+def model_misfit_fn(c_arr, mu_scale=[1., 1., 3.]):
     # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
     # Djk is the same for s=3 and s=5
 
     # c_arr_renorm = jf.model_renorm(c_arr, true_params_flat, sigma2scale)
     c_arr_renorm = c_arr
-    lambda_factor = []
     cd = []
+    lambda_factor = []
     for i in range(len_s):
-        cd.append(c_arr_renorm[i::len_s])
-        lambda_factor.append(jnp.trace(data_hess_dpy[i::len_s, i::len_s]) / len_data)
+        cd.append(jnp.append(GVARS.ctrl_arr_dpt_full[sind_arr[i],
+                                                     GVARS.knot_ind_th-4:GVARS.knot_ind_th],
+                             c_arr_renorm[i::len_s]))
+        lambda_factor.append(jnp.trace(data_hess_dpy[i::len_s, i::len_s]) / len_data * len_s)
 
-    Djk = D_bsp_j_D_bsp_k[0::len_s, 0::len_s]
+    Djk = D_bsp_j_D_bsp_k #[0::len_s, 0::len_s]
     cDc = 0.0
 
     for i in range(len_s):

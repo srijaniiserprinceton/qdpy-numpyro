@@ -139,9 +139,8 @@ class GlobalVars():
         # self.wsr_extend()
 
         wsr_err = np.zeros_like(self.wsr)
-        maxval = abs(self.wsr[0]).max()
         for i in range(self.wsr.shape[0]):
-            wsr_err[i, :] = 0.10*maxval*np.ones(self.wsr.shape[1])
+            wsr_err[i, :] = 0.10*abs(self.wsr[i]).max()*np.ones(self.wsr[0].shape)
         self.wsr_err = wsr_err
 
         # rth = r threshold beyond which the profiles are updated. 
