@@ -258,10 +258,17 @@ def model_misfit_fn(c_arr, mu_scale=[1., 2.5, 5.]):
     c_arr_renorm = c_arr
     cd = []
     lambda_factor = []
+    start_idx = max(GVARS.knot_ind_th-4, 0)
+    end_idx = GVARS.knot_ind_th
+    carr_padding = []
     for i in range(len_s):
-        cd.append(jnp.append(GVARS.ctrl_arr_dpt_full[sind_arr[i],
-                                                     GVARS.knot_ind_th-4:GVARS.knot_ind_th],
-                             c_arr_renorm[i::len_s]))
+        if sind_arr[i] > 0:
+            carr_padding.append(GVARS.ctrl_arr_dpt_full[sind_arr[i], start_idx:end_idx])#*0.0)
+        else:
+            carr_padding.append(GVARS.ctrl_arr_dpt_full[sind_arr[i], start_idx:end_idx])
+
+    for i in range(len_s):
+        cd.append(jnp.append(carr_padding[i], c_arr_renorm[i::len_s]))
         lambda_factor.append(jnp.trace(data_hess_dpy[i::len_s, i::len_s]) / len_data * len_s)
 
     Djk = D_bsp_j_D_bsp_k #[0::len_s, 0::len_s]
