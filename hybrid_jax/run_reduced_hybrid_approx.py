@@ -226,10 +226,6 @@ def loop_in_mults_Q(mult_ind, data_acoeff):
 
 data_acoeffs_Q = foril(0, nmults_Q, loop_in_mults_Q, data_acoeffs_Q)
 
-#---------------checking that the loaded data are correct----------------#
-c_arr_renorm = jf.model_renorm(true_params_flat, true_params_flat, sigma2scale)
-c_arr_renorm = jnp.asarray(c_arr_renorm)
-
 #----------------------------------------------------------------------# 
 # the DPT model function that returns a-coefficients
 def model_D(c_arr):
@@ -237,8 +233,8 @@ def model_D(c_arr):
     pred_acoeffs = jnp.zeros(num_j * nmults_D)
 
     # denormalizing to make actual model params
-    c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
-    pred = fixed_part_D + c_arr_denorm @ param_coeff_flat_D
+    # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
+    pred = fixed_part_D + c_arr @ param_coeff_flat_D
 
     def loop_in_mults(mult_ind, pred_acoeff):
         pred_omega = jdc(pred, (mult_ind*dim_hyper_D,), (dim_hyper_D,))
@@ -252,7 +248,7 @@ def model_D(c_arr):
 
 model_D_ = jit(model_D)
 
-pred_acoeffs_D = model_D_(c_arr_renorm)
+pred_acoeffs_D = model_D_(c_arr)
 
 # these arrays should be very close
 np.testing.assert_array_almost_equal(pred_acoeffs_D, data_acoeffs_D)
@@ -262,8 +258,8 @@ np.testing.assert_array_almost_equal(pred_acoeffs_D, data_acoeffs_D)
 def model_Q(c_arr):
     pred_acoeffs = jnp.zeros(num_j * nmults_Q)
 
-    c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
-    pred = c_arr_denorm @ param_coeff_flat_Q + fixed_part_Q
+    # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
+    pred = c_arr @ param_coeff_flat_Q + fixed_part_Q
 
     def loop_in_mults(mult_ind, pred_acoeff):
         _eigval_mult = jnp.zeros(2*ellmax_Q+1)
@@ -298,7 +294,7 @@ def get_eigs(mat):
 
 model_Q_ = jit(model_Q)
 
-pred_acoeffs_Q = model_Q_(c_arr_renorm)
+pred_acoeffs_Q = model_Q_(c_arr)
 
 # these arrays should be very close
 np.testing.assert_array_almost_equal(pred_acoeffs_Q, data_acoeffs_Q)
@@ -352,16 +348,27 @@ def data_misfit_fn_Q(c_arr):
     return jnp.sum(jnp.square(data_misfit_arr_Q))
 
 
-def model_misfit_fn(c_arr, mu_scale=[1., 1., 1.]):
-    # Djk is the same for s=1, 3, 5
-    Djk = D_bsp_j_D_bsp_k[0::len_s, 0::len_s]
+def model_misfit_fn(c_arr, mu_scale=[1., 0.036, 0.0203]):
+    # Djk is the same for s=1, s=3 and s=5
+    # as the basis functions and the knot locations are the same
     cd = []
+    lambda_factor = []
+    start_idx = 0
+    end_idx = GVARS.knot_ind_th
+    carr_padding = []
     for i in range(len_s):
-        cd.append(c_arr[i::len_s])
+        carr_padding.append(GVARS.ctrl_arr_dpt_full[sind_arr[i], start_idx:end_idx])
 
-    cDc = 0.0
     for i in range(len_s):
-        cDc += mu_scale[i] * cd[i] @ Djk @ cd[i]
+        cd.append(jnp.append(carr_padding[i], c_arr[i::len_s]))
+        lambda_factor.append(jnp.trace(data_hess_dpy[i::len_s, i::len_s])
+                             / len_data * len_s)
+
+    Djk = D_bsp_j_D_bsp_k
+    cDc = 0.0
+
+    for i in range(len_s):
+        cDc += mu_scale[i] * cd[i] @ Djk @ cd[i] * lambda_factor[i]
     return cDc
 
 
@@ -412,17 +419,17 @@ c_arr_init_full = jf.c4fit_2_c4plot(GVARS_D, c_init*true_params_flat,
 # converting ctrl points to wsr and plotting
 init_plot = postplotter.postplotter(GVARS_D, c_arr_init_full, 'init')
 #------------------------------------------------------------------------# 
-
 # getting the renormalized model parameters
-c_arr_renorm = jf.model_renorm(c_init*true_params_flat,
-                               true_params_flat,
-                               sigma2scale)
-c_arr_renorm = jnp.asarray(c_arr_renorm)
+c_arr = c_init * true_params_flat
+# c_arr_renorm = jf.model_renorm(c_arr,
+#                                true_params_flat,
+#                                sigma2scale)
+# c_arr_renorm = jnp.asarray(c_arr_renorm)
 
 #----------------------------------------------------------------------#
 # plotting acoeffs from initial data and HMI data
-init_acoeffs_D = model_D(c_arr_renorm)
-init_acoeffs_Q = model_Q(c_arr_renorm)
+init_acoeffs_D = model_D(c_arr)
+init_acoeffs_Q = model_Q(c_arr)
 
 plot_acoeffs.plot_acoeffs_datavsmodel(init_acoeffs_D, data_acoeffs_D,
                                       data_acoeffs_out_HMI_D,
@@ -449,20 +456,16 @@ maxiter = 50
 itercount = 0
 
 # calculating the DPT & model hessian once since it doesn't depend on c_arr
-# hess_D = _data_hess_fn_D(c_arr_renorm)
-# model_hess = _model_hess_fn(c_arr_renorm)
-# np.save("/scratch/g.samarth/qdpy-numpyro/hessD.npy", hess_D)
-
 suffix = f"{int(ARGS_Q[4])}s.{GVARS_Q.eigtype}.{GVARS_Q.tslen}d"
 data_hess_dpy = np.load(f"{dpy_dir}/dhess.{suffix}.npy")
 model_hess_dpy = np.load(f"{dpy_dir}/mhess.{suffix}.npy")
 hess_inv = jnp.linalg.inv(data_hess_dpy + mu * model_hess_dpy)
 
 
-loss = _loss_fn(c_arr_renorm)
-model_misfit = model_misfit_fn(c_arr_renorm)
+loss = _loss_fn(c_arr)
+model_misfit = model_misfit_fn(c_arr)
 data_misfit = loss - mu * model_misfit
-grads = _grad_fn(c_arr_renorm)
+grads = _grad_fn(c_arr)
 tinit = 0
 print(f'[{itercount:3d} | {tinit:6.1f} sec ] ' +
       f'data_misfit = {data_misfit:12.5e} loss-diff = {loss_diff:12.5e}; ' +
@@ -473,19 +476,13 @@ t1s = time.time()
 while ((abs(loss_diff) > loss_threshold) and
        (itercount < maxiter)):
     t1 = time.time()
-
     loss_prev = loss
-    grads = _grad_fn(c_arr_renorm)
-    # hess_Q = _data_hess_fn_Q(c_arr_renorm) 
-    # hess = hess_D + hess_Q + model_hess
-    # hess_inv = jnp.linalg.inv(hess)
-    # np.save(f"/scratch/g.samarth/qdpy-numpyro/hessQ.{itercount:03d}.npy", hess_Q)
+    grads = _grad_fn(c_arr)
+    c_arr = _update_H(c_arr, grads, hess_inv)
+    loss = _loss_fn(c_arr)
 
-    c_arr_renorm = _update_H(c_arr_renorm, grads, hess_inv)
-    loss = _loss_fn(c_arr_renorm)
-
-    model_misfit = model_misfit_fn(c_arr_renorm)
-    data_misfit = loss - mu * model_misfit
+    model_misfit = model_misfit_fn(c_arr)
+    data_misfit = loss - mu*model_misfit
     loss_diff = loss_prev - loss
     loss_arr.append(loss)
 
@@ -499,8 +496,8 @@ while ((abs(loss_diff) > loss_threshold) and
 t2s = time.time()
 print(f"Total time taken = {(t2s-t1s):12.3f} seconds")
 
-data_misfit_val_D = data_misfit_fn_D(c_arr_renorm)
-data_misfit_val_Q = data_misfit_fn_Q(c_arr_renorm)
+data_misfit_val_D = data_misfit_fn_D(c_arr)
+data_misfit_val_Q = data_misfit_fn_Q(c_arr)
 total_misfit = data_misfit_val_D + data_misfit_val_Q
 num_data = len(pred_acoeffs_D) + len(pred_acoeffs_Q)
 chisq = total_misfit/num_data
@@ -509,8 +506,8 @@ print(f"chisq = {chisq:.5f}")
 
 #----------------------------------------------------------------------#
 # plotting acoeffs from initial data and HMI data
-final_acoeffs_D = model_D(c_arr_renorm)
-final_acoeffs_Q = model_Q(c_arr_renorm)
+final_acoeffs_D = model_D(c_arr)
+final_acoeffs_Q = model_Q(c_arr)
 
 plot_acoeffs.plot_acoeffs_datavsmodel(final_acoeffs_D, data_acoeffs_D,
                                       data_acoeffs_out_HMI_D,
@@ -521,9 +518,7 @@ plot_acoeffs.plot_acoeffs_datavsmodel(final_acoeffs_Q, data_acoeffs_Q,
                                       acoeffs_sigma_HMI_Q, 'final_Q')
 #----------------------------------------------------------------------# 
 # reconverting back to model_params in units of true_params_flat
-c_arr_fit = jf.model_denorm(c_arr_renorm, true_params_flat, sigma2scale)\
-            /true_params_flat
-
+c_arr_fit = c_arr/true_params_flat
 print(c_arr_fit)
 
 #------------------plotting the post fitting profiles-------------------#
