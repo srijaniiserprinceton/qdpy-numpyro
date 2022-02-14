@@ -86,7 +86,7 @@ class GlobalVars():
     def __init__(self, lmin=200, lmax=200, n0=0, rth=0.9, knot_num=15,
                  load_from_file=0, relpath='.'): 
         self.tslen = 72
-        self.numsplits = 5
+        self.numsplits = 36
         self.local_dir = dirnames[0]
         self.scratch_dir = dirnames[1]
         self.snrnmais_dir = dirnames[2]
@@ -110,7 +110,8 @@ class GlobalVars():
         M_sol = 1.989e33       # in grams
         R_sol = 6.956e10       # in cm
         B_0 = 10e5             # in Gauss (base of convection zone)
-        self.OM = np.sqrt(4*np.pi*R_sol*B_0**2/M_sol) 
+        self.OM = np.sqrt(4*np.pi*R_sol*B_0**2/M_sol)
+        self.rsun = R_sol
 
         self.r = np.loadtxt(f"{self.ipdir}/r.dat").astype('float')
         self.nl_all = np.loadtxt(f"{self.datadir}/nl.dat").astype('int')
@@ -384,6 +385,18 @@ class GlobalVars():
         else:
             return splits, split_sigmas
     # }}} find_acoeffs(data, l, n)
+
+
+    def get_lower_tp(self, n, ell):
+        model_s_data = np.loadtxt(f"{self.ipdir}/modelS.dat")
+        c = model_s_data[:, 1]
+        r = model_s_data[:, 0]*self.rsun
+        r[r==0] = 1.0
+        omega = self.findfreq(n, ell,
+                              np.array([0], dtype=int),
+                              fullfreq=True)[0]*1e-6 #Hz
+        rltp_idx = np.argmin(abs(c*c/r/r - omega*omega/ell/(ell+1)*4*np.pi*np.pi))
+        return r[rltp_idx]/self.rsun
 
 
     def get_all_GVAR(self):

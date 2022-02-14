@@ -137,6 +137,10 @@ nc_D = len(cind_arr_D)
 # slicing the Pjl correctly in angular degree s
 Pjl_D = RL_poly_D[:, smin_D:smax_D+1:2, :]
 
+# mu_scaling = np.array([1., 1., 1.])
+knee_mu = np.array([3.535e-5, 4.961e-5, 1.768e-4])
+mu_scaling = knee_mu/knee_mu[0]
+
 #-----------------------------------------------------------------------# 
 nmults_Q = len(GVARS_Q.ell0_arr)
 num_j_Q = len(GVARS_Q.s_arr)
@@ -247,8 +251,7 @@ def model_D(c_arr):
     return pred_acoeffs
 
 model_D_ = jit(model_D)
-
-pred_acoeffs_D = model_D_(c_arr)
+pred_acoeffs_D = model_D_(true_params_flat)
 
 # these arrays should be very close
 np.testing.assert_array_almost_equal(pred_acoeffs_D, data_acoeffs_D)
@@ -293,8 +296,7 @@ def get_eigs(mat):
     return eigvals
 
 model_Q_ = jit(model_Q)
-
-pred_acoeffs_Q = model_Q_(c_arr)
+pred_acoeffs_Q = model_Q_(true_params_flat)
 
 # these arrays should be very close
 np.testing.assert_array_almost_equal(pred_acoeffs_Q, data_acoeffs_Q)
@@ -323,6 +325,8 @@ data_acoeffs_out_HMI_Q = GVARS_Q.acoeffs_out_HMI
 print(f"data_acoeffs_D = {data_acoeffs_D[:15]}")
 print(f"data_acoeffs_Q = {data_acoeffs_Q[:15]}")
 
+len_data = len(data_acoeffs_D) + len(data_acoeffs_Q)
+
 #----------------------------------------------------------------------# 
 # plotting acoeffs pred and data to see if we should expect good fit
 plot_acoeffs.plot_acoeffs_datavsmodel(pred_acoeffs_D, data_acoeffs_D,
@@ -348,16 +352,16 @@ def data_misfit_fn_Q(c_arr):
     return jnp.sum(jnp.square(data_misfit_arr_Q))
 
 
-def model_misfit_fn(c_arr, mu_scale=[1., 0.036, 0.0203]):
+def model_misfit_fn(c_arr, mu_scale=mu_scaling):
     # Djk is the same for s=1, s=3 and s=5
     # as the basis functions and the knot locations are the same
     cd = []
     lambda_factor = []
     start_idx = 0
-    end_idx = GVARS.knot_ind_th
+    end_idx = GVARS_D.knot_ind_th
     carr_padding = []
     for i in range(len_s):
-        carr_padding.append(GVARS.ctrl_arr_dpt_full[sind_arr[i], start_idx:end_idx])
+        carr_padding.append(GVARS_D.ctrl_arr_dpt_full[sind_arr_D[i], start_idx:end_idx])
 
     for i in range(len_s):
         cd.append(jnp.append(carr_padding[i], c_arr[i::len_s]))

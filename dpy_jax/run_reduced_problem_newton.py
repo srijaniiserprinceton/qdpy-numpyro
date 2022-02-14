@@ -89,6 +89,10 @@ len_s = len(sind_arr)
 # number of c's to fit
 nc = len(cind_arr)
 
+# mu_scaling = np.array([1., 1., 1.])
+knee_mu = np.array([3.535e-5, 4.961e-5, 1.768e-4])
+mu_scaling = knee_mu/knee_mu[0]
+
 # slicing the Pjl correctly in angular degree s
 Pjl = RL_poly[:, smin:smax+1:2, :]
 #------------------------------------------------------------------------#
@@ -250,7 +254,7 @@ def data_misfit_arr_fn(c_arr):
 
     return data_misfit_arr
 
-def model_misfit_fn(c_arr, mu_scale=[1., 2.5, 5.]):
+def model_misfit_fn(c_arr, mu_scale=mu_scaling):
     # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
     # Djk is the same for s=3 and s=5
 

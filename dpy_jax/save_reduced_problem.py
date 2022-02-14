@@ -145,7 +145,7 @@ bsp_basis = np.reshape(bsp_basis, (len(sind_arr) * len(cind_arr), -1), 'F')
 bsp_basis_full = np.load('bsp_basis_full.npy')
 # acting the basis elements on with operator D
 # D_bsp = jf.D(GVARS.bsp_basis, GVARS.r)
-start_idx = max(GVARS.knot_ind_th-4, 0)
+# start_idx = max(GVARS.knot_ind_th-4, 0)
 D_bsp = jf.D(bsp_basis_full, GVARS.r)
 
 # calculating D_bsp_k * D_bsp_j and then integrating over radius
