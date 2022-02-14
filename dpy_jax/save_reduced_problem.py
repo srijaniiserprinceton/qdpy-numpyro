@@ -146,7 +146,7 @@ bsp_basis_full = np.load('bsp_basis_full.npy')
 # acting the basis elements on with operator D
 # D_bsp = jf.D(GVARS.bsp_basis, GVARS.r)
 start_idx = max(GVARS.knot_ind_th-4, 0)
-D_bsp = jf.D(bsp_basis_full[start_idx:], GVARS.r)
+D_bsp = jf.D(bsp_basis_full, GVARS.r)
 
 # calculating D_bsp_k * D_bsp_j and then integrating over radius
 D_bsp_j_D_bsp_k_r = D_bsp[:, NAX, :] * D_bsp[NAX, :, :]
@@ -205,6 +205,7 @@ np.save(f'{outdir}/data_model.npy', eigvals_model)
 np.save(f'{outdir}/cind_arr.npy', cind_arr)
 np.save(f'{outdir}/sind_arr.npy', sind_arr)
 np.save(f'{outdir}/D_bsp_j_D_bsp_k.npy', D_bsp_j_D_bsp_k)
+print(f"--SAVING COMPLETE--")
 
 # plotting for visual verification of renormalization
 plot_renorm.visualize_model_renorm(true_params_flat, true_params_samples,

@@ -55,7 +55,7 @@ lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
                                      nl_idx_pruned,
                                      omega_pruned)
 
-
+'''
 def get_bsp_basis_elements(x):
     """Returns the integrated basis polynomials
     forming the B-spline.
@@ -80,9 +80,10 @@ def get_bsp_basis_elements(x):
         c[GVARS.knot_ind_th + c_ind] = 1.0
         basis_elements[c_ind, :] = splev(x, (t, c, k))
     return basis_elements
-
+bsp_basis = GVARS.bsp_basis #get_bsp_basis_elements(GVARS.r)
+'''
 # extracting the basis elements once 
-bsp_basis = get_bsp_basis_elements(GVARS.r)
+bsp_basis = GVARS.bsp_basis
 
 def build_integrated_part(eig_idx1, eig_idx2, ell1, ell2, s):
     # ls2fac
@@ -283,8 +284,6 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
             np.fill_diagonal(fixed_hypmat[startx+dellx:endx-dellx,
                                           starty+delly:endy-delly],
                              f_integral)
-    
-
     return non_c_hypmat_arr, fixed_hypmat, mask_hypmat
 
 
@@ -298,16 +297,17 @@ def get_sp_indices_maxshaped(sp_indices_cenmult, sp_indices_maxmult):
     mask_common_ind = np.ones(len_maxmult_spind, dtype='bool')
     
     for i in range(len_cenmult_spind):
-        common_ind = np.where(np.abs(sp_indices_maxmult[0] - sp_indices_cenmult[0][i]) +\
-                              np.abs(sp_indices_maxmult[1] - sp_indices_cenmult[1][i]) == 0)
+        common_ind = np.where((np.abs(sp_indices_maxmult[0] - sp_indices_cenmult[0][i]) +
+                               np.abs(sp_indices_maxmult[1] - sp_indices_cenmult[1][i]))
+                              == 0)
 
         if(len(common_ind[0]) > 0):
             mask_common_ind[common_ind[0][0]] = False
             '''
             print('A',common_ind, common_ind[0], common_ind[0][0])
-            print('B',sp_indices_maxmult[0][common_ind[0]], sp_indices_maxmult[1][common_ind[0]])
+            print('B',sp_indices_maxmult[0][common_ind[0]], 
+                  sp_indices_maxmult[1][common_ind[0]])
             print('C',sp_indices_cenmult[0][i], sp_indices_cenmult[1][i])
-
             sys.exit()
             '''
         

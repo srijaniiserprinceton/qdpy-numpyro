@@ -65,10 +65,10 @@ GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
                             relpath=outdir)
 
 __, GVARS_TR, __ = GVARS.get_all_GVAR()
-#-------------------parameters to be inverted for--------------------# 
+#-------------------parameters to be inverted for--------------------#
 # the indices of ctrl points that we want to invert for
-ind_min, ind_max = 0, GVARS.knot_num-1
-cind_arr = np.arange(ind_min, ind_max + 1)
+ind_min, ind_max = 0, GVARS.ctrl_arr_dpt_clipped.shape[1]-1
+cind_arr = np.arange(ind_min, ind_max+1)
 
 # the angular degrees we want to invert for
 smin, smax = 1, 5
@@ -230,8 +230,9 @@ for i in range(2):
  
 #----------------------COMPARING AGAINST supmat_qdpt.npy-----------------#
 
-for i, ell0 in enumerate(ell0_arr):
+for i in tqdm(range(len(ell0_arr)), desc='comparing with qdPy'):
     # qdpt supermatrix from qdPy
+    ell0 = ell0_arr[i]
     qdpt_supmat = np.load(f'supmat_qdpt_{ell0}.npy').real
     dim_super = qdpt_supmat.shape[0]
     np.testing.assert_array_almost_equal(qdpt_supmat,
