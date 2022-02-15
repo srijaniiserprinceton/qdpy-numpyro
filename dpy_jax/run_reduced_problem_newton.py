@@ -89,9 +89,9 @@ len_s = len(sind_arr)
 # number of c's to fit
 nc = len(cind_arr)
 
-# mu_scaling = np.array([1., 1., 1.])
-knee_mu = np.array([3.535e-5, 4.961e-5, 1.768e-4])
-mu_scaling = knee_mu/knee_mu[0]
+mu_scaling = np.array([1., 1., 1.])
+# knee_mu = np.array([3.535e-5, 4.961e-5, 1.768e-4])
+# mu_scaling = knee_mu/knee_mu[0]
 
 # slicing the Pjl correctly in angular degree s
 Pjl = RL_poly[:, smin:smax+1:2, :]
