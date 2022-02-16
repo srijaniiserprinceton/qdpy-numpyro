@@ -10,13 +10,12 @@ parser.add_argument("--lmin", help="min angular degree", type=int)
 parser.add_argument("--lmax", help="max angular degree", type=int)
 parser.add_argument("--exclude_qdpy", help="choose modes not in qdpy",
                     type=int, default=0)
-
-
+parser.add_argument("--instrument", help="mdi or hmi",
+                    type=str, default='hmi')
 args = parser.parse_args()
 
 nmin, nmax = args.nmin, args.nmax
 lmin, lmax = args.lmin, args.lmax
-
 
 gvar= gvar_jax.GlobalVars()
 outdir = f"{gvar.scratch_dir}/dpy_jax"
