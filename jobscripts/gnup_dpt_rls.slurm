@@ -3,7 +3,7 @@
 #SBATCH --nodes=1                                                                            
 #SBATCH --ntasks-per-node=40                                                                
 #SBATCH --mem=150G                                                                           
-#SBATCH --time=01:00:00          # total run time limit (HH:MM:SS) 
+#SBATCH --time=00:30:00          # total run time limit (HH:MM:SS) 
 echo "Starting at "`date`
 module purge
 module load anaconda3

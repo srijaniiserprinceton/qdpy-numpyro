@@ -45,8 +45,12 @@ class get_splines:
         vercof2, dvercof2 = eval_splrem(self.r, [rmin, rmax],
                                         len(knot_locs))
         
-        bsp_basis = np.column_stack((vercof1, vercof2[:, 1:-1]))
-        d_bsp_basis = np.column_stack((dvercof1, dvercof2[:, 1:-1]))
+        # arranging the basis from left to right with st lines
+        # at the ends
+        bsp_basis = np.column_stack((vercof1[:,-1],
+                                     np.column_stack((vercof2[:,1:-1], vercof1[:,0]))))
+        d_bsp_basis = np.column_stack((dvercof1[:,-1],
+                                       np.column_stack((dvercof2[:,1:-1], dvercof1[:,0]))))
         
         # storing the analytically derived B-splines and it first derivatives
         # making them of shape (n_basis, r)
