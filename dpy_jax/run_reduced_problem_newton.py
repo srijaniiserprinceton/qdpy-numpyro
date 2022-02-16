@@ -89,9 +89,9 @@ len_s = len(sind_arr)
 # number of c's to fit
 nc = len(cind_arr)
 
-# mu_scaling = np.array([1., 1., 1.])
-knee_mu = np.array([3.535e-5, 4.961e-5, 1.768e-4])
-mu_scaling = knee_mu/knee_mu[0]
+mu_scaling = np.array([1., 1., 1.])
+# knee_mu = np.array([2.15443e-5, 1.59381e-7, 1.29155e-7])
+# mu_scaling = knee_mu/knee_mu[0]
 
 # slicing the Pjl correctly in angular degree s
 Pjl = RL_poly[:, smin:smax+1:2, :]
@@ -171,6 +171,15 @@ len_data = len(data_acoeffs)
 
 # the regularizing parameter
 mu = PARGS.mu
+
+
+# changing the regularization as a function of depth
+mu_depth = np.zeros_like(GVARS.ctrl_arr_dpt_full[0,:])
+rth_soft = 0.77
+width = 0.03
+mu_depth = 0.5 * (1 - np.tanh((GVARS.knot_locs - rth_soft)/width))
+mu_depth = 1e18 * jnp.sqrt(jnp.asarray(mu_depth))
+
 
 def print_info(itercount, tdiff, data_misfit, loss_diff, max_grads, model_misfit):
     print(f'[{itercount:3d} | ' +
@@ -267,6 +276,7 @@ def model_misfit_fn(c_arr, mu_scale=mu_scaling):
     carr_padding = []
     for i in range(len_s):
         carr_padding.append(GVARS.ctrl_arr_dpt_full[sind_arr[i], start_idx:end_idx])
+        
         #if sind_arr[i] > 0:
         #    carr_padding.append(GVARS.ctrl_arr_dpt_full[sind_arr[i], start_idx:end_idx])
         #else:
@@ -281,6 +291,7 @@ def model_misfit_fn(c_arr, mu_scale=mu_scaling):
 
     for i in range(len_s):
         cDc += mu_scale[i] * cd[i] @ Djk @ cd[i] * lambda_factor[i]
+        cDc += jnp.sum(mu_depth * jnp.square(cd[i] - GVARS.ctrl_arr_dpt_full[sind_arr[i]]))
     return cDc
 
 

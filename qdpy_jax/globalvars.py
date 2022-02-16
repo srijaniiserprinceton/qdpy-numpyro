@@ -88,6 +88,7 @@ class GlobalVars():
         self.tslen = 72
         self.numsplits = 36
         self.instrument = instrument
+        self.numsplits = 5
         self.local_dir = dirnames[0]
         self.scratch_dir = dirnames[1]
         self.snrnmais_dir = dirnames[2]
