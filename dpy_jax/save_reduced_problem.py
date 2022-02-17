@@ -208,5 +208,5 @@ np.save(f'{outdir}/D_bsp_j_D_bsp_k.npy', D_bsp_j_D_bsp_k)
 print(f"--SAVING COMPLETE--")
 
 # plotting for visual verification of renormalization
-plot_renorm.visualize_model_renorm(true_params_flat, true_params_samples,
-                                   sigma2scale, jf.model_renorm, len(sind_arr))
+# plot_renorm.visualize_model_renorm(true_params_flat, true_params_samples,
+#                                    sigma2scale, jf.model_renorm, len(sind_arr))

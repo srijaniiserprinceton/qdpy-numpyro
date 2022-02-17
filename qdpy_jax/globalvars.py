@@ -35,7 +35,6 @@ eigtype =  dirnames[-1].split('/')[-2].split('_')[1]
 # taking [:-2] since we are ignoring the file name and current dirname
 # this is specific to the way the directory structure is constructed
 
-
 class qdParams():
     # Reading global variables
     # setting rmax as 1.2 because the entire r array needs to be used
@@ -97,7 +96,7 @@ class GlobalVars():
         self.ipdir = f"{self.scratch_dir}/input_files"
         self.eigdir = f"{self.snrnmais_dir}/eig_files"
         self.progdir = self.local_dir
-        fsuffix = f"{self.tslen}d.6335.{self.numsplits}"
+        fsuffix = f"{self.tslen}d.6328.{self.numsplits}"
         self.hmidata_in = np.loadtxt(f"{self.ipdir}/{self.instrument}.in.{fsuffix}")
         self.hmidata_out = np.loadtxt(f"{self.ipdir}/{self.instrument}.out.{fsuffix}")
         self.relpath = relpath
@@ -285,7 +284,6 @@ class GlobalVars():
             acoeffs_true = np.append(acoeffs_true, _aval)
             acoeffs_sigma = np.append(acoeffs_sigma, _asig)
         return acoeffs_true*1e-3, acoeffs_sigma*1e-3
-
 
     def get_acoeffs_out_HMI(self):
         n0arr = self.n0_arr
