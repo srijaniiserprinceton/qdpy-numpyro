@@ -241,6 +241,13 @@ def get_dhess_exact(c_arr):
     gtg = pc_pjl @ (np.diag(1/acoeffs_sigma_HMI**2) @ pc_pjl.T)
     return 2*gtg
 
+def get_GT_Cd_inv(c_arr):
+    '''Function to compute G.T @ Cd_inv
+    for obtaining the G^{-g} later.'
+    '''
+    pc_pjl = get_pc_pjl(c_arr)
+    GT_Cd_inv= pc_pjl @ np.diag(1/acoeffs_sigma_HMI**2)
+    return GT_Cd_inv
 
 def data_misfit_arr_fn(c_arr):
     # predicted a-coefficients
@@ -425,14 +432,21 @@ plot_acoeffs.plot_acoeffs_dm_scaled(final_acoeffs, data_acoeffs,
                                     data_acoeffs_out_HMI,
                                     acoeffs_sigma_HMI, 'final')
 #----------------------------------------------------------------------# 
-
 # reconverting back to model_params in units of true_params_flat
-# c_arr_fit = jf.model_denorm(c_arr, true_params_flat, sigma2scale)\
-#             /true_params_flat
 c_arr_fit = c_arr/true_params_flat
 
 for i in range(len_s):
     print(c_arr_fit[i::len_s])
+
+#-----------------finding the model covariance matrix------------------#
+# can be shown that the model covariance matrix has the following form
+# C_m = G^{-g} @ C_d @ G^{-g}.T
+# G^{-g} = total_hess_inv @ G.T @ C_d_inv
+GT_Cd_inv = get_GT_Cd_inv(c_arr)
+G_g_inv = hess_inv @ GT_Cd_inv
+C_d = jnp.diag(acoeffs_sigma_HMI**2)
+C_m = jf.get_model_covariance(G_g_inv, C_d)
+sys.exit()
 
 #------------------plotting the post fitting profiles-------------------#
 c_arr_fit_full = jf.c4fit_2_c4plot(GVARS, c_arr_fit*true_params_flat,

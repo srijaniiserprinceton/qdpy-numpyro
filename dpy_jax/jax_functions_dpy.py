@@ -132,3 +132,6 @@ def D(f, r):
     
     return d2r_df2
     
+
+def get_model_covariance(G_g_inv, C_d):
+    return G_g_inv @ jnp.linalg.inv(C_d) @ G_g_inv.T
