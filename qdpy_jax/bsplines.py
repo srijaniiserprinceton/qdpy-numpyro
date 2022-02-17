@@ -2,7 +2,7 @@ import os
 os.environ["F90"] = "gfortran"
 import sys
 import numpy as np
-from avni.tools.bases import eval_splrem, eval_polynomial
+from avni.tools.bases import eval_splrem, eval_polynomial, eval_vbspl
 
 class get_splines:
     def __init__(self, r, rth, wsr, custom_knot_num, fac_arr, spl_deg=3):
@@ -34,28 +34,94 @@ class get_splines:
         rmin, rmax = self.r.min(), self.r.max()
         total_knot_num = int(np.round((rmax-rmin)/(1 - self.rth))) \
                          * self.custom_knot_num
-        
-        knot_locs = np.linspace(rmin, rmax, total_knot_num)
-        
+        total_knot_num += 4 - total_knot_num%4 - 1
+        # knot_locs = np.linspace(rmin, rmax, total_knot_num)
+
+        num_skip = len(self.r)//total_knot_num
+        knot_locs_uniq = self.r[::num_skip][:total_knot_num-1]
+        knot_locs_uniq = np.append(knot_locs_uniq, rmax)
+        knot_ind_th = np.argmin(abs(knot_locs_uniq - self.rth))
+        self.knot_ind_th = knot_ind_th - knot_ind_th%4
+        knotval_th = knot_locs_uniq[self.knot_ind_th]
+        # print(f"knotlocsuniq shape = {knot_locs_uniq.shape}, {self.knot_ind_th}")
+
+        knot_locs = np.hstack((knot_locs_uniq[:self.knot_ind_th],
+                               knot_locs_uniq[self.knot_ind_th:]))
+        self.knot_locs = knot_locs
+        # print(f"knotlocs shape = {knot_locs.shape}")
+
+        vercof1, dvercof1 = eval_polynomial(self.r,
+                                            [rmin, self.knot_locs[self.knot_ind_th]],
+                                            1, types= ['TOP','BOTTOM'])
+        vercof2, dvercof2 = eval_vbspl(self.r, knot_locs_uniq[:self.knot_ind_th+1])
+        vercof3, dvercof3 = eval_polynomial(self.r,
+                                            [self.knot_locs[self.knot_ind_th], rmax],
+                                            1, types= ['TOP','BOTTOM'])
+        vercof4, dvercof4 = eval_vbspl(self.r, knot_locs_uniq[self.knot_ind_th:])
+
+        idx = np.where(vercof3[:, -1] > 0)[0][0]
+        vercof3[idx, -1] = 0.0
+
+        # arranging the basis from left to right with st lines
+        bsp_basis = np.column_stack((vercof1[:, -1],
+                                     vercof2[:, 1:-1],
+                                     vercof1[:, 0],
+                                     vercof3[:, -1],
+                                     vercof4[:, 1:-1],
+                                     vercof3[:, 0]))
+
+        d_bsp_basis = np.column_stack((dvercof1[:, -1],
+                                       dvercof2[:, 1:-1],
+                                       dvercof1[:, 0],
+                                       dvercof3[:, -1],
+                                       dvercof4[:, 1:-1],
+                                       dvercof3[:, 0]))
+
+        self.knot_ind_th = self.knot_ind_th + 4
+
+        knot_locs = np.hstack((knot_locs_uniq[:self.knot_ind_th+1],
+                               knot_locs_uniq[self.knot_ind_th:]))
+        self.knot_locs = knot_locs
+
+        # storing the analytically derived B-splines and it first derivatives
+        # making them of shape (n_basis, r)
+        self.bsp_basis = bsp_basis.T
+        self.d_bsp_basis = d_bsp_basis.T
+
+    def create_knots_and_bsp_old(self):
+        rmin, rmax = self.r.min(), self.r.max()
+        total_knot_num = int(np.round((rmax-rmin)/(1 - self.rth))) \
+                         * self.custom_knot_num
+        # knot_locs = np.linspace(rmin, rmax, total_knot_num)
+
+        num_skip = len(self.r)//total_knot_num
+        knot_locs = self.r[::num_skip]
+
         self.knot_ind_th = np.argmin(abs(knot_locs - self.rth))
         self.knot_locs = knot_locs
 
         vercof1, dvercof1 = eval_polynomial(self.r, [rmin, rmax],
                                             1, types= ['TOP','BOTTOM'])
-        vercof2, dvercof2 = eval_splrem(self.r, [rmin, rmax],
-                                        len(knot_locs))
+        vercof2, dvercof2 = eval_vbspl(self.r, knot_locs)
         
         # arranging the basis from left to right with st lines
-        # at the ends
-        bsp_basis = np.column_stack((vercof1[:,-1],
-                                     np.column_stack((vercof2[:,1:-1], vercof1[:,0]))))
-        d_bsp_basis = np.column_stack((dvercof1[:,-1],
-                                       np.column_stack((dvercof2[:,1:-1], dvercof1[:,0]))))
-        
+        bsp_basis = np.column_stack((vercof1[:, -1],
+                                     vercof2[:, 1:-1],
+                                     vercof1[:, 0]))
+        d_bsp_basis = np.column_stack((dvercof1[:, -1],
+                                       dvercof2[:, 1:-1],
+                                       dvercof1[:, 0]))
+
+        # [ORIGINAL convention]
+        # bsp_basis = np.column_stack((vercof1, vercof2[:, 1:-1]))
+        # d_bsp_basis = np.column_stack((dvercof1, dvercof2[:, 1:-1]))
+ 
         # storing the analytically derived B-splines and it first derivatives
         # making them of shape (n_basis, r)
         self.bsp_basis = bsp_basis.T
         self.d_bsp_basis = d_bsp_basis.T
+
+
 
     def get_uplo_dpt_carr(self):
         # creating the carr corresponding to the DPT using custom knots

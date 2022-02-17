@@ -35,7 +35,6 @@ eigtype =  dirnames[-1].split('/')[-2].split('_')[1]
 # taking [:-2] since we are ignoring the file name and current dirname
 # this is specific to the way the directory structure is constructed
 
-
 class qdParams():
     # Reading global variables
     # setting rmax as 1.2 because the entire r array needs to be used
@@ -84,8 +83,10 @@ class GlobalVars():
                    "get_ind", "mask_minmax"]
 
     def __init__(self, lmin=200, lmax=200, n0=0, rth=0.9, knot_num=15,
-                 load_from_file=0, relpath='.'): 
+                 load_from_file=0, relpath='.', instrument='hmi'): 
         self.tslen = 72
+        self.numsplits = 36
+        self.instrument = instrument
         self.numsplits = 5
         self.local_dir = dirnames[0]
         self.scratch_dir = dirnames[1]
@@ -96,12 +97,11 @@ class GlobalVars():
         self.eigdir = f"{self.snrnmais_dir}/eig_files"
         self.progdir = self.local_dir
         fsuffix = f"{self.tslen}d.6328.{self.numsplits}"
-        self.hmidata_in = np.loadtxt(f"{self.ipdir}/hmi.in.{fsuffix}")
-        self.hmidata_out = np.loadtxt(f"{self.ipdir}/hmi.out.{fsuffix}")
+        self.hmidata_in = np.loadtxt(f"{self.ipdir}/{self.instrument}.in.{fsuffix}")
+        self.hmidata_out = np.loadtxt(f"{self.ipdir}/{self.instrument}.out.{fsuffix}")
         self.relpath = relpath
         self.eigtype = eigtype
 
-        # self.sfactor = np.array([1., 20., 100.])
         self.sfactor = np.array([1., 1., 1.])
         qdPars = qdParams(lmin=lmin, lmax=lmax, n0=n0, rth=rth)
 
@@ -131,9 +131,9 @@ class GlobalVars():
         self.s_arr = np.arange(1, self.smax+1, 2)
 
         self.fwindow = qdPars.fwindow
-        self.wsr = -1.0*np.loadtxt(f'{self.ipdir}/w.dat')
-        self.err1d = np.loadtxt(f'{self.ipdir}/err1d-hmi.dat')
-        self.wsr_err = np.loadtxt(f'{self.ipdir}/err_hmi.dat')
+        self.wsr = -1.0*np.loadtxt(f'{self.ipdir}/w_{self.instrument}.dat')
+        self.err1d = np.loadtxt(f'{self.ipdir}/err1d-{self.instrument}.dat')
+        self.wsr_err = np.loadtxt(f'{self.ipdir}/err_{self.instrument}.dat')
 
         self.wsr = self.sfactor[:, NAX]*self.wsr
         self.wsr_err = self.sfactor[:, NAX]*self.wsr_err
@@ -285,7 +285,6 @@ class GlobalVars():
             acoeffs_sigma = np.append(acoeffs_sigma, _asig)
         return acoeffs_true*1e-3, acoeffs_sigma*1e-3
 
-
     def get_acoeffs_out_HMI(self):
         n0arr = self.n0_arr
         ell0arr = self.ell0_arr
@@ -387,7 +386,9 @@ class GlobalVars():
     # }}} find_acoeffs(data, l, n)
 
 
+    # {{{ def get_lower_tp(self, n, ell):
     def get_lower_tp(self, n, ell):
+        """Returns the lower turning point of the given mode."""
         model_s_data = np.loadtxt(f"{self.ipdir}/modelS.dat")
         c = model_s_data[:, 1]
         r = model_s_data[:, 0]*self.rsun
@@ -397,6 +398,7 @@ class GlobalVars():
                               fullfreq=True)[0]*1e-6 #Hz
         rltp_idx = np.argmin(abs(c*c/r/r - omega*omega/ell/(ell+1)*4*np.pi*np.pi))
         return r[rltp_idx]/self.rsun
+    # }}} get_lower_tp(self, n, ell)
 
 
     def get_all_GVAR(self):
