@@ -27,16 +27,24 @@ print(jax.devices())
 from dpy_jax import jax_functions_dpy as jf
 
 from qdpy_jax import globalvars as gvar_jax
-#------------------------------------------------------------------------#
-
+#----------------------local directory structure------------------------#
+current_dir = os.path.dirname(os.path.realpath(__file__))
+package_dir = os.path.dirname(current_dir)
+with open(f"{package_dir}/.config", "r") as f:
+    dirnames = f.read().splitlines()
+scratch_dir = dirnames[1]
+outdir = f"{scratch_dir}/qdpy_jax"
+outdir_dpy = f"{scratch_dir}/dpy_jax"
+plotdir = f"{scratch_dir}/plots"
+#------------------------------------------------------------------------# 
 ARGS = np.loadtxt(".n0-lmin-lmax.dat")
 GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             lmin=int(ARGS[1]),
                             lmax=int(ARGS[2]),
                             rth=ARGS[3],
                             knot_num=int(ARGS[4]),
-                            load_from_file=int(ARGS[5]))
-outdir = f"{GVARS.scratch_dir}/qdpy_jax"
+                            load_from_file=int(ARGS[5]),
+                            relpath=outdir)
 dpy_outdir = f"{GVARS.scratch_dir}/dpy_jax"
 #-------------loading precomputed files for the problem-------------------#
 data = np.load(f'{outdir}/data_model.npy')
@@ -150,7 +158,6 @@ data_acoeffs = foril(0, nmults, loop_in_mults, data_acoeffs)
 
 #----------------------testing the pred_acoeffs---------------------------#
 np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
-
 
 #--------------------------------inversion---------------------------------#
 def data_misfit_fn(c_arr):
