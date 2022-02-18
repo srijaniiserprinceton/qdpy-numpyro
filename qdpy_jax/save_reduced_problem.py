@@ -21,6 +21,8 @@ print('JAX using:', xla_bridge.get_backend().platform)
 config.update('jax_platform_name', 'cpu')
 config.update('jax_enable_x64', True)
 
+NAX = jnp.newaxis
+
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
 with open(f"{package_dir}/.config", "r") as f:
@@ -146,6 +148,12 @@ del param_coeff
 # converting to array and changing the axes to nmult X element_idx X xy-identifier
 hypmat_idx = np.moveaxis(sp_indices_all, 1, -1)
 
+D_bsp = jf.D(GVARS.bsp_basis_full, GVARS.r)
+
+# calculating D_bsp_k * D_bsp_j and then integrating over radius
+D_bsp_j_D_bsp_k_r = D_bsp[:, NAX, :] * D_bsp[NAX, :, :]
+D_bsp_j_D_bsp_k = integrate.trapz(D_bsp_j_D_bsp_k_r, GVARS.r, axis=2)
+
 #----------------saving precomputed parameters------------------------#
 np.save(f'{outdir}/true_params_flat.npy', true_params_flat)
 np.save(f'{outdir}/param_coeff_flat.npy', param_coeff_flat)
@@ -155,14 +163,11 @@ np.save(f'{outdir}/omega0_arr.npy', omega0_arr)
 np.save(f'{outdir}/ell0_arr.npy', ell0_arr)
 np.save(f'{outdir}/cind_arr.npy', cind_arr)
 np.save(f'{outdir}/sind_arr.npy', sind_arr)
+np.save(f'{outdir}/D_bsp_j_D_bsp_k.npy', D_bsp_j_D_bsp_k)
+print(f"--SAVING COMPLETE--")
 
 # sys.exit()
 #-----------------------------------------------------------------#
-D_bsp = jf.D(GVARS.bsp_basis_full, GVARS.r)
-
-# calculating D_bsp_k * D_bsp_j and then integrating over radius
-D_bsp_j_D_bsp_k_r = D_bsp[:, NAX, :] * D_bsp[NAX, :, :]
-D_bsp_j_D_bsp_k = integrate.trapz(D_bsp_j_D_bsp_k_r, GVARS.r, axis=2)
 
 synth_hypmat_sparse = true_params_flat @ param_coeff_flat + fixed_hypmat_sparse
 
@@ -211,12 +216,9 @@ eigvals_true = model()
 # saving the synthetic eigvals and HMI acoeffs
 np.save(f"{outdir}/data_model.npy", eigvals_true)
 np.save(f'{outdir}/acoeffs_HMI.npy', GVARS.acoeffs_true)
-np.save(f'{outdir}/acoeffs_sigma_HMI.npy', GVARS.acoeffs_sigma)
-np.save(f'{outdir}/D_bsp_j_D_bsp_k.npy', D_bsp_j_D_bsp_k)
-print(f"--SAVING COMPLETE--")
+np.save(f'{outdir}/acoeffs_sigma_HMI.npy', GVARS.acoeffs_sigma)Aa
 
 sys.exit()
-
 #-------------COMPARING AGAINST supmat_qdpt and dpy_jax----------------#
 # testing only valid for nmin = 0, nmax = 0, lmin = 200, lmax = 201
 synth_hypmat = np.zeros((nmults, dim_hyper, dim_hyper))

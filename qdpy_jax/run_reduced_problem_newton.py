@@ -274,13 +274,13 @@ pred_acoeffs = jnp.zeros(num_j * nmults)
 __, pred_acoeffs = foril(0, nmults, loop_in_mults, (pred, pred_acoeffs))
 
 # these arrays should be very close
-# np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
+np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
 #----------------------------------------------------------------------#
 # changing to the HMI acoeffs if doing this for real data 
 # data_acoeffs = GVARS.acoeffs_true
 np.random.seed(3)
 data_acoeffs_err = np.random.normal(loc=0, scale=acoeffs_sigma_HMI)
-data_acoeffs = data_acoeffs + 1.0*data_acoeffs_err
+data_acoeffs = data_acoeffs + 0.0*data_acoeffs_err
 data_acoeffs_out_HMI = GVARS.acoeffs_out_HMI
 print(f"data_acoeffs = {data_acoeffs[:15]}")
 
