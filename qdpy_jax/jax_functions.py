@@ -77,3 +77,16 @@ def jax_minus1pow_vec(num):
 def jax_gamma(ell):
     """Computes gamma_ell"""
     return np.sqrt((2*ell + 1)/4/np.pi)
+
+def D(f, r):
+    num_f = f.shape[0]
+    d2r_df2 = np.zeros_like(f)
+    for i in range(num_f):
+        dr_df = np.gradient(f[i], r, edge_order=2)
+        d2r_df2[i] = np.gradient(dr_df, r, edge_order=2)
+        # d2r_df2[i] = dr_df
+    
+    return d2r_df2
+    
+def get_model_covariance(G_g_inv, C_d):
+    return G_g_inv @ C_d @ G_g_inv.T

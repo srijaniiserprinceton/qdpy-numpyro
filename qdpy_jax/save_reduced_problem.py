@@ -3,6 +3,7 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from scipy import sparse
+from scipy import integrate
 import os
 import sys
 
@@ -157,6 +158,12 @@ np.save(f'{outdir}/sind_arr.npy', sind_arr)
 
 # sys.exit()
 #-----------------------------------------------------------------#
+D_bsp = jf.D(GVARS.bsp_basis_full, GVARS.r)
+
+# calculating D_bsp_k * D_bsp_j and then integrating over radius
+D_bsp_j_D_bsp_k_r = D_bsp[:, NAX, :] * D_bsp[NAX, :, :]
+D_bsp_j_D_bsp_k = integrate.trapz(D_bsp_j_D_bsp_k_r, GVARS.r, axis=2)
+
 synth_hypmat_sparse = true_params_flat @ param_coeff_flat + fixed_hypmat_sparse
 
 def model():
@@ -205,6 +212,8 @@ eigvals_true = model()
 np.save(f"{outdir}/data_model.npy", eigvals_true)
 np.save(f'{outdir}/acoeffs_HMI.npy', GVARS.acoeffs_true)
 np.save(f'{outdir}/acoeffs_sigma_HMI.npy', GVARS.acoeffs_sigma)
+np.save(f'{outdir}/D_bsp_j_D_bsp_k.npy', D_bsp_j_D_bsp_k)
+print(f"--SAVING COMPLETE--")
 
 sys.exit()
 
@@ -219,8 +228,10 @@ for i in range(2):
     ell0 = ell0_arr[i]
     end_idx  = start_idx + (2*ell0 + 1)
     # densifying
-    synth_hypmat[i] = sparse.coo_matrix((synth_hypmat_sparse[i], sp_indices_all[i]),
-                                        shape = (dim_hyper, dim_hyper)).toarray()
+    synth_hypmat[i] = sparse.coo_matrix((synth_hypmat_sparse[i],
+                                         sp_indices_all[i]),
+                                        shape = (dim_hyper,
+                                                 dim_hyper)).toarray()
 
     # DPT eigenvalues in muHz
     DPT_eigvals_from_qdpy[start_idx:end_idx] =\
