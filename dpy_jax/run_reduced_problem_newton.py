@@ -291,9 +291,8 @@ def model_misfit_fn(c_arr, mu_scale=mu_scaling):
 
     for i in range(len_s):
         cDc += mu_scale[i] * cd[i] @ Djk @ cd[i] * lambda_factor[i]
-        sqdiff = jnp.square(cd[i] - GVARS.ctrl_arr_dpt_full[sind_arr[i]])
-        # cDc += jnp.sum(mu_depth * jnp.square(cd[i] - GVARS.ctrl_arr_dpt_full[sind_arr[i]])[:100])
-        cDc += jnp.sum(mu_depth * sqdiff)
+        norm_c = jnp.square(cd[i] - GVARS.ctrl_arr_dpt_full[sind_arr[i]])
+        cDc += jnp.sum(mu_depth * norm_c)
     return cDc
 
 
@@ -342,7 +341,8 @@ c_arr_init_full = jf.c4fit_2_c4plot(GVARS, c_init,
                                     sind_arr, cind_arr)
 
 # converting ctrl points to wsr and plotting
-init_plot = postplotter.postplotter(GVARS, c_arr_init_full, 'init')
+ctrl_zero_error = np.zeros_like(c_arr_init_full)
+init_plot = postplotter.postplotter(GVARS, c_arr_init_full, ctrl_zero_error, 'init')
 #----------------------------------------------------------------------#
 # plotting acoeffs from initial data and HMI data
 init_acoeffs = data_misfit_arr_fn(c_init)*acoeffs_sigma_HMI +\
@@ -439,18 +439,26 @@ for i in range(len_s):
 # can be shown that the model covariance matrix has the following form
 # C_m = G^{-g} @ C_d @ G^{-g}.T
 # G^{-g} = total_hess_inv @ G.T @ C_d_inv
+
 GT_Cd_inv = get_GT_Cd_inv(c_arr)
 G_g_inv = hess_inv @ GT_Cd_inv
 C_d = jnp.diag(acoeffs_sigma_HMI**2)
 C_m = jf.get_model_covariance(G_g_inv, C_d)
-sys.exit()
+ctrl_arr_err = jnp.sqrt(jnp.diag(C_m))
 
 #------------------plotting the post fitting profiles-------------------#
 c_arr_fit_full = jf.c4fit_2_c4plot(GVARS, c_arr_fit*true_params_flat,
                                    sind_arr, cind_arr)
 
+# making the full error array to pass into c4fit_2_c4plot
+ctrl_arr_err_full = np.zeros_like(c_arr_fit_full)
+ctrl_arr_err_full[:, -len(true_params_flat)//len_s:] =\
+                            jnp.reshape(ctrl_arr_err, (3,-1), 'F')
+
+c_arr_err_full = jnp.reshape(ctrl_arr_err_full, (3,-1), 'F')
+
 # converting ctrl points to wsr and plotting
-fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full, 'fit')
+fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full, c_arr_err_full, 'fit')
 
 #------------------------------------------------------------------------#
 with open(f"{current_dir}/reg_misfit.txt", "a") as f:
