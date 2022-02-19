@@ -15,6 +15,7 @@ PARGS = parser.parse_args()
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from scipy import sparse as sp_sparse
 import sys
 
 #----------------------JAX related modules-------------------------------#
@@ -38,6 +39,7 @@ from qdpy_jax import globalvars as gvar_jax
 from dpy_jax import jax_functions_dpy as jf
 from plotter import postplotter
 from plotter import plot_acoeffs_datavsmodel as plot_acoeffs
+import save_reduced_problem as SRP
 
 #----------------------local directory structure------------------------#
 current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -77,7 +79,7 @@ D_bsp_j_D_bsp_k = np.load(f'{outdir}/D_bsp_j_D_bsp_k.npy')
 #------------------------------------------------------------------------# 
 nmults = len(GVARS.ell0_arr)
 num_j = len(GVARS.s_arr)
-dim_hyper = 2 * np.max(GVARS.ell0_arr) + 1
+dim_hyper = int(np.loadtxt('.dimhyper'))
 ellmax = np.max(ell0_arr)
 smin = min(GVARS.s_arr)
 smax = max(GVARS.s_arr)
@@ -135,6 +137,31 @@ def get_eigs(mat):
     eigvals, eigvecs = jnp.linalg.eigh(mat)
     eigvals = eigval_sort_slice(eigvals, eigvecs)
     return eigvals
+
+
+def get_eigvalsfull(ipdata):
+    eigval_model = np.array([])
+    _hmatidx = np.moveaxis(sparse_idx, 1, -1)
+
+    for mult_ind in range(nmults):
+        _eigval_mult = np.zeros(2*ellmax+1)
+        ell0 = ell0_arr[mult_ind]
+        omegaref = omega0_arr[mult_ind]
+        # pred_dense = sparse.bcoo_todense(ipdata[mult_ind],
+        #                                  sparse_idx[mult_ind],
+        #                                  shape=(dim_hyper,
+        #                                         dim_hyper))
+        pred_dense = sp_sparse.coo_matrix((ipdata[mult_ind],
+                                           _hmatidx[mult_ind]),
+                                          shape=(dim_hyper,
+                                                 dim_hyper)).toarray()
+
+        _eigval_mult[:2*ell0+1] = get_eigs(pred_dense)[:2*ell0+1]
+        _eigval_mult = _eigval_mult/2./omegaref*GVARS.OM*1e6
+        eigval_model = np.append(eigval_model,
+                                 _eigval_mult)
+    return eigval_model
+
 
 
 def loop_in_mults(mult_ind, ipda):
@@ -254,7 +281,9 @@ _update_cgrad = jit(update_cgrad)
 # adding the contribution from the fitting part
 # and testing that arrays are very close
 pred = fixed_part + true_params_flat @ param_coeff_flat
-# np.testing.assert_array_almost_equal(pred, data)
+pred_eigvals = get_eigvalsfull(pred)
+np.testing.assert_array_almost_equal(pred_eigvals, data)
+print(f"[TESTING] pred_eigvals = data: PASSED")
 
 #----------------------making the data_acoeffs---------------------------#
 def loop_for_data(mult_ind, data_acoeff):
@@ -275,6 +304,7 @@ __, pred_acoeffs = foril(0, nmults, loop_in_mults, (pred, pred_acoeffs))
 
 # these arrays should be very close
 np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
+print(f"[TESTING] pred_acoeffs = data_acoeffs: PASSED")
 #----------------------------------------------------------------------#
 # changing to the HMI acoeffs if doing this for real data 
 # data_acoeffs = GVARS.acoeffs_true
