@@ -131,7 +131,7 @@ data_acoeffs = foril(0, nmults, loop_in_mults, data_acoeffs)
 pred = fixed_part * 1.0
 pred += true_params_flat @ param_coeff_flat
 np.testing.assert_array_almost_equal(pred, data)
-
+print(f"[TESTING] pred = data: PASSED")
 #-------------checking that the acoeffs match correctly------------------#
 pred_acoeffs = jnp.zeros(num_j * nmults)
 
@@ -147,6 +147,7 @@ pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
 
 # these arrays should be very close
 np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
+print(f"[TESTING] pred_acoeffs = data_acoeffs : PASSED")
 #----------------------------------------------------------------------#
 # changing to the HMI acoeffs if doing this for real data 
 # data_acoeffs = GVARS.acoeffs_true
@@ -180,7 +181,8 @@ mu_depth = 0.5 * (1 - np.tanh((GVARS.knot_locs - rth_soft)/width))
 mu_depth = 1e10 * jnp.sqrt(jnp.asarray(mu_depth)) / mu
 
 
-def print_info(itercount, tdiff, data_misfit, loss_diff, max_grads, model_misfit):
+def print_info(itercount, tdiff, data_misfit,
+               loss_diff, max_grads, model_misfit):
     print(f'[{itercount:3d} | ' +
           f'{tdiff:6.1f} sec ] ' +
           f'data_misfit = {data_misfit:12.5e} ' +
@@ -191,24 +193,19 @@ def print_info(itercount, tdiff, data_misfit, loss_diff, max_grads, model_misfit
 
 # the model function that is used by MCMC kernel
 def data_misfit_fn(c_arr):
-    # predicted a-coefficients
-    pred_acoeffs = jnp.zeros(num_j * nmults)
-
-    # denormalizing to make actual model params
-    # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
-    c_arr_denorm = c_arr
-    pred = fixed_part + c_arr_denorm @ param_coeff_flat
+    pred = fixed_part + c_arr @ param_coeff_flat
 
     def loop_in_mults(mult_ind, pred_acoeff):
         pred_omega = jdc(pred, (mult_ind*dim_hyper,), (dim_hyper,))
         pred_acoeff = jdc_update(pred_acoeff,
-                                (Pjl[mult_ind] @ pred_omega)/aconv_denom[mult_ind],
+                                ((Pjl[mult_ind] @ pred_omega)/
+                                 aconv_denom[mult_ind]),
                                 (mult_ind * num_j,))
         return pred_acoeff
 
+    pred_acoeffs = jnp.zeros(num_j * nmults)
     pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
     data_misfit_arr = (pred_acoeffs - data_acoeffs)/acoeffs_sigma_HMI
-
     return jnp.sum(jnp.square(data_misfit_arr))
 
 
@@ -220,7 +217,8 @@ def get_pc_pjl(c_arr):
         def loop_in_mults(mult_ind, pred_acoeff):
             pred_omega = jdc(pred[cind], (mult_ind*dim_hyper,), (dim_hyper,))
             pred_acoeff = jdc_update(pred_acoeff,
-                                    (Pjl[mult_ind] @ pred_omega)/aconv_denom[mult_ind],
+                                    ((Pjl[mult_ind] @ pred_omega)/
+                                     aconv_denom[mult_ind]),
                                     (mult_ind * num_j,))
             return pred_acoeff
 
@@ -248,50 +246,35 @@ def get_GT_Cd_inv(c_arr):
     return GT_Cd_inv
 
 def data_misfit_arr_fn(c_arr):
-    # predicted a-coefficients
-    pred_acoeffs = jnp.zeros(num_j * nmults)
-
-    # denormalizing to make actual model params
-    # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
-    c_arr_denorm = c_arr
-    pred = fixed_part + c_arr_denorm @ param_coeff_flat
+    pred = fixed_part + c_arr @ param_coeff_flat
 
     def loop_in_mults(mult_ind, pred_acoeff):
         pred_omega = jdc(pred, (mult_ind*dim_hyper,), (dim_hyper,))
         pred_acoeff = jdc_update(pred_acoeff,
-                                (Pjl[mult_ind] @ pred_omega)/aconv_denom[mult_ind],
+                                ((Pjl[mult_ind] @ pred_omega)/
+                                 aconv_denom[mult_ind]),
                                 (mult_ind * num_j,))
         return pred_acoeff
 
+    pred_acoeffs = jnp.zeros(num_j * nmults)
     pred_acoeffs = foril(0, nmults, loop_in_mults, pred_acoeffs)
     data_misfit_arr = (pred_acoeffs - data_acoeffs)/acoeffs_sigma_HMI
 
     return data_misfit_arr
 
+
 def model_misfit_fn(c_arr, mu_scale=mu_scaling):
-    # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
-    # Djk is the same for s=3 and s=5
-
-    # c_arr_renorm = jf.model_renorm(c_arr, true_params_flat, sigma2scale)
-    c_arr_renorm = c_arr
-    cd = []
-    lambda_factor = []
-    start_idx = 0 #max(GVARS.knot_ind_th-4, 0)
-    end_idx = GVARS.knot_ind_th
-    carr_padding = []
-    for i in range(len_s):
-        carr_padding.append(GVARS.ctrl_arr_dpt_full[sind_arr[i], start_idx:end_idx])
-
-    for i in range(len_s):
-        cd.append(jnp.append(carr_padding[i], c_arr_renorm[i::len_s]))
-        lambda_factor.append(jnp.trace(data_hess_dpy[i::len_s, i::len_s]) / len_data * len_s)
-
-    Djk = D_bsp_j_D_bsp_k #[0::len_s, 0::len_s]
+    Djk = D_bsp_j_D_bsp_k # same for s=1, 3, 5
+    sidx, eidx = 0, GVARS.knot_ind_th
     cDc = 0.0
 
     for i in range(len_s):
-        cDc += mu_scale[i] * cd[i] @ Djk @ cd[i] * lambda_factor[i]
-        norm_c = jnp.square(cd[i] - GVARS.ctrl_arr_dpt_full[sind_arr[i]])
+        carr_padding = GVARS.ctrl_arr_dpt_full[sind_arr[i], sidx:eidx]
+        cd = jnp.append(carr_padding, c_arr[i::len_s])
+        lambda_factor = jnp.trace(data_hess_dpy[i::len_s, i::len_s])
+        lambda_factor /= len_data * len_s
+        cDc += mu_scale[i] * cd @ Djk @ cd * lambda_factor
+        norm_c = jnp.square(cd - GVARS.ctrl_arr_dpt_full[sind_arr[i]])
         cDc += jnp.sum(mu_depth * norm_c)
     return cDc
 
@@ -299,29 +282,29 @@ def model_misfit_fn(c_arr, mu_scale=mu_scaling):
 def hessian(f):
     return jacfwd(jacrev(f))
 
-data_hess_fn = hessian(data_misfit_fn)
-model_hess_fn = hessian(model_misfit_fn)
 
 def loss_fn(c_arr):
     data_misfit_val = data_misfit_fn(c_arr)
     model_misfit_val = model_misfit_fn(c_arr)
-
-    # total misfit
-    misfit = data_misfit_val + mu*model_misfit_val
-    return misfit
-
-grad_fn = jax.grad(loss_fn)
-hess_fn = hessian(loss_fn)
+    total_misfit = data_misfit_val + mu*model_misfit_val
+    return total_misfit
 
 def update_cgrad(c_arr, grads, steplen):
     gstr = jnp.sqrt(jnp.sum(jnp.square(grads)))
-    return jax.tree_multimap(lambda c, g, sl: c - sl * g / gstr, c_arr, grads, steplen)
+    return jax.tree_multimap(lambda c, g, sl: c - sl * g / gstr,
+                             c_arr, grads, steplen)
 
 def update_H(c_arr, grads, hess_inv):
-    return jax.tree_multimap(lambda c, g, h: c - g @ h, c_arr, grads, hess_inv)
+    return jax.tree_multimap(lambda c, g, h: c - g @ h,
+                             c_arr, grads, hess_inv)
 
 
 #---------------------- jitting the functions --------------------------#
+data_hess_fn = hessian(data_misfit_fn)
+model_hess_fn = hessian(model_misfit_fn)
+grad_fn = jax.grad(loss_fn)
+hess_fn = hessian(loss_fn)
+
 _grad_fn = jit(grad_fn)
 _hess_fn = jit(hess_fn)
 _update_H = jit(update_H)
@@ -336,13 +319,14 @@ c_init = np.ones_like(true_params_flat)
 c_init *= true_params_flat
 print(f"Number of parameters = {len(c_init)}")
 
-#------------------plotting the initial profiles-------------------#                     
+#------------------plotting the initial profiles-------------------#
 c_arr_init_full = jf.c4fit_2_c4plot(GVARS, c_init,
                                     sind_arr, cind_arr)
 
 # converting ctrl points to wsr and plotting
 ctrl_zero_error = np.zeros_like(c_arr_init_full)
-init_plot = postplotter.postplotter(GVARS, c_arr_init_full, ctrl_zero_error, 'init')
+init_plot = postplotter.postplotter(GVARS, c_arr_init_full,
+                                    ctrl_zero_error, 'init')
 #----------------------------------------------------------------------#
 # plotting acoeffs from initial data and HMI data
 init_acoeffs = data_misfit_arr_fn(c_init)*acoeffs_sigma_HMI +\

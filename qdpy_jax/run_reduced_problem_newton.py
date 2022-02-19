@@ -241,8 +241,8 @@ def model_misfit_fn(c_arr, mu_scale=mu_scaling):
         lambda_factor = jnp.trace(data_hess_dpy[i::len_s, i::len_s])
         lambda_factor /= len_data * len_s
         cDc += mu_scale[i] * cd @ Djk @ cd * lambda_factor
-        norm_c = jnp.square(cd - GVARS.ctrl_arr_dpt_full[sind_arr[i]])
-        cDc += jnp.sum(mu_depth * norm_c)
+        # norm_c = jnp.square(cd - GVARS.ctrl_arr_dpt_full[sind_arr[i]])
+        # cDc += jnp.sum(mu_depth * norm_c)
     return cDc
 
 
@@ -336,9 +336,9 @@ mu_depth = 1e10 * jnp.sqrt(jnp.asarray(mu_depth)) / mu
 
 #-----------------------the main training loop--------------------------#
 # initialization of params
-c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))*1e-4
-c_init += np.random.rand(len(c_init))
-#c_init = np.ones_like(true_params_flat)
+# c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))*1e-4
+# c_init += np.random.rand(len(c_init))
+c_init = np.ones_like(true_params_flat)
 c_init *= true_params_flat
 print(f"Number of parameters = {len(c_init)}")
 
