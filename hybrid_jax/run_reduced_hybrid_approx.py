@@ -3,7 +3,7 @@ import time
 import argparse
 from datetime import date
 from datetime import datetime
-
+#------------------------------------------------------------------------# 
 parser = argparse.ArgumentParser()
 parser.add_argument("--mu", help="regularization",
                     type=float, default=0.)
@@ -12,9 +12,6 @@ parser.add_argument("--synth", help="use synthetic data",
 parser.add_argument("--noise", help="add noise",
                     type=bool, default=True)
 PARGS = parser.parse_args()
-#----------------setting the number of chains to be used-----------------#
-# num_chains = 3
-# os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={num_chains}"
 #------------------------------------------------------------------------# 
 from collections import namedtuple
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -22,7 +19,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import arviz as az
 import sys
-
+#------------------------------------------------------------------------# 
 import jax
 from jax import random
 from jax import jit
@@ -37,17 +34,17 @@ import jax.numpy as jnp
 from jax.config import config
 config.update('jax_enable_x64', True)
 print(jax.devices())
-
+#------------------------------------------------------------------------# 
 from qdpy_jax import globalvars as gvar_jax
 from dpy_jax import jax_functions_dpy as jf
-
+#------------------------------------------------------------------------# 
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
 with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
 outdir = f"{scratch_dir}/hybrid_jax"
-
+#------------------------------------------------------------------------# 
 sys.path.append(f"{package_dir}/plotter")
 import postplotter
 import plot_acoeffs_datavsmodel as plot_acoeffs
@@ -159,8 +156,8 @@ np.testing.assert_array_almost_equal(sind_arr_D, sind_arr_Q)
 np.testing.assert_array_almost_equal(true_params_flat_D,
                                      true_params_flat_Q)
 len_s = len(sind_arr_D)
-num_j = num_j_D
 true_params_flat = true_params_flat_D
+num_j = num_j_D
 
 del num_j_D, num_j_Q
 del true_params_flat_D, true_params_flat_Q
@@ -168,6 +165,11 @@ del true_params_flat_D, true_params_flat_Q
 # the regularizing parameter
 mu = PARGS.mu
 
+# calculating the DPT & model hessian once since it doesn't depend on c_arr
+suffix = f"{int(ARGS_Q[4])}s.{GVARS_Q.eigtype}.{GVARS_Q.tslen}d"
+data_hess_dpy = np.load(f"{dpy_dir}/dhess.{suffix}.npy")
+model_hess_dpy = np.load(f"{dpy_dir}/mhess.{suffix}.npy")
+hess_inv = jnp.linalg.inv(data_hess_dpy + mu * model_hess_dpy)
 #------------------------------------------------------------------------#
 # calculating the denominator of DPT a-coefficient converion apriori
 # shape (nmults_D, num_j_D)
@@ -205,45 +207,93 @@ aconv_denom_Q = jnp.asarray(aconv_denom_Q)
 true_params_flat = jnp.asarray(true_params_flat)
 
 #----------------------making the data_acoeffs---------------------------# 
-data_acoeffs_D = jnp.zeros(num_j*nmults_D)
-
 def loop_in_mults_D(mult_ind, data_acoeff):
     data_omega = jdc(data_D, (mult_ind*dim_hyper_D,), (dim_hyper_D,))
     data_acoeff = jdc_update(data_acoeff,
-                             (Pjl_D[mult_ind] @ data_omega)/aconv_denom_D[mult_ind],
+                             ((Pjl_D[mult_ind] @ data_omega)/
+                              aconv_denom_D[mult_ind]),
                              (mult_ind * num_j,))
-    
     return data_acoeff
 
-data_acoeffs_D = foril(0, nmults_D, loop_in_mults_D, data_acoeffs_D)
-
-#----------------------making the data_acoeffs---------------------------#
-data_acoeffs_Q = jnp.zeros(num_j*nmults_Q)
 
 def loop_in_mults_Q(mult_ind, data_acoeff):
     data_omega = jdc(data_Q, (mult_ind*(2*ellmax_Q+1),), (2*ellmax_Q+1,))
     data_acoeff = jdc_update(data_acoeff,
-                             (Pjl_Q[mult_ind] @ data_omega)/aconv_denom_Q[mult_ind],
+                             ((Pjl_Q[mult_ind] @ data_omega)/
+                              aconv_denom_Q[mult_ind]),
                              (mult_ind * num_j,))
-
     return data_acoeff
 
-data_acoeffs_Q = foril(0, nmults_Q, loop_in_mults_Q, data_acoeffs_Q)
 
+data_acoeffs_D = jnp.zeros(num_j*nmults_D)
+data_acoeffs_Q = jnp.zeros(num_j*nmults_Q)
+data_acoeffs_D = foril(0, nmults_D, loop_in_mults_D, data_acoeffs_D)
+data_acoeffs_Q = foril(0, nmults_Q, loop_in_mults_Q, data_acoeffs_Q)
+len_data = len(data_acoeffs_D)
+#--------------------------------------------------------------------------# 
+def data_misfit_fn_D(c_arr):
+    # predicted DPT a-coefficients
+    pred_acoeffs_D = model_D(c_arr)
+    data_misfit_arr_D = (pred_acoeffs_D - data_acoeffs_D)/acoeffs_sigma_HMI_D
+    return jnp.sum(jnp.square(data_misfit_arr_D))
+
+
+def data_misfit_fn_Q(c_arr):
+    # predicted QDPT a-coefficients
+    pred_acoeffs_Q = model_Q(c_arr)
+    data_misfit_arr_Q = (pred_acoeffs_Q - data_acoeffs_Q)/acoeffs_sigma_HMI_Q
+    return jnp.sum(jnp.square(data_misfit_arr_Q))
+
+
+def model_misfit_fn(c_arr, mu_scale=mu_scaling):
+    # Djk is the same for s=1, 3, 5
+    Djk = D_bsp_j_D_bsp_k
+    sidx, eidx = 0, GVARS_D.knot_ind_th
+    cDc = 0.0
+
+    for i in range(len_s):
+        carr_padding = GVARS_D.ctrl_arr_dpt_full[sind_arr_D[i], sidx:eidx]
+        cd = jnp.append(carr_padding, c_arr[i::len_s])
+        lambda_factor = jnp.trace(data_hess_dpy[i::len_s, i::len_s])
+        lambda_factor /= len_data * len_s
+        cDc += mu_scale[i] * cd @ Djk @ cd * lambda_factor
+        # norm_c = jnp.square(cd - GVARS_D.ctrl_arr_dpt_full[sind_arr_D[i]])
+        # cDc += jnp.sum(mu_depth * norm_c)
+    return cDc
+
+
+def hessian_D(f):
+    return jacfwd(jacrev(f))
+
+
+def hessian_Q(f):
+    return jacfwd(jacfwd(f))
+
+
+def loss_fn(c_arr):
+    data_misfit_val_D = data_misfit_fn_D(c_arr)
+    data_misfit_val_Q = data_misfit_fn_Q(c_arr)
+    model_misfit_val = model_misfit_fn(c_arr)
+
+    misfit = (data_misfit_val_D +
+              data_misfit_val_Q +
+              mu*model_misfit_val)
+    return misfit
+
+
+def update_H(c_arr, grads, hess_inv):
+    return jax.tree_multimap(lambda c, g, h: c - g @ h, c_arr, grads, hess_inv)
 #----------------------------------------------------------------------# 
 # the DPT model function that returns a-coefficients
 def model_D(c_arr):
-    # predicted a-coefficients
     pred_acoeffs = jnp.zeros(num_j * nmults_D)
-
-    # denormalizing to make actual model params
-    # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
     pred = fixed_part_D + c_arr @ param_coeff_flat_D
 
     def loop_in_mults(mult_ind, pred_acoeff):
         pred_omega = jdc(pred, (mult_ind*dim_hyper_D,), (dim_hyper_D,))
         pred_acoeff = jdc_update(pred_acoeff,
-                                (Pjl_D[mult_ind] @ pred_omega)/aconv_denom_D[mult_ind],
+                                 ((Pjl_D[mult_ind] @ pred_omega)/
+                                  aconv_denom_D[mult_ind]),
                                 (mult_ind * num_j,))
         return pred_acoeff
 
@@ -255,31 +305,34 @@ pred_acoeffs_D = model_D_(true_params_flat)
 
 # these arrays should be very close
 np.testing.assert_array_almost_equal(pred_acoeffs_D, data_acoeffs_D)
-
+print(f"[TESTING] pred_acoeffs_D = data_acoeffs_D: PASSED -- " +
+      f"maxdiff = {abs(pred_acoeffs_D - data_acoeffs_D).max():.5e}; " + 
+      f"misfit = {data_misfit_fn_D(true_params_flat):.5e}")
 #----------------------------------------------------------------------# 
 # the QDPT model function that returns a-coefficients 
 def model_Q(c_arr):
     pred_acoeffs = jnp.zeros(num_j * nmults_Q)
-
-    # c_arr_denorm = jf.model_denorm(c_arr, true_params_flat, sigma2scale)
     pred = c_arr @ param_coeff_flat_Q + fixed_part_Q
 
     def loop_in_mults(mult_ind, pred_acoeff):
         _eigval_mult = jnp.zeros(2*ellmax_Q+1)
         ell0 = ell0_arr_Q[mult_ind]
         omegaref = omega0_arr_Q[mult_ind]
-        pred_dense = sparse.bcoo_todense(pred[mult_ind], sparse_idx_Q[mult_ind],
+        pred_dense = sparse.bcoo_todense(pred[mult_ind],
+                                         sparse_idx_Q[mult_ind],
                                          shape=(dim_hyper_Q, dim_hyper_Q))
-        _eigval_mult = get_eigs(pred_dense)[:2*ellmax_Q+1]/2./omegaref*GVARS_Q.OM*1e6
+        _eigval_mult = get_eigs(pred_dense)[:2*ellmax_Q+1]
+        _eigval_mult = _eigval_mult/2./omegaref*GVARS_Q.OM*1e6
 
         pred_acoeff = jdc_update(pred_acoeff,
-                                 (Pjl_Q[mult_ind] @ _eigval_mult)/aconv_denom_Q[mult_ind],
+                                 ((Pjl_Q[mult_ind] @ _eigval_mult)/
+                                  aconv_denom_Q[mult_ind]),
                                  (mult_ind * num_j,))
         return pred_acoeff
 
     pred_acoeffs = foril(0, nmults_Q, loop_in_mults, pred_acoeffs)
-
     return pred_acoeffs
+
 
 def eigval_sort_slice(eigval, eigvec):
     def body_func(i, ebs):
@@ -300,33 +353,35 @@ pred_acoeffs_Q = model_Q_(true_params_flat)
 
 # these arrays should be very close
 np.testing.assert_array_almost_equal(pred_acoeffs_Q, data_acoeffs_Q)
-
+print(f"[TESTING] pred_acoeffs_Q = data_acoeffs_Q: PASSED -- " +
+      f"maxdiff = {abs(pred_acoeffs_Q - data_acoeffs_Q).max():.5e}; " +
+      f"misfit = {data_misfit_fn_Q(true_params_flat):.5e}")
+print(f"[TESTING] total-loss = {loss_fn(true_params_flat):.5e}")
 #----------------------------------------------------------------------#
 # synthetic or real data; if synthetic whether to add artifical noise 
 if PARGS.synth:
     print("Using synthetic data")
     if PARGS.noise:
+        print("--Using gaussian noise")
         np.random.seed(3)
         data_acoeffs_err_D = np.random.normal(loc=0, scale=acoeffs_sigma_HMI_D)
-        data_acoeffs_D = data_acoeffs_D + data_acoeffs_err_D
+        data_acoeffs_D = data_acoeffs_D + 0.0*data_acoeffs_err_D
         
         np.random.seed(3)
         data_acoeffs_err_Q = np.random.normal(loc=0, scale=acoeffs_sigma_HMI_Q)
-        data_acoeffs_Q = data_acoeffs_Q + data_acoeffs_err_Q
+        data_acoeffs_Q = data_acoeffs_Q + 0.0*data_acoeffs_err_Q
 
 else:
     print("Using observed data")
     data_acoeffs_D = GVARS_D.acoeffs_true
-    data_acoeffs_Q = GVARS_Q.acoeffs_true                                                 
+    data_acoeffs_Q = GVARS_Q.acoeffs_true
 
 data_acoeffs_out_HMI_D = GVARS_D.acoeffs_out_HMI
 data_acoeffs_out_HMI_Q = GVARS_Q.acoeffs_out_HMI
-
 print(f"data_acoeffs_D = {data_acoeffs_D[:15]}")
 print(f"data_acoeffs_Q = {data_acoeffs_Q[:15]}")
 
 len_data = len(data_acoeffs_D) + len(data_acoeffs_Q)
-
 #----------------------------------------------------------------------# 
 # plotting acoeffs pred and data to see if we should expect good fit
 plot_acoeffs.plot_acoeffs_datavsmodel(pred_acoeffs_D, data_acoeffs_D,
@@ -336,100 +391,34 @@ plot_acoeffs.plot_acoeffs_datavsmodel(pred_acoeffs_D, data_acoeffs_D,
 plot_acoeffs.plot_acoeffs_datavsmodel(pred_acoeffs_Q, data_acoeffs_Q,
                                       data_acoeffs_out_HMI_Q,
                                       acoeffs_sigma_HMI_Q, 'ref_Q')
-
-# sys.exit()
-#--------------------------------------------------------------------------# 
-def data_misfit_fn_D(c_arr):
-    # predicted DPT a-coefficients
-    pred_acoeffs_D = model_D(c_arr)
-    data_misfit_arr_D = (pred_acoeffs_D - data_acoeffs_D)/acoeffs_sigma_HMI_D
-    return jnp.sum(jnp.square(data_misfit_arr_D))
-
-def data_misfit_fn_Q(c_arr):
-    # predicted QDPT a-coefficients
-    pred_acoeffs_Q = model_Q(c_arr)
-    data_misfit_arr_Q = (pred_acoeffs_Q - data_acoeffs_Q)/acoeffs_sigma_HMI_Q
-    return jnp.sum(jnp.square(data_misfit_arr_Q))
-
-
-def model_misfit_fn(c_arr, mu_scale=mu_scaling):
-    # Djk is the same for s=1, s=3 and s=5
-    # as the basis functions and the knot locations are the same
-    cd = []
-    lambda_factor = []
-    start_idx = 0
-    end_idx = GVARS_D.knot_ind_th
-    carr_padding = []
-    for i in range(len_s):
-        carr_padding.append(GVARS_D.ctrl_arr_dpt_full[sind_arr_D[i], start_idx:end_idx])
-
-    for i in range(len_s):
-        cd.append(jnp.append(carr_padding[i], c_arr[i::len_s]))
-        lambda_factor.append(jnp.trace(data_hess_dpy[i::len_s, i::len_s])
-                             / len_data * len_s)
-
-    Djk = D_bsp_j_D_bsp_k
-    cDc = 0.0
-
-    for i in range(len_s):
-        cDc += mu_scale[i] * cd[i] @ Djk @ cd[i] * lambda_factor[i]
-    return cDc
-
-
-def hessian_D(f):
-    return jacfwd(jacrev(f))
-
-def hessian_Q(f):
-    return jacfwd(jacfwd(f))
-
+#---------------------- jitting the functions --------------------------#
 data_hess_fn_D = hessian_D(data_misfit_fn_D)
 data_hess_fn_Q = hessian_Q(data_misfit_fn_Q)
 model_hess_fn =  hessian_D(model_misfit_fn)
-
-def loss_fn(c_arr):
-    data_misfit_val_D = data_misfit_fn_D(c_arr)
-    data_misfit_val_Q = data_misfit_fn_Q(c_arr)
-    model_misfit_val = model_misfit_fn(c_arr)
-
-    # total misfit
-    misfit = (data_misfit_val_D +
-              data_misfit_val_Q +
-              mu*model_misfit_val)
-    
-    return misfit
-
 grad_fn = jax.grad(loss_fn)
 
-def update_H(c_arr, grads, hess_inv):
-    return jax.tree_multimap(lambda c, g, h: c - g @ h, c_arr, grads, hess_inv)
-
-#---------------------- jitting the functions --------------------------#
 _grad_fn = jit(grad_fn)
 _data_hess_fn_D = jit(data_hess_fn_D)
 _data_hess_fn_Q = jit(data_hess_fn_Q)
 _model_hess_fn = jit(model_hess_fn)
 _update_H = jit(update_H)
 _loss_fn = jit(loss_fn)
-
 #-----------------------initialization of params------------------#
 # c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))
 c_init = (np.ones_like(true_params_flat) +
           0.0*np.random.uniform(0.0, 1.0, size=len(true_params_flat)))
 
-#------------------plotting the initial profiles-------------------#                     
+#------------------plotting the initial profiles-------------------#
 c_arr_init_full = jf.c4fit_2_c4plot(GVARS_D, c_init*true_params_flat,
                                     sind_arr_D, cind_arr_D)
+ctrl_zero_err = np.zeros_like(c_arr_init_full)
 
 # converting ctrl points to wsr and plotting
-init_plot = postplotter.postplotter(GVARS_D, c_arr_init_full, 'init')
+init_plot = postplotter.postplotter(GVARS_D, c_arr_init_full,
+                                    ctrl_zero_err, 'init')
 #------------------------------------------------------------------------# 
 # getting the renormalized model parameters
 c_arr = c_init * true_params_flat
-# c_arr_renorm = jf.model_renorm(c_arr,
-#                                true_params_flat,
-#                                sigma2scale)
-# c_arr_renorm = jnp.asarray(c_arr_renorm)
-
 #----------------------------------------------------------------------#
 # plotting acoeffs from initial data and HMI data
 init_acoeffs_D = model_D(c_arr)
@@ -458,13 +447,6 @@ loss_arr = []
 loss_threshold = 1e-1
 maxiter = 50
 itercount = 0
-
-# calculating the DPT & model hessian once since it doesn't depend on c_arr
-suffix = f"{int(ARGS_Q[4])}s.{GVARS_Q.eigtype}.{GVARS_Q.tslen}d"
-data_hess_dpy = np.load(f"{dpy_dir}/dhess.{suffix}.npy")
-model_hess_dpy = np.load(f"{dpy_dir}/mhess.{suffix}.npy")
-hess_inv = jnp.linalg.inv(data_hess_dpy + mu * model_hess_dpy)
-
 
 loss = _loss_fn(c_arr)
 model_misfit = model_misfit_fn(c_arr)
@@ -530,7 +512,8 @@ c_arr_fit_full = jf.c4fit_2_c4plot(GVARS_D, c_arr_fit*true_params_flat,
                                    sind_arr_D, cind_arr_D)
 
 # converting ctrl points to wsr and plotting
-fit_plot = postplotter.postplotter(GVARS_D, c_arr_fit_full, 'fit')
+fit_plot = postplotter.postplotter(GVARS_D, c_arr_fit_full,
+                                   ctrl_zero_err, 'fit')
 
 #------------------------------------------------------------------------#
 with open("reg_misfit.txt", "a") as f:
