@@ -45,6 +45,7 @@ with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
 outdir = f"{scratch_dir}/dpy_jax"
+summdir = f"{scratch_dir}/summaryfiles"
 plotdir = f"{scratch_dir}/plots"
 #----------------------------------------------------------------------#
 ARGS = np.loadtxt(".n0-lmin-lmax.dat")
@@ -453,5 +454,5 @@ todays_date = date.today()
 timeprefix = datetime.now().strftime("%H.%M")
 dateprefix = f"{todays_date.day:02d}.{todays_date.month:02d}.{todays_date.year:04d}"
 fsuffix = f"{dateprefix}-{timeprefix}-{hsuffix}"
-jf.save_obj(soln_summary, f"{outdir}/summary.dpt-{fsuffix}")
+jf.save_obj(soln_summary, f"{summdir}/summary.dpt-{fsuffix}")
 

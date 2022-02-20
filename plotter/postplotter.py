@@ -16,7 +16,8 @@ scratch_dir = dirnames[1]
 plotdir = f"{scratch_dir}/plots"
 
 class postplotter:
-    def __init__(self, GVARS, ctrl_arr_fit_full, ctrl_arr_err_full, tag):
+    def __init__(self, GVARS, ctrl_arr_fit_full, ctrl_arr_err_full, tag,
+                 color='red'):
         self.GVARS = GVARS
         self.r = GVARS.r
         self.OM = GVARS.OM
@@ -35,8 +36,9 @@ class postplotter:
         self.plot_fit_wsr_zoom()
         self.plot_omega_rtheta()
 
-    def plot_fit_wsr(self):
-        fig, ax = plt.subplots(3, 2, figsize=(15, 7), sharex=True)
+    def plot_fit_wsr(self, fig=None, ax=None, pcolor='red'):
+        if fig == None and ax == None:
+            fig, ax = plt.subplots(3, 2, figsize=(15, 7), sharex=True)
 
         lw = 0.5
         # plot the wsr from dpt (no-spline)
@@ -58,15 +60,19 @@ class postplotter:
                               alpha=0.5, color='gray')
 
         # construct the spline from ctrl_arr_dpt_full
-        wsr_spl_full = gen_wsr.get_wsr_from_spline(self.r, self.ctrl_arr_dpt_full,
+        wsr_spl_full = gen_wsr.get_wsr_from_spline(self.GVARS, self.r,
+                                                   self.ctrl_arr_dpt_full,
                                                    self.t_internal, self.spl_deg)
 
         # converting to muHz
         # wsr_spl_full *= self.OM * 1e6
         # overplotting the reconstructed profile
-        ax[0, 0].plot(self.r, wsr_spl_full[0], '--r', alpha=0.5, linewidth=lw)
-        ax[1, 0].plot(self.r, wsr_spl_full[1], '--r', alpha=0.5, linewidth=lw)
-        ax[2, 0].plot(self.r, wsr_spl_full[2], '--r', alpha=0.5, linewidth=lw)
+        ax[0, 0].plot(self.r, wsr_spl_full[0], '--',
+                      color=pcolor, alpha=0.5, linewidth=lw)
+        ax[1, 0].plot(self.r, wsr_spl_full[1], '--',
+                      color=pcolor, alpha=0.5, linewidth=lw)
+        ax[2, 0].plot(self.r, wsr_spl_full[2], '--', 
+                      color=pcolor, alpha=0.5, linewidth=lw)
 
         # settin axis labels and title
         ax[0, 0].set_title(f'$w_s(r)$ DPT vs. {self.tag}', size=16)
@@ -80,9 +86,9 @@ class postplotter:
         w3r_errperc = self.get_percent_error(wsr_spl_full[1], self.wsr_dpt[1])
         w5r_errperc = self.get_percent_error(wsr_spl_full[2], self.wsr_dpt[2])
         
-        ax[0, 1].semilogy(self.r, abs(w1r_errperc), 'r', alpha=0.5)
-        ax[1, 1].semilogy(self.r, abs(w3r_errperc), 'r', alpha=0.5)
-        ax[2, 1].semilogy(self.r, abs(w5r_errperc), 'r', alpha=0.5)
+        ax[0, 1].semilogy(self.r, abs(w1r_errperc), color=pcolor, alpha=0.5)
+        ax[1, 1].semilogy(self.r, abs(w3r_errperc), color=pcolor, alpha=0.5)
+        ax[2, 1].semilogy(self.r, abs(w5r_errperc), color=pcolor, alpha=0.5)
         
         # settin axis labels
         ax[0, 1].set_ylabel('% offset in $w_1(r)$', size=14)
@@ -95,27 +101,30 @@ class postplotter:
         plt.tight_layout()
         plt.savefig(f'{plotdir}/{self.tag}_wsr.pdf')
         plt.close()
+        return fig, ax
 
     
     def plot_fit_wsr_w_error(self):
         fig, ax = plt.subplots(3, 2, figsize=(15, 7), sharex=True)
         
-        err_spl_full = gen_wsr.get_wsr_from_spline(self.r, self.ctrl_arr_err_full,
+        err_spl_full = gen_wsr.get_wsr_from_spline(self.GVARS,
+                                                   self.r, self.ctrl_arr_err_full,
                                                    self.t_internal, self.spl_deg)
 
         lw = 0.5
-        # plot the wsr from dpt (no-spline)                                                   
+        # plot the wsr from dpt (no-spline)
         ax[0, 0].plot(self.r, self.wsr_dpt[0], 'k', linewidth=lw)
         ax[1, 0].plot(self.r, self.wsr_dpt[1], 'k', linewidth=lw)
         ax[2, 0].plot(self.r, self.wsr_dpt[2], 'k', linewidth=lw)
 
-        # construct the spline from ctrl_arr_dpt_full                                         
-        wsr_spl_full = gen_wsr.get_wsr_from_spline(self.r, self.ctrl_arr_dpt_full,
+        # construct the spline from ctrl_arr_dpt_full
+        wsr_spl_full = gen_wsr.get_wsr_from_spline(self.GVARS,
+                                                   self.r, self.ctrl_arr_dpt_full,
                                                    self.t_internal, self.spl_deg)
 
-        # converting to muHz                                                                  
-        # wsr_spl_full *= self.OM * 1e6                                                       
-        # overplotting the reconstructed profile                                             
+        # converting to muHz
+        # wsr_spl_full *= self.OM * 1e6
+        # overplotting the reconstructed profile
         ax[0, 0].plot(self.r, wsr_spl_full[0], '--r', alpha=0.5, linewidth=lw)
         ax[1, 0].plot(self.r, wsr_spl_full[1], '--r', alpha=0.5, linewidth=lw)
         ax[2, 0].plot(self.r, wsr_spl_full[2], '--r', alpha=0.5, linewidth=lw)
@@ -134,14 +143,14 @@ class postplotter:
                               alpha=0.5, color='red')
 
 
-        # settin axis labels and title                                                        
+        # settin axis labels and title
         ax[0, 0].set_title(f'$w_s(r)$ DPT vs. {self.tag}', size=16)
         ax[0, 0].set_ylabel('$w_1(r)$ in $\mu$Hz', size=16)
         ax[1, 0].set_ylabel('$w_3(r)$ in $\mu$Hz', size=16)
         ax[2, 0].set_ylabel('$w_5(r)$ in $\mu$Hz', size=16)
         ax[2, 0].set_xlabel('$r$ in $R_{\odot}$', size=16)
 
-        # plotting the error percentages                                                      
+        # plotting the error percentages
         w1r_errperc = self.get_percent_error(wsr_spl_full[0], self.wsr_dpt[0])
         w3r_errperc = self.get_percent_error(wsr_spl_full[1], self.wsr_dpt[1])
         w5r_errperc = self.get_percent_error(wsr_spl_full[2], self.wsr_dpt[2])
@@ -150,7 +159,7 @@ class postplotter:
         ax[1, 1].semilogy(self.r, abs(w3r_errperc), 'r', alpha=0.5)
         ax[2, 1].semilogy(self.r, abs(w5r_errperc), 'r', alpha=0.5)
 
-        # settin axis labels                                                                  
+        # settin axis labels
         ax[0, 1].set_ylabel('% offset in $w_1(r)$', size=14)
         ax[1, 1].set_ylabel('% offset in $w_3(r)$', size=14)
         ax[2, 1].set_ylabel('% offset in $w_5(r)$', size=14)
@@ -174,7 +183,8 @@ class postplotter:
         ax[2, 0].plot(self.r[rth_idx:], self.wsr_dpt[2][rth_idx:], 'k')
 
         # construct the spline from ctrl_arr_dpt_full
-        wsr_spl_full = gen_wsr.get_wsr_from_spline(self.r, self.ctrl_arr_dpt_full,
+        wsr_spl_full = gen_wsr.get_wsr_from_spline(self.GVARS,
+                                                   self.r, self.ctrl_arr_dpt_full,
                                                    self.t_internal, self.spl_deg)
 
         # converting to muHz
@@ -229,7 +239,8 @@ class postplotter:
         ax[2, 0].plot(self.r[rth_idx:], self.wsr_dpt[2][rth_idx:], 'k')
 
         # construct the spline from ctrl_arr_dpt_full
-        wsr_spl_full = gen_wsr.get_wsr_from_spline(self.r, self.ctrl_arr_dpt_full,
+        wsr_spl_full = gen_wsr.get_wsr_from_spline(self.GVARS,
+                                                   self.r, self.ctrl_arr_dpt_full,
                                                    self.t_internal, self.spl_deg)
 
         s = np.array([1, 3, 5])

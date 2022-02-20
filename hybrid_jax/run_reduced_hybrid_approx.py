@@ -44,6 +44,7 @@ with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
 outdir = f"{scratch_dir}/hybrid_jax"
+summdir = f"{scratch_dir}/summaryfiles"
 #------------------------------------------------------------------------# 
 sys.path.append(f"{package_dir}/plotter")
 import postplotter
@@ -489,7 +490,6 @@ num_data = len(pred_acoeffs_D) + len(pred_acoeffs_Q)
 chisq = total_misfit/num_data
 print(f"chisq = {chisq:.5f}")
 
-
 #----------------------------------------------------------------------#
 # plotting acoeffs from initial data and HMI data
 final_acoeffs_D = model_D(c_arr)
@@ -545,7 +545,7 @@ todays_date = date.today()
 timeprefix = datetime.now().strftime("%H.%M")
 dateprefix = f"{todays_date.day:02d}.{todays_date.month:02d}.{todays_date.year:04d}"
 fsuffix = f"{dateprefix}-{timeprefix}-{suffix}"
-jf.save_obj(soln_summary, f"{outdir}/summary-{fsuffix}")
+jf.save_obj(soln_summary, f"{summdir}/summary-{fsuffix}")
 
 """
 # plotting the hessians for analysis
