@@ -14,11 +14,12 @@ plotdir = f"{scratch_dir}/plots"
 plt.rcParams['axes.grid'] = True
 
 class preplotter:
-    def __init__(self, r, OM, wsr_dpt, wsr_fixed,
+    def __init__(self, GVARS, r, OM, wsr_dpt, wsr_fixed,
                  ctrl_arr_up, ctrl_arr_lo,
                  ctrl_arr_dpt_full, ctrl_arr_dpt_clipped,
                  t_internal, knot_ind_th, wsr_err, spl_deg=3):
-    
+
+        self.GVARS = GVARS
         self.r = r
         self.OM = OM
         self.wsr_dpt = wsr_dpt
@@ -45,7 +46,8 @@ class preplotter:
         ax[2, 0].plot(self.r, self.wsr_dpt[2], 'k')
 
         # construct the spline from ctrl_arr_dpt_full
-        wsr_spl_full = gen_wsr.get_wsr_from_spline(self.r, self.ctrl_arr_dpt_full,
+        wsr_spl_full = gen_wsr.get_wsr_from_spline(self.GVARS,
+                                                   self.r, self.ctrl_arr_dpt_full,
                                                    self.t_internal, self.spl_deg)
 
         # converting to muHz
@@ -102,19 +104,22 @@ class preplotter:
         # getting the dpt profile from clipped dpt
         ctrl_arr_dpt_recon = np.zeros_like(self.ctrl_arr_dpt_full)
         ctrl_arr_dpt_recon[:, self.knot_ind_th:] = self.ctrl_arr_dpt_clipped
-        wsr_dpt_recon = gen_wsr.get_wsr_from_spline(self.r, ctrl_arr_dpt_recon,
+        wsr_dpt_recon = gen_wsr.get_wsr_from_spline(self.GVARS,
+                                                    self.r, ctrl_arr_dpt_recon,
                                                     self.t_internal, self.spl_deg)
 
         # getting the upex profile
         ctrl_arr_up_full = np.zeros_like(self.ctrl_arr_dpt_full)
         ctrl_arr_up_full[:, self.knot_ind_th:] = self.ctrl_arr_up
-        wsr_up = gen_wsr.get_wsr_from_spline(self.r, ctrl_arr_up_full,
+        wsr_up = gen_wsr.get_wsr_from_spline(self.GVARS,
+                                             self.r, ctrl_arr_up_full,
                                              self.t_internal, self.spl_deg)
         
         # getting the loex profile
         ctrl_arr_lo_full = np.zeros_like(self.ctrl_arr_dpt_full)
         ctrl_arr_lo_full[:, self.knot_ind_th:] = self.ctrl_arr_lo
-        wsr_lo = gen_wsr.get_wsr_from_spline(self.r, ctrl_arr_lo_full,
+        wsr_lo = gen_wsr.get_wsr_from_spline(self.GVARS,
+                                             self.r, ctrl_arr_lo_full,
                                              self.t_internal, self.spl_deg)
         
         # plotting 
