@@ -226,11 +226,13 @@ class GlobalVars():
         self.s_arr = tuple(self.s_arr)
         self.omega_list= tuple(self.omega_list)
 
+        _GVARS = self
         # if preplot is True, plot the various things for
         # ensuring everything is working properly
 
         if qdPars.preplot:
-            check_splines = preplotter.preplotter(self.r, self.OM, self.wsr,
+            check_splines = preplotter.preplotter(_GVARS,
+                                                  self.r, self.OM, self.wsr,
                                                   self.wsr_fixed,
                                                   self.ctrl_arr_up,
                                                   self.ctrl_arr_lo,

@@ -21,6 +21,7 @@ class preplotter:
 
         self.GVARS = GVARS
         self.r = r
+        print(f"GVARS = {GVARS}; r = {self.r}; OM = {OM}")
         self.OM = OM
         self.wsr_dpt = wsr_dpt
         self.wsr_fixed = wsr_fixed 
