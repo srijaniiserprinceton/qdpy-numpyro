@@ -13,6 +13,7 @@ scratch_dir = dirnames[1]
 dpy_dir = f"{scratch_dir}/dpy_jax"
 qdpy_dir = f"{scratch_dir}/qdpy_jax"
 outdir = f"{scratch_dir}/summaryfiles"
+plotdir = f"{scratch_dir}/plots"
 
 def select_and_load():
     os.system(f"ls {outdir}/summary* > {outdir}/fnames.txt")
@@ -62,5 +63,5 @@ def plot_from_summary(summlist):
 if __name__ == "__main__":
     summary_list = select_and_load()
     fig = plot_from_summary(summary_list)
-    fig.show()
+    fig.savefig(f"{plotdir}/compare-dpt-qdpt.pdf")
     
