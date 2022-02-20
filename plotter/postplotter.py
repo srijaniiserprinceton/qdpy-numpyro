@@ -46,18 +46,18 @@ class postplotter:
         ax[1, 0].plot(self.r, self.wsr_dpt[1], 'k', linewidth=lw)
         ax[2, 0].plot(self.r, self.wsr_dpt[2], 'k', linewidth=lw)
 
-        ax[0, 0].fill_between(self.r,
-                              self.wsr_dpt[0]-self.wsr_err[0],
-                              self.wsr_dpt[0]+self.wsr_err[0],
-                              alpha=0.5, color='gray')
-        ax[1, 0].fill_between(self.r,
-                              self.wsr_dpt[1]-self.wsr_err[1],
-                              self.wsr_dpt[1]+self.wsr_err[1],
-                              alpha=0.5, color='gray')
-        ax[2, 0].fill_between(self.r,
-                              self.wsr_dpt[2]-self.wsr_err[2],
-                              self.wsr_dpt[2]+self.wsr_err[2],
-                              alpha=0.5, color='gray')
+        # ax[0, 0].fill_between(self.r,
+        #                       self.wsr_dpt[0]-self.wsr_err[0],
+        #                       self.wsr_dpt[0]+self.wsr_err[0],
+        #                       alpha=0.5, color='gray')
+        # ax[1, 0].fill_between(self.r,
+        #                       self.wsr_dpt[1]-self.wsr_err[1],
+        #                       self.wsr_dpt[1]+self.wsr_err[1],
+        #                       alpha=0.5, color='gray')
+        # ax[2, 0].fill_between(self.r,
+        #                       self.wsr_dpt[2]-self.wsr_err[2],
+        #                       self.wsr_dpt[2]+self.wsr_err[2],
+        #                       alpha=0.5, color='gray')
 
         # construct the spline from ctrl_arr_dpt_full
         wsr_spl_full = gen_wsr.get_wsr_from_spline(self.GVARS, self.r,
