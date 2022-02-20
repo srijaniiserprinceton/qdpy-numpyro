@@ -136,8 +136,8 @@ nc_D = len(cind_arr_D)
 Pjl_D = RL_poly_D[:, smin_D:smax_D+1:2, :]
 
 # mu_scaling = np.array([1., 1., 1.])
-knee_mu = np.array([3.535e-5, 4.961e-5, 1.768e-4])
-mu_scaling = knee_mu/knee_mu[0]
+knee_mu = np.array([2.12696e-5, 9.92329e-6, 3.84844e-5])
+mu_scaling = knee_mu
 
 #-----------------------------------------------------------------------# 
 nmults_Q = len(GVARS_Q.ell0_arr)
@@ -539,6 +539,7 @@ soln_summary['data_hess'] = data_hess_dpy
 soln_summary['model_hess'] = model_hess_dpy
 soln_summary['loss_arr'] = loss_arr
 soln_summary['mu'] = mu
+soln_summary['knee_mu'] = knee_mu
 soln_summary['chisq'] = chisq
 
 todays_date = date.today()
