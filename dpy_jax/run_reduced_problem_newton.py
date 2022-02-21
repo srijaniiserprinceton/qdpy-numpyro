@@ -6,7 +6,7 @@ from datetime import datetime
 #-----------------------------------------------------------------------#
 parser = argparse.ArgumentParser()
 parser.add_argument("--mu", help="regularization",
-                    type=float, default=0.)
+                    type=float, default=1.0)
 parser.add_argument("--store_hess", help="store hessians",
                     type=bool, default=False)
 parser.add_argument("--read_hess", help="store hessians",
@@ -268,11 +268,11 @@ len_data = len(data_acoeffs) # length of data
 mu = PARGS.mu # regularization parameter
 
 # changing the regularization as a function of depth
-mu_depth = np.zeros_like(GVARS.ctrl_arr_dpt_full[0, :])
-rth_soft = GVARS.rth + 0.01
-width = 0.003
-mu_depth = 0.5 * (1 - np.tanh((GVARS.knot_locs - rth_soft)/width))
-mu_depth = 1e10 * jnp.sqrt(jnp.asarray(mu_depth)) / mu
+# mu_depth = np.zeros_like(GVARS.ctrl_arr_dpt_full[0, :])
+# rth_soft = GVARS.rth + 0.01
+# width = 0.003
+# mu_depth = 0.5 * (1 - np.tanh((GVARS.knot_locs - rth_soft)/width))
+# mu_depth = 1e10 * jnp.sqrt(jnp.asarray(mu_depth)) / mu
 #-----------------------the main training loop--------------------------#
 # initialization of params
 c_init = np.ones_like(true_params_flat) + 0.0*np.random.rand(len(true_params_flat))
@@ -299,7 +299,7 @@ plot_acoeffs.plot_acoeffs_dm_scaled(init_acoeffs, data_acoeffs,
                                     data_acoeffs_out_HMI,
                                     acoeffs_sigma_HMI, 'init')
 #----------------------------------------------------------------------#
-print(f"mu depth shape = {mu_depth.shape}")
+# print(f"mu depth shape = {mu_depth.shape}")
 print(f"ctrl full shape = {GVARS.ctrl_arr_dpt_full.shape}")
 N = len(data_acoeffs)
 loss = 1e25
