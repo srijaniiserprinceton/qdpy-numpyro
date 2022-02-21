@@ -50,6 +50,7 @@ def findfreq(data, l, n, m):
     L = np.sqrt(l*(l+1))
     try:
         modeindex = np.where((data[:, 0]==l) * (data[:,1]==n))[0][0]
+        modeindex_efs = gvar.nl_all.index((int(n),int(l)))
     except:
         print( "MODE NOT FOUND : l = %3s, n = %2s" %( l, n ) )
         return None, None, None
