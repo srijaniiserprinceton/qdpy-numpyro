@@ -200,7 +200,7 @@ class GlobalVars():
         # all spline basis
         self.bsp_basis_full = bsplines.bsp_basis
         self.d_bsp_basis = bsplines.d_bsp_basis
-        np.save(f'{self.relpath}/bsp_basis_full.npy', self.bsp_basis_full)
+        # np.save(f'{self.relpath}/bsp_basis_full.npy', self.bsp_basis_full)
         # only the splines basis corresponding to the ctrl_clipped
         self.bsp_basis = self.bsp_basis_full[-self.nc:]
 

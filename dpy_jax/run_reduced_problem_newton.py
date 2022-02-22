@@ -17,7 +17,7 @@ import numpy as np
 from collections import namedtuple
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-import arviz as az
+# import arviz as az
 import sys
 #------------------------------------------------------------------------# 
 import jax
@@ -36,8 +36,9 @@ print(jax.devices())
 #----------------- import local modules -----------------------------#
 from qdpy_jax import globalvars as gvar_jax
 from dpy_jax import jax_functions_dpy as jf
-from plotter import postplotter
-from plotter import plot_acoeffs_datavsmodel as plot_acoeffs
+sys.path.append('../plotter')
+import postplotter
+import plot_acoeffs_datavsmodel as plot_acoeffs
 #------------------------ directory structure --------------------------#
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
@@ -91,8 +92,8 @@ len_s = len(sind_arr) # number of s to fit
 nc = len(cind_arr) # number of c to fit
 
 knee_mu = np.array([2.12696e-5, 9.92329e-6, 3.84844e-5])
-mu_scaling = knee_mu
-# mu_scaling = np.array([1., 1., 1.])
+# mu_scaling = knee_mu
+mu_scaling = np.array([1., 1., 1.])
 
 #------------------------------------------------------------------------#
 # slicing the Pjl correctly in angular degree s and computing normalization
@@ -408,13 +409,13 @@ c_arr_fit_full = jf.c4fit_2_c4plot(GVARS, c_arr_fit*true_params_flat,
 
 # making the full error array to pass into c4fit_2_c4plot
 ctrl_arr_err_full = np.zeros_like(c_arr_fit_full)
-ctrl_arr_err_full[:, -len(true_params_flat)//len_s:] =\
+ctrl_arr_err_full[sind_arr, -len(true_params_flat)//len_s:] =\
                             jnp.reshape(ctrl_arr_err, (len_s, -1), 'F')
 
 c_arr_err_full = jnp.reshape(ctrl_arr_err_full, (len_s, -1), 'F')
 
 # converting ctrl points to wsr and plotting
-fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full, c_arr_err_full, 'fit')
+fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full, ctrl_arr_err_full, 'fit')
 
 # plotting the hessians for analysis
 fig, ax = plt.subplots(1, 2, figsize=(10,5))
