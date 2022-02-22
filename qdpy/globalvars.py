@@ -1,18 +1,20 @@
 import os
+import sys
 import numpy as np
-import jax.numpy as jnp
 import matplotlib.pyplot as plt
 from numpy.polynomial.legendre import legval
 from scipy.interpolate import splrep, splev
 
+#----------------------------------------------------------------------
 # loading local libraries/classes
 from qdpy import jax_functions as jf
 from qdpy import bsplines as bsp
 from plotter import preplotter as preplotter
-import sys
-
+#----------------------------------------------------------------------
+import jax.numpy as jnp
 NAX = np.newaxis
 
+#----------------------------------------------------------------------
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
 data_dir = f"{package_dir}/qdpy_jax"

@@ -18,6 +18,7 @@ scratch_dir = dirnames[1]
 outdir = f"{scratch_dir}/{ARGS.outdir}"
 ipdir = f"{package_dir}/{ARGS.outdir}"
 
+#-----------------------------------------------------------------------
 
 def gen_RL_poly():
     ellmax = np.max(GVARS.ell0_arr)
@@ -29,6 +30,7 @@ def gen_RL_poly():
 
     return RL_poly
 
+#-----------------------------------------------------------------------
 
 if __name__ == '__main__':
     ARGS = np.loadtxt(f"{ipdir}/.n0-lmin-lmax.dat")

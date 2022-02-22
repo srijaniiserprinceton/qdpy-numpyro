@@ -1,15 +1,13 @@
-import jax.numpy as jnp
 from tqdm import tqdm
 import numpy as np
-from jax.lax import fori_loop as foril
 import py3nj
-import jax
 import time
 
+import jax
+import jax.numpy as jnp
+from jax.lax import fori_loop as foril
 jax.config.update('jax_platform_name', 'cpu')
 jax.config.update('jax_enable_x64', True)
-# from jax.lib import xla_bridge
-# print(xla_bridge.get_backend().platform)
 
 
 def w3j(l1, l2, l3, m1, m2, m3):
@@ -141,22 +139,37 @@ def get_wigners_qdpy(nl_nbs, s_arr, wig_list, wig_idx):
 
     return wig_list, wig_idx
 
-# function to check if the elements of a 1D array are sorted
 def issorted(a):
+    '''function to check if the elements of a 1D array are sorted'''
     return jnp.all(a[:-1] <= a[1:])
 
-# function to find 2-d index for a contiguous numbering
-# of elements in a matrix
+
 def ind2sub(cont_ind, nrows, ncols):
+    '''function to find 2-d index for a contiguous numbering
+    of elements in a matrix'''
     return cont_ind//nrows, cont_ind%ncols
 
-# @jnp.vectorize
-# @np.vectorize
-def find_idx(ell1, s, ell2, m):
-    # New method for specific use-case of qdPy
-    # /ell1 s ell2\
-    # \-|m| 0 |m| /
 
+def find_idx(ell1, s, ell2, m):
+    '''New method for specific use-case of qdPy
+       /ell1 s ell2\
+       \-|m| 0 |m| /
+    
+    Inputs:
+    ------
+    ell1 - int
+    s - int
+    ell2 - int
+    m - int
+    All are parameters as described in the matrix above
+
+    Returns:
+    --------
+    wig_idx - int
+        index of the wigner3j symbol
+    fac - float
+        sign of wigner
+    '''
     fac = np.sign(m)
     ell = np.minimum(ell1, ell2)
     dell = np.abs(ell1 - ell2)
@@ -168,7 +181,6 @@ def find_idx(ell1, s, ell2, m):
     wig_idx = idx2*(10**max_ord_mag_idx1) + idx1
     return wig_idx, fac 
 
-_find_idx = jax.jit(find_idx)
 
 def foril_func(i):
     return i, _find_idx(ell1, s, ell2, m)
@@ -180,11 +192,9 @@ def get_wig_from_pc(ell1, s, ell2, m):
     wigidx_local = jnp.searchsorted(wig_idx, idx)
     wig2 = fac * wig_list[wigidx_local]
     tv = np.isclose(wig1, wig2)
-    # print(f'({ell1:4d} :{ell2:4d} :{m:4d}) ' +
-    #       f'wig-actual = {wig1:9.6f}: wig-read = {wig2:9.6f}' +
-    #       f'- Match = {tv}')
     print(f'Match = {tv}')
     return wig1, wig2
+
 
 def compute_uniq_wigners(ell, s, ellp, m):
     wig_idx, fac = _find_idx(ell, s, ellp, m)
@@ -195,11 +205,10 @@ def compute_uniq_wigners(ell, s, ellp, m):
     wig_list = wig_list[sortind_wig_idx]
     return wig_list, wig_idx
 
-# timing the functions with and without jitting
+
 if __name__ == "__main__":
-    # wigner parameters
+    _find_idx = jax.jit(find_idx)
     ell1, s, ell2 = 200, 5, 202
-    # m = -9
     m = jnp.arange(ell1+1)
     wig_list, wig_idx = compute_uniq_wigners(ell1, s, ell2, m)
     wig_list = jnp.asarray(wig_list)
