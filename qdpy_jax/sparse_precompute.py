@@ -6,19 +6,12 @@ from scipy import sparse
 import sys
 import os
 
-'''
-from jax.experimental import sparse
-from jax.ops import index_update as jidx_update
-from jax.ops import index as jidx
-import jax.numpy as jnp
-from jax import jit
-'''
+from qdpy import load_multiplets
+from qdpy import jax_functions as jf
+from qdpy import wigner_map as wigmap
+from qdpy import globalvars as gvar_jax
 
-from qdpy_jax import load_multiplets
 from qdpy_jax import prune_multiplets
-from qdpy_jax import jax_functions as jf
-from qdpy_jax import wigner_map2 as wigmap
-from qdpy_jax import globalvars as gvar_jax
 from qdpy_jax import build_cenmult_and_nbs as build_cnm
 
 current_dir = os.path.dirname(os.path.realpath(__file__))

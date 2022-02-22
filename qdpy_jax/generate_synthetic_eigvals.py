@@ -47,9 +47,10 @@ with open(".n0-lmin-lmax.dat", "w") as f:
             f"{ARGS.load_mults}")
 #-----------------------------------------------------------------#
 # importing local package 
-from qdpy_jax import globalvars as gvar_jax
+from qdpy import globalvars as gvar_jax
+from qdpy import build_hypermatrix_sparse as build_hm_sparse
+
 from qdpy_jax import sparse_precompute as precompute
-from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
 #-----------------------------------------------------------------#
 GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
                             lmin=ARGS.lmin,

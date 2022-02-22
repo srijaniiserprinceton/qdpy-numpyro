@@ -72,10 +72,11 @@ def get_eigs(mat):
 
 if __name__ == "__main__":
     #----------------------import custom packages------------------------#
-    from qdpy_jax import jax_functions as jf
-    from qdpy_jax import globalvars as gvar_jax
+    from qdpy import jax_functions as jf
+    from qdpy import globalvars as gvar_jax
+    from qdpy import build_hypermatrix_sparse as build_hm_sparse
+
     from qdpy_jax import sparse_precompute as precompute
-    from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
     #-----------------------------------------------------------------#
     parser = argparse.ArgumentParser()
     parser.add_argument("--n0", help="radial order",

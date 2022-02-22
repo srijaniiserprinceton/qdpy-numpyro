@@ -31,7 +31,8 @@ echo "rth      = $RTH"
 echo "-------------------------"
 
 echo "[ 1. ] Creating list of modes ..."
-python mode_lister.py --nmin $NMIN --nmax $NMAX --lmin $LMIN --lmax $LMAX >.mlist.out 2>.mlist.err
+python ../qdpy/mode_lister.py --nmin $NMIN --nmax $NMAX --lmin $LMIN --lmax $LMAX \
+         --outdir "qdpy_jax" >.mlist.out 2>.mlist.err
 echo "       -- `tail -1 .mlist.out`"
 
 echo "[ 2. ] Saving reduced problem ..."
@@ -39,7 +40,7 @@ python save_reduced_problem.py --load_mults 1 --knot_num $KNOTNUM --rth $RTH
 echo "       -- DONE"
 
 echo "[ 3. ] Creating Ritzwoller Lavely polynomials ..."
-python precompute_ritzlavely.py >.rl.out 2>.rl.err
+python ../qdpy/precompute_ritzlavely.py --outdir "qdpy_jax" >.rl.out 2>.rl.err
 echo "       -- `tail -1 .rl.out`"
 
 echo "----- INITIALIZATION COMPLETE --------------------"
