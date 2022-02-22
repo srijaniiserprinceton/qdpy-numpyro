@@ -9,15 +9,12 @@
 __pycache__
 .config
 .datadump
-qdpy_output
+qdpy_iofiles
 *.out
 *.err
 *.png
 *.log
-jobscripts/gnup_v11.sh
-jobscripts/gnup_v11.pbs
-jobscripts/ipjobs_v11.sh
-jobscripts/ipjobs*.sh
+*.sh
 *.pbs
 hmi*
 mdi*
