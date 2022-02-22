@@ -37,12 +37,12 @@ echo "-------------------------"
 echo "[ 1. ] Creating list of modes ..."
 if [ $EXCLUDE_QDPY_MODES == '1' ]; then
 	echo "       -- Using only DPY modes"
-	python mode_lister.py --nmin $NMIN --nmax $NMAX --lmin $LMIN --lmax $LMAX \
-		   --exclude_qdpy 1 >.mlist.out 2>.mlist.err
+	python ../qdpy/mode_lister.py --nmin $NMIN --nmax $NMAX --lmin $LMIN --lmax $LMAX \
+		   --outdir "dpy_jax" --exclude_qdpy 1 >.mlist.out 2>.mlist.err
 else
 	echo "       -- Using QDPY+DPY modes"
-	python mode_lister.py --nmin $NMIN --nmax $NMAX --lmin $LMIN --lmax $LMAX \
-		   >.mlist.out 2>.mlist.err
+	python ../qdpy/mode_lister.py --nmin $NMIN --nmax $NMAX --lmin $LMIN --lmax $LMAX \
+		   --outdir "dpy_jax" >.mlist.out 2>.mlist.err
 fi
 echo "       -- `tail -1 .mlist.out`"
 
@@ -52,7 +52,7 @@ python generate_synthetic_eigvals.py --lmin $LMIN --lmax $LMAX \
 echo "       -- DONE"
 
 echo "[ 3. ] Creating Ritzwoller Lavely polynomials ..."
-python precompute_ritzlavely.py >.rl.out 2>.rl.err
+python ../qdpy/precompute_ritzlavely.py --outdir "dpy_jax" >.rl.out 2>.rl.err
 echo "       -- `tail -1 .rl.out`"
 
 echo "[ 4. ] Saving reduced problem ..."

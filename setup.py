@@ -26,8 +26,8 @@ from setuptools.command.test import test as TestCommand
 
 
 setup(
-    name='qdPy_jax',
-    version='0.1.',
+    name='qdpy',
+    version='0.5.',
     packages=find_packages("."), # Finds every folder with __init__.py in it. (Hehe)
     install_requires=[
         "jax", "numpy", "matplotlib", "scipy", "py3nj"

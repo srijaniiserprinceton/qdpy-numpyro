@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from qdpy_jax import gen_wsr
+from qdpy import gen_wsr
 
 
 current_dir = os.path.dirname(os.path.realpath(__file__))

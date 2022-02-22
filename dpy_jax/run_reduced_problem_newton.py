@@ -34,11 +34,10 @@ from jax.config import config
 config.update('jax_enable_x64', True)
 print(jax.devices())
 #----------------- import local modules -----------------------------#
-from qdpy_jax import globalvars as gvar_jax
-from dpy_jax import jax_functions_dpy as jf
-sys.path.append('../plotter')
-import postplotter
-import plot_acoeffs_datavsmodel as plot_acoeffs
+from qdpy import globalvars as gvar_jax
+from qdpy import jax_functions as jf
+from plotter import postplotter
+from plotter import plot_acoeffs_datavsmodel as plot_acoeffs
 #------------------------ directory structure --------------------------#
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
@@ -92,8 +91,8 @@ len_s = len(sind_arr) # number of s to fit
 nc = len(cind_arr) # number of c to fit
 
 knee_mu = np.array([2.12696e-5, 9.92329e-6, 3.84844e-5])
-# mu_scaling = knee_mu
-mu_scaling = np.array([1., 1., 1.])
+mu_scaling = knee_mu
+# mu_scaling = np.array([1., 1., 1.])
 
 #------------------------------------------------------------------------#
 # slicing the Pjl correctly in angular degree s and computing normalization

@@ -6,13 +6,10 @@ from numpy.polynomial.legendre import legval
 from scipy.interpolate import splrep, splev
 
 # loading local libraries/classes
-from qdpy_jax import jax_functions as jf
-from qdpy_jax import bsplines as bsp
+from qdpy import jax_functions as jf
+from qdpy import bsplines as bsp
+from plotter import preplotter as preplotter
 import sys
-current_dir = os.path.dirname(os.path.realpath(__file__))
-package_dir = os.path.dirname(current_dir)
-sys.path.append(f"{package_dir}/plotter")
-import preplotter as preplotter
 
 NAX = np.newaxis
 

@@ -22,23 +22,20 @@ print('JAX using:', xla_bridge.get_backend().platform)
 config.update('jax_platform_name', 'gpu')
 config.update('jax_enable_x64', True)
 
+#------------------------------------------------------------------
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
 with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
 outdir = f"{scratch_dir}/dpy_jax"
-#----------------------import custom packages------------------------#
-from qdpy_jax import globalvars as gvar_jax
-from dpy_jax import jax_functions_dpy as jf
+#----------------------import local packages------------------------#
+from qdpy import build_hypermatrix_sparse as build_hm_sparse
+from qdpy import globalvars as gvar_jax
+from qdpy import jax_functions as jf
 from dpy_jax import sparse_precompute_acoeff as precompute
-from qdpy_jax import build_hypermatrix_sparse as build_hm_sparse
+from plotter import plot_model_renorm as plot_renorm
 
-sys.path.append(f"{package_dir}/plotter")
-import plot_model_renorm as plot_renorm
-
-from jax.lib import xla_bridge
-print('JAX using:', xla_bridge.get_backend().platform)
 
 ARGS = np.loadtxt(".n0-lmin-lmax.dat")
 GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
@@ -57,7 +54,7 @@ ind_min, ind_max = 0, GVARS.ctrl_arr_dpt_clipped.shape[1]-1
 cind_arr = np.arange(ind_min, ind_max+1)
 
 # the angular degrees we want to invert for
-smin, smax = 1, 1
+smin, smax = 1, 5
 smin_ind, smax_ind = (smin-1)//2, (smax-1)//2
 sind_arr = np.arange(smin_ind, smax_ind+1)
 

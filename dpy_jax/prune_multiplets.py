@@ -1,7 +1,7 @@
 from jax import jit
 import numpy as np
 
-from dpy_jax import wigner_map2 as wigmap
+from qdpy import wigner_map as wigmap
 from dpy_jax import build_cenmults as build_cnm
 
 # jitting various functions
@@ -39,8 +39,8 @@ def get_pruned_attributes(GVARS):
     nl_pruned = CENMULTS.nl_cnm
     omega_pruned = CENMULTS.omega_cnm
 
-    wig_list, wig_idx = wigmap.get_wigners(CENMULTS.nl_cnm, GVARS.s_arr,
-                                           wig_list, wig_idx)
+    wig_list, wig_idx = wigmap.get_wigners_dpy(CENMULTS.nl_cnm, GVARS.s_arr,
+                                               wig_list, wig_idx)
 
     nl_arr = np.asarray(GVARS.nl_all)
     nl_pruned = np.asarray(nl_pruned)

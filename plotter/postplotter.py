@@ -4,7 +4,7 @@ from scipy.special import lpmn
 from tqdm import tqdm
 import os
 
-from qdpy_jax import gen_wsr
+from qdpy import gen_wsr
 
 plt.rcParams['axes.grid'] = True
 

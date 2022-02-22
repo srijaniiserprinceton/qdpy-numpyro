@@ -49,7 +49,7 @@ def w3j_vecm(l1, l2, l3, m1, m2, m3):
     return wigvals
 
 
-def get_wigners(nl_nbs, s_arr, wig_list, wig_idx):
+def get_wigners_dpy(nl_nbs, s_arr, wig_list, wig_idx):
     # re-converting it back to array
     nl_nbs = jnp.asarray(nl_nbs)
     
@@ -92,6 +92,55 @@ def get_wigners(nl_nbs, s_arr, wig_list, wig_idx):
 
     return wig_list, wig_idx
 
+
+def get_wigners_qdpy(nl_nbs, s_arr, wig_list, wig_idx):
+    # re-converting it back to array
+    nl_nbs = jnp.asarray(nl_nbs)
+    
+    @np.vectorize
+    def find_idx_fac(ell1, s, ell2, m):
+        dell = abs(ell1 - ell2)
+        ell = min(ell1, ell2)
+        idx1 = ell*(ell+1)//2 + abs(m)
+        idx2 = s*(s+1)//2 + dell
+        fac = 1
+
+        if m < 0:
+            fac = -1
+
+        max_ord_mag_idx1 = 5
+        wig_idx = idx2*(10**max_ord_mag_idx1) + idx1
+        return wig_idx, fac
+
+    num_multiplets = nl_nbs.shape[0]
+    num_blocks = int(num_multiplets**2)
+
+    for i in range(num_multiplets):
+        for ii in range(i, num_multiplets):
+            ell1 = np.array([nl_nbs[i, 1]])[0]
+            ell2 = np.array([nl_nbs[ii, 1]])[0]
+            ellmin = min(ell1, ell2)
+            m = np.arange(0, ellmin+1)
+            l1arr = np.ones_like(m)*ell1
+            l2arr = np.ones_like(m)*ell2
+            for s in s_arr:
+                dell = abs(ell2 - ell1)
+                widx, fac = find_idx_fac(l1arr, s, l2arr, m)
+                exists = True
+
+                try:
+                    _i1 = wig_idx.index(widx)
+                    exists = True
+                except ValueError:
+                    exists = False
+
+                if not exists:
+                    wigvals = w3j_vecm(ell1, s, ell2, -m, 0*m, m)
+                    wig_list.extend(list(wigvals))
+                    wig_idx.extend(list(widx))
+
+    return wig_list, wig_idx
+
 # function to check if the elements of a 1D array are sorted
 def issorted(a):
     return jnp.all(a[:-1] <= a[1:])
@@ -109,16 +158,15 @@ def find_idx(ell1, s, ell2, m):
     # \-|m| 0 |m| /
 
     fac = np.sign(m)
-    ell = np.minimum(ell1, ell2)                                                             
-    dell = np.abs(ell1 - ell2)                                                               
-    idx1 = ell*(ell+1)//2 + np.abs(m)                                                        
-    idx2 = s*(s+1)//2 + dell                                                                  
+    ell = np.minimum(ell1, ell2)
+    dell = np.abs(ell1 - ell2)
+    idx1 = ell*(ell+1)//2 + np.abs(m)
+    idx2 = s*(s+1)//2 + dell
 
-    # computing a unified index for the wigner                                                
-    max_ord_mag_idx1 = 5                                                                      
-    wig_idx = idx2*(10**max_ord_mag_idx1) + idx1                                              
+    # computing a unified index for the wigner
+    max_ord_mag_idx1 = 5
+    wig_idx = idx2*(10**max_ord_mag_idx1) + idx1
     return wig_idx, fac 
-
 
 _find_idx = jax.jit(find_idx)
 

@@ -2,7 +2,7 @@ import os
 import numpy as np
 from datetime import date
 from datetime import datetime
-from dpy_jax import jax_functions_dpy as jf
+from qdpy import jax_functions as jf
 from plotter import postplotter
 
 current_dir = os.path.dirname(os.path.realpath(__file__))

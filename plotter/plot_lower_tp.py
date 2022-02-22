@@ -1,16 +1,17 @@
 import numpy as np
 from scipy import integrate
 from scipy.interpolate import splev
-import sys
 import matplotlib.pyplot as plt
+import sys
 
 from jax import jit
 
+from qdpy import jax_functions as jf
+from qdpy import globalvars as gvar_jax
+from qdpy import wigner_map2 as wigmap
+
 from qdpy_jax import load_multiplets
 from qdpy_jax import prune_multiplets
-from qdpy_jax import jax_functions as jf
-from qdpy_jax import wigner_map2 as wigmap
-from qdpy_jax import globalvars as gvar_jax
 from qdpy_jax import build_cenmult_and_nbs as build_cnm
 
 # defining functions used in multiplet functions in the script

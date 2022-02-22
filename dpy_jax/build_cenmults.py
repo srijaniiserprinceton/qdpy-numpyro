@@ -1,5 +1,5 @@
 import numpy as np   
-from qdpy_jax import jax_functions as jf
+from qdpy import jax_functions as jf
 
 def getnt4cenmult(GVARS):
     """Function that returns the name tuple for the
