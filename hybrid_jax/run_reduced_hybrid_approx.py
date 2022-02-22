@@ -35,8 +35,8 @@ from jax.config import config
 config.update('jax_enable_x64', True)
 print(jax.devices())
 #------------------------------------------------------------------------# 
-from qdpy_jax import globalvars as gvar_jax
-from dpy_jax import jax_functions_dpy as jf
+from qdpy import globalvars as gvar_jax
+from qdpy import jax_functions_dpy as jf
 #------------------------------------------------------------------------# 
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
