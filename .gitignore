@@ -20,4 +20,5 @@ jobscripts/ipjobs_v11.sh
 jobscripts/ipjobs*.sh
 *.pbs
 hmi*
+mdi*
 *.pkl
