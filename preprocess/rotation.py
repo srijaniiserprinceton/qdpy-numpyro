@@ -156,9 +156,10 @@ if __name__=="__main__":
     fnames_err2d = get_fnames("err")
     smax = 5
 
-    for i in range(2):#len(fnames_rot2d)):
+    for i in range(len(fnames_rot2d)):
         fname_re = [fnames_rot2d[i],
                     fnames_err2d[i]]
+        print(fname_re[0])
         (rmesh, theta), (rot2d, err2d) = load_data(fname_re)
         lenr = len(rmesh)
         ws = get_interpolated_ws(rot2d, smax)
