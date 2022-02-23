@@ -1,6 +1,6 @@
 from collections import namedtuple
+import pickle5 as pickle
 from tqdm import tqdm
-import pickle
 import time
 
 from jax.lax import cond as cond
