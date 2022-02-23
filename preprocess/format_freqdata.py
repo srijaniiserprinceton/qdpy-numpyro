@@ -1,17 +1,30 @@
 import argparse
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 #-----------------------------------------------------------------------#
 PARSER = argparse.ArgumentParser()
 PARSER.add_argument("--instrument", help="hmi or mdi",
                     type=str, default="hmi")
+PARSER.add_argument("--tslen", help="72d or 360d",
+                    type=str, default="72d")
 ARGS = PARSER.parse_args()
 del PARSER
 #-----------------------------------------------------------------------#
 INSTR = ARGS.instrument
+#------------------------ directory structure --------------------------#
+current_dir = os.path.dirname(os.path.realpath(__file__))
+package_dir = os.path.dirname(current_dir)
+with open(f"{package_dir}/.config", "r") as f:
+    dirnames = f.read().splitlines()
+scratch_dir = dirnames[1]
+ipdir = f"{scratch_dir}/input_files"
+dldir = f"{ipdir}/{INSTR}"
+#----------------------------------------------------------------------#
 
 
-def reformat_splitdata():
+def reformat_splitdata(ell, n, mu, sind, ac_ois):
+    ac_obs, ac_inv, asig = ac_ois
     """Creates files in the format of hmi.6328.36"""
     num_modes = len(ell)
     data_splits = np.zeros((num_modes, 84), dtype=float)
@@ -24,7 +37,7 @@ def reformat_splitdata():
         for n1 in nlist:
             idxs = np.where((ell1 == ell)*
                             (n1 == n))[0]
-            print(f"{n1:3d}, {ell1:4d},", idxs)
+            # print(f"{n1:3d}, {ell1:4d},", idxs)
             for idx in idxs:
                 data_splits[count, 0] = ell[idx]
                 data_splits[count, 1] = n[idx]
@@ -39,8 +52,15 @@ def reformat_splitdata():
     return data_splits, data_splits_out
 
 
-if __name__ == "__main__":
-    a = np.loadtxt(f'splittings.out.{instrument}')
+def get_fnames(suffix="split"):
+    os.system(f"ls {dldir}/hmi* | grep {suffix} > {dldir}/fnames_{suffix}.txt")
+    with open(f"{dldir}/fnames_{suffix}.txt", "r") as f:
+        fnames = f.read().splitlines()
+    return fnames
+
+
+def setup_reformatting(fname):
+    a = np.loadtxt(fname)
     ac_obs = a[:, 6]
     sorted_idx = np.argsort(ac_obs)
 
@@ -52,7 +72,13 @@ if __name__ == "__main__":
     ac_obs = a[:, 6][sorted_idx]
     ac_inv = a[:, 7][sorted_idx]
     asig = a[:, -1][sorted_idx]
+    ac_ois = (ac_obs, ac_inv, asig)
 
+    dsplits, dsplits_out = reformat_splitdata(ell, n, mu, sind, ac_ois)
+    return dsplits, dsplits_out
+
+
+def plot_data():
     a1obs = ac_obs[sind==1]
     a1inv = ac_inv[sind==1]
     a1sig = asig[sind==1]
@@ -70,10 +96,6 @@ if __name__ == "__main__":
     a5sig = asig[sind==3]
     ell5 = ell[sind==3]
     a5idx = np.arange(len(a5obs))
-
-    dsplits, dsplits_out = reformat_splitdata()
-    np.savetxt(f'{instrument}.in.6335.36', dsplits)
-    np.savetxt(f'{instrument}.out.6335.36', dsplits_out)
 
     fig, axs = plt.subplots(nrows=3, ncols=2, figsize=(8, 12))
     #axs = axs.flatten()
@@ -113,3 +135,17 @@ if __name__ == "__main__":
     axs[2, 1].set_ylabel('$\\delta a_5/\\sigma_5$')
     fig.tight_layout()
     plt.show()
+
+
+
+
+if __name__ == "__main__":
+    fnames_split = get_fnames()
+    for fname in fnames_split:
+        print(fname)
+        dsplits, dsplits_out = setup_reformatting(fname)
+        fname_splits = fname.split('.')
+        mdi_day = fname_splits[2]
+        numsplits = fname_splits[3]
+        np.savetxt(f'{dldir}/{INSTR}.in.{ARGS.tslen}.{mdi_day}.{numsplits}', dsplits)
+        np.savetxt(f'{dldir}/{INSTR}.out.{ARGS.tslen}.{mdi_day}.{numsplits}', dsplits_out)
