@@ -17,7 +17,7 @@ with open(f"{package_dir}/.config", "r") as f:
 scratch_dir = dirnames[1]
 plotdir = f"{scratch_dir}/plots"
 
-suffix = "r09.w5.72d.Jesper"
+suffix = "r09.w1.72d.gyre"
 reg_data = pd.read_csv(f"{package_dir}/dpy_jax/reg_misfit.{suffix}.txt")
 
 data_misfit = reg_data['data-misfit']
@@ -37,7 +37,7 @@ mu = mu[mask]
 data_mf_rescaled = rescale(data_misfit)
 model_mf_rescaled = rescale(model_misfit)
 slope = get_slope(model_mf_rescaled, data_mf_rescaled)
-knee_idx = np.argmin(abs(slope+1)) + 70
+knee_idx = np.argmin(abs(slope+1))
 
 range_x = model_misfit.max() - model_misfit.min()
 range_y = data_misfit.max() - data_misfit.min()

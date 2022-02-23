@@ -91,8 +91,8 @@ len_s = len(sind_arr) # number of s to fit
 nc = len(cind_arr) # number of c to fit
 
 knee_mu = np.array([2.12696e-5, 9.92329e-6, 3.84844e-5])
-mu_scaling = knee_mu
-# mu_scaling = np.array([1., 1., 1.])
+# mu_scaling = knee_mu
+mu_scaling = np.array([1., 1., 1.])
 
 #------------------------------------------------------------------------#
 # slicing the Pjl correctly in angular degree s and computing normalization
