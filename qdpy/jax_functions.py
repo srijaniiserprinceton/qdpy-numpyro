@@ -21,6 +21,14 @@ def load_obj(name):
     return None
 
 
+class dict2obj(object):
+    """Turns a dictionary into a class"""
+    def __init__(self, dictionary):
+        """Constructor"""
+        for key in dictionary:
+            setattr(self, key, dictionary[key])
+
+
 def time_run(f, *args, unit="seconds", prefix="execution", Niter=1,
              block_until_ready=False):
     t1 = time.time()

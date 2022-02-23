@@ -65,7 +65,7 @@ soln_summary['params']['dpy']['lmin'] = int(ARGS[1])
 soln_summary['params']['dpy']['lmax'] = int(ARGS[2])
 soln_summary['params']['dpy']['rth'] = ARGS[3]
 soln_summary['params']['dpy']['knot_num'] = int(ARGS[4])
-soln_summary['params']['dpy']['GVARS'] = GVARS
+soln_summary['params']['dpy']['GVARS'] = jf.dict2obj(GVARS.__dict__)
 #-------------loading precomputed files for the problem-------------------# 
 data = np.load(f'{outdir}/data_model.npy')
 true_params_flat = np.load(f'{outdir}/true_params_flat.npy')
