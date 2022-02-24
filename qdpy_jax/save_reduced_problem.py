@@ -91,6 +91,14 @@ if __name__ == "__main__":
                         type=int, default=5)
     parser.add_argument("--load_mults", help="load mults from file",
                         type=int, default=0)
+    parser.add_argument("--instrument", help="hmi or mdi",
+                        type=str, default="hmi")
+    parser.add_argument("--tslen", help="72 or 360",
+                        type=int, default=72)
+    parser.add_argument("--daynum", help="day from MDI epoch",
+                        type=int, default=6328)
+    parser.add_argument("--numsplits", help="number of splitting coefficients",
+                        type=int, default=18)
     ARGS = parser.parse_args()
 
     with open(".n0-lmin-lmax.dat", "w") as f:
@@ -108,7 +116,11 @@ if __name__ == "__main__":
                                 rth=ARGS.rth,
                                 knot_num=ARGS.knot_num,
                                 load_from_file=ARGS.load_mults,
-                                relpath=outdir)
+                                relpath=outdir,
+                                instrument=ARGS.instrument,
+                                tslen=ARGS.tslen,
+                                daynum=ARGS.daynum,
+                                numsplits=ARGS.numsplits)
 
     __, GVARS_TR, __ = GVARS.get_all_GVAR()
     #-------------------parameters to be inverted for--------------------#
