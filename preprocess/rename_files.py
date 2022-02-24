@@ -17,23 +17,35 @@ mdi_daylist = pd.read_table(f'{ipdir}/daylist.txt', delim_whitespace=True,
                                    'MDI': np.int64,
                                    'DATE': str})
 #----------------------------------------------------------------------#
-def rename_file(fname, suffix="split"):
+def get_newname(fname, suffix="split"):
     date = fname.split('.')[2].split('_')[0]
     year = date[:4]
     month = date[4:6]
     day = date[6:]
     date_str = f"{year}-{month}-{day}"
+    newname = None
     try:
         idx = np.where(date_str == mdi_daylist['DATE'].values)[0][0]
         print(f"{date_str} -- {mdi_daylist['DATE'][idx]} -- " +
               f"{mdi_daylist['MDI'][idx]}")
         mdi_day = mdi_daylist['MDI'][idx]
         found = 1
-        os.system(f"cp {fname} {outdir}/hmi.{suffix}.{mdi_day}.18")
+        newname = f"hmi.{suffix}.{mdi_day}.18"
     except IndexError:
         print(f"{date_str} -- NOT FOUND")
         found = 0
 
+    return newname
+
+
+
+def rename_file(fname, suffix="split"):
+    newname = get_newname(fname, suffix=suffix)
+    if newname == None:
+        found = 0
+    else:
+        os.system(f"cp {fname} {outdir}/{newname}")
+        found = 1
     return found
 
 

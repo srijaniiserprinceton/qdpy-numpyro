@@ -11,6 +11,14 @@ parser.add_argument("--store_hess", help="store hessians",
                     type=bool, default=False)
 parser.add_argument("--read_hess", help="store hessians",
                     type=bool, default=False)
+parser.add_argument("--instrument", help="hmi or mdi",
+                    type=str, default="hmi")
+parser.add_argument("--tslen", help="72 or 360",
+                    type=int, default=72)
+parser.add_argument("--daynum", help="day from MDI epoch",
+                    type=int, default=6328)
+parser.add_argument("--numsplits", help="number of splitting coefficients",
+                    type=int, default=18)
 PARGS = parser.parse_args()
 #------------------------------------------------------------------------# 
 import numpy as np
@@ -55,7 +63,11 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             rth=ARGS[3],
                             knot_num=int(ARGS[4]),
                             load_from_file=int(ARGS[5]),
-                            relpath=outdir)
+                            relpath=outdir,
+                            instrument=PARGS.instrument,
+                            tslen=PARGS.tslen,
+                            daynum=PARGS.daynum,
+                            numsplits=PARGS.numsplits)
 
 soln_summary = {}
 soln_summary['params'] = {}

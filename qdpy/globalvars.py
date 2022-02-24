@@ -82,11 +82,16 @@ class GlobalVars():
                    "get_ind", "mask_minmax"]
 
     def __init__(self, lmin=200, lmax=200, n0=0, rth=0.9, knot_num=15,
-                 load_from_file=0, relpath='.', instrument='hmi'): 
-        self.tslen = 72
-        self.numsplits = 36
+                 load_from_file=0, relpath='.', instrument='hmi',
+                 tslen=72, daynum=6328, numsplits=18):
+
+        # storing the parameters required for inversion
+        self.tslen = tslen
+        self.numsplits = numsplits
         self.instrument = instrument
-        self.numsplits = 5
+        self.daynum = daynum
+
+        # storing the directory structure
         self.local_dir = dirnames[0]
         self.scratch_dir = dirnames[1]
         self.snrnmais_dir = dirnames[2]
@@ -95,9 +100,12 @@ class GlobalVars():
         self.ipdir = f"{self.scratch_dir}/input_files"
         self.eigdir = f"{self.snrnmais_dir}/eig_files"
         self.progdir = self.local_dir
-        fsuffix = f"{self.tslen}d.6328.{self.numsplits}"
-        self.hmidata_in = np.loadtxt(f"{self.ipdir}/{self.instrument}.in.{fsuffix}")
-        self.hmidata_out = np.loadtxt(f"{self.ipdir}/{self.instrument}.out.{fsuffix}")
+
+        fsuffix = f"{self.tslen}d.{self.daynum}.{self.numsplits}"
+        self.hmidata_in = np.loadtxt(f"{self.ipdir}/{self.instrument}/" +
+                                     f"{self.instrument}.in.{fsuffix}")
+        self.hmidata_out = np.loadtxt(f"{self.ipdir}/{self.instrument}/" +
+                                      f"{self.instrument}.out.{fsuffix}")
         self.relpath = relpath
         self.eigtype = eigtype
 
@@ -130,9 +138,11 @@ class GlobalVars():
         self.s_arr = np.arange(1, self.smax+1, 2)
 
         self.fwindow = qdPars.fwindow
-        self.wsr = -1.0*np.loadtxt(f'{self.ipdir}/w_{self.instrument}.dat')
+        self.wsr = -1.0*np.loadtxt(f'{self.ipdir}/{self.instrument}/' +
+                                   f'wsr.{self.instrument}.{fsuffix}')
         self.err1d = np.loadtxt(f'{self.ipdir}/err1d-{self.instrument}.dat')
-        self.wsr_err = np.loadtxt(f'{self.ipdir}/err_{self.instrument}.dat')
+        self.wsr_err = np.loadtxt(f'{self.ipdir}/{self.instrument}/' +
+                                  f'err.{self.instrument}.{fsuffix}')
 
         self.wsr = self.sfactor[:, NAX]*self.wsr
         self.wsr_err = self.sfactor[:, NAX]*self.wsr_err

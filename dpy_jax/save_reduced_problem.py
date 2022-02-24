@@ -8,7 +8,18 @@ from scipy.stats import norm
 from scipy import integrate
 
 NAX = np.newaxis
-
+#-----------------------------------------------------------------------#
+parser = argparse.ArgumentParser()
+parser.add_argument("--instrument", help="hmi or mdi",
+                    type=str, default="hmi")
+parser.add_argument("--tslen", help="72 or 360",
+                    type=int, default=72)
+parser.add_argument("--daynum", help="day from MDI epoch",
+                    type=int, default=6328)
+parser.add_argument("--numsplits", help="number of splitting coefficients",
+                    type=int, default=18)
+PARGS = parser.parse_args()
+#------------------------------------------------------------------------# 
 import jax.numpy as jnp
 from jax.config import config
 import jax
@@ -44,7 +55,11 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             rth=ARGS[3],
                             knot_num=int(ARGS[4]),
                             load_from_file=int(ARGS[5]),
-                            relpath=outdir)
+                            relpath=outdir,
+                            instrument=PARGS.instrument,
+                            tslen=PARGS.tslen,
+                            daynum=PARGS.daynum,
+                            numsplits=PARGS.numsplits)
 
 GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 outdir = f"{GVARS.scratch_dir}/dpy_jax"

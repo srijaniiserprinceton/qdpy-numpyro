@@ -2,6 +2,8 @@ import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+
+from preprocess import rename_files as RN
 #-----------------------------------------------------------------------#
 PARSER = argparse.ArgumentParser()
 PARSER.add_argument("--instrument", help="hmi or mdi",
@@ -53,8 +55,9 @@ def reformat_splitdata(ell, n, mu, sind, ac_ois):
 
 
 def get_fnames(suffix="split"):
-    os.system(f"ls {dldir}/hmi* | grep {suffix} > {dldir}/fnames_{suffix}.txt")
-    with open(f"{dldir}/fnames_{suffix}.txt", "r") as f:
+    os.system(f"ls {dldir}/dlfiles/hmi* | grep {suffix} > " +
+              f"{dldir}/dlfiles/fnames_{suffix}.txt")
+    with open(f"{dldir}/dlfiles/fnames_{suffix}.txt", "r") as f:
         fnames = f.read().splitlines()
     return fnames
 
@@ -135,17 +138,39 @@ def plot_data():
     axs[2, 1].set_ylabel('$\\delta a_5/\\sigma_5$')
     fig.tight_layout()
     plt.show()
+    return None
 
+
+def store_output(fname, splitdata):
+    fmt_list = []
+    for i in range(splitdata.shape[1]):
+        if i<2:
+            fmt_list.append("^5d")
+        else:
+            fmt_list.append(".4f")
+
+    with open(fname, "w") as f:
+        for i in range(splitdata.shape[0]):
+            for j in range(splitdata.shape[1]):
+                if j<2:
+                    f.write(f"{int(splitdata[i, j]):{fmt_list[j]}} ")
+                else:
+                    f.write(f"{splitdata[i, j]:{fmt_list[j]}} ")
+            f.write("\n")
+    return None
 
 
 
 if __name__ == "__main__":
     fnames_split = get_fnames()
     for fname in fnames_split:
-        print(fname)
+        newname = RN.get_newname(fname)
+        print(newname)
         dsplits, dsplits_out = setup_reformatting(fname)
-        fname_splits = fname.split('.')
+        fname_splits = newname.split('.')
         mdi_day = fname_splits[2]
         numsplits = fname_splits[3]
-        np.savetxt(f'{dldir}/{INSTR}.in.{ARGS.tslen}.{mdi_day}.{numsplits}', dsplits)
-        np.savetxt(f'{dldir}/{INSTR}.out.{ARGS.tslen}.{mdi_day}.{numsplits}', dsplits_out)
+
+        store_output(f'{dldir}/{INSTR}.in.{ARGS.tslen}.{mdi_day}.{numsplits}', dsplits)
+        store_output(f'{dldir}/{INSTR}.out.{ARGS.tslen}.{mdi_day}.{numsplits}',
+                     dsplits_out)
