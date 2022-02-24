@@ -101,6 +101,7 @@ nl_arr, omega_arr = get_multiplet_list(ARGS.exclude_qdpy)
 
 #---------------------- printing and saving ---------------------------
 print_multiplet_list(tuple(map(tuple, nl_arr)))
+sfx = GVARS.filename_suffix
 print(f'Total multiplets: {len(nl_arr)}')
-np.save(f'{outdir}/qdpy_multiplets.npy', nl_arr)
-np.save(f'{outdir}/omega_qdpy_multiplets.npy', omega_arr)
+np.save(f'{outdir}/qdpy_multiplets.{sfx}.npy', nl_arr)
+np.save(f'{outdir}/omega_qdpy_multiplets.{sfx}.npy', omega_arr)

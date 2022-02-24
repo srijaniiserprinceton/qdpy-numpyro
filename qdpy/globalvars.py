@@ -102,6 +102,7 @@ class GlobalVars():
         self.progdir = self.local_dir
 
         fsuffix = f"{self.tslen}d.{self.daynum}.{self.numsplits}"
+        self.filename_suffix = f"{self.instrument}.{fsuffix}"
         self.hmidata_in = np.loadtxt(f"{self.ipdir}/{self.instrument}/" +
                                      f"{self.instrument}.in.{fsuffix}")
         self.hmidata_out = np.loadtxt(f"{self.ipdir}/{self.instrument}/" +
@@ -437,7 +438,8 @@ class GlobalVars():
 
         # loading from a file. Must be saved in the (nmults, 2) shape
         if(load_from_file):
-            mults = np.load(f'{self.relpath}/qdpy_multiplets.npy').astype('int')
+            mults = np.load(f'{self.relpath}/' +
+                            f'qdpy_multiplets.{self.filename_suffix}.npy').astype('int')
             n_arr, ell_arr = mults[:, 0], mults[:, 1]
             for i in range(len(n_arr)):
                 mult_ind = self.nl_all.index((n_arr[i], ell_arr[i]))

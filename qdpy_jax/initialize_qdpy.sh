@@ -46,7 +46,6 @@ echo "lmin      = $LMIN"
 echo "lmax      = $LMAX"
 echo "knot_num  = $KNOTNUM"
 echo "rth       = $RTH"
-echo "excl_qdpy = $EXCLUDE_QDPY_MODES"
 echo "---data parameters ---"
 echo "instrument = $INSTR"
 echo "tslen      = $TSLEN"
@@ -66,7 +65,9 @@ python save_reduced_problem.py --load_mults 1 --knot_num $KNOTNUM --rth $RTH \
 echo "       -- DONE"
 
 echo "[ 3. ] Creating Ritzwoller Lavely polynomials ..."
-python ../qdpy/precompute_ritzlavely.py --outdir "qdpy_jax" >.rl.out 2>.rl.err
+python ../qdpy/precompute_ritzlavely.py --outdir "qdpy_jax" \
+	   --instrument $INSTR --tslen $TSLEN --daynum $DAYNUM --numsplits $NUMSPLIT \
+	   >.rl.out 2>.rl.err
 echo "       -- `tail -1 .rl.out`"
 
 echo "----- INITIALIZATION COMPLETE --------------------"

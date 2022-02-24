@@ -78,7 +78,9 @@ python generate_synthetic_eigvals.py --lmin $LMIN --lmax $LMAX \
 echo "       -- DONE"
 
 echo "[ 3. ] Creating Ritzwoller Lavely polynomials ..."
-python ../qdpy/precompute_ritzlavely.py --outdir "dpy_jax" >.rl.out 2>.rl.err
+python ../qdpy/precompute_ritzlavely.py --outdir "dpy_jax" \
+	   --instrument $INSTR --tslen $TSLEN --daynum $DAYNUM --numsplits $NUMSPLIT \
+	   >.rl.out 2>.rl.err
 echo "       -- `tail -1 .rl.out`"
 
 echo "[ 4. ] Saving reduced problem ..."
