@@ -91,6 +91,14 @@ if __name__ == "__main__":
                         type=int, default=5)
     parser.add_argument("--load_mults", help="load mults from file",
                         type=int, default=0)
+    parser.add_argument("--instrument", help="hmi or mdi",
+                        type=str, default="hmi")
+    parser.add_argument("--tslen", help="72 or 360",
+                        type=int, default=72)
+    parser.add_argument("--daynum", help="day from MDI epoch",
+                        type=int, default=6328)
+    parser.add_argument("--numsplits", help="number of splitting coefficients",
+                        type=int, default=18)
     ARGS = parser.parse_args()
 
     with open(".n0-lmin-lmax.dat", "w") as f:
@@ -108,7 +116,11 @@ if __name__ == "__main__":
                                 rth=ARGS.rth,
                                 knot_num=ARGS.knot_num,
                                 load_from_file=ARGS.load_mults,
-                                relpath=outdir)
+                                relpath=outdir,
+                                instrument=ARGS.instrument,
+                                tslen=ARGS.tslen,
+                                daynum=ARGS.daynum,
+                                numsplits=ARGS.numsplits)
 
     __, GVARS_TR, __ = GVARS.get_all_GVAR()
     #-------------------parameters to be inverted for--------------------#
@@ -202,18 +214,19 @@ if __name__ == "__main__":
                            fixed_hypmat_sparse)
     eigvals_true = model()
     #----------------saving precomputed parameters------------------------#
-    np.save(f'{outdir}/true_params_flat.npy', true_params_flat)
-    np.save(f'{outdir}/param_coeff_flat.npy', param_coeff_flat)
-    np.save(f'{outdir}/fixed_part.npy', fixed_hypmat_sparse)
-    np.save(f'{outdir}/sparse_idx.npy', hypmat_idx)
-    np.save(f'{outdir}/omega0_arr.npy', omega0_arr)
-    np.save(f'{outdir}/ell0_arr.npy', ell0_arr)
-    np.save(f'{outdir}/cind_arr.npy', cind_arr)
-    np.save(f'{outdir}/sind_arr.npy', sind_arr)
-    np.save(f'{outdir}/D_bsp_j_D_bsp_k.npy', D_bsp_j_D_bsp_k)
-    np.save(f"{outdir}/data_model.npy", eigvals_true)
-    np.save(f'{outdir}/acoeffs_HMI.npy', GVARS.acoeffs_true)
-    np.save(f'{outdir}/acoeffs_sigma_HMI.npy', GVARS.acoeffs_sigma)
+    sfx = GVARS.filename_suffix
+    np.save(f'{outdir}/true_params_flat.{sfx}.npy', true_params_flat)
+    np.save(f'{outdir}/param_coeff_flat.{sfx}.npy', param_coeff_flat)
+    np.save(f'{outdir}/fixed_part.{sfx}.npy', fixed_hypmat_sparse)
+    np.save(f'{outdir}/sparse_idx.{sfx}.npy', hypmat_idx)
+    np.save(f'{outdir}/omega0_arr.{sfx}.npy', omega0_arr)
+    np.save(f'{outdir}/ell0_arr.{sfx}.npy', ell0_arr)
+    np.save(f'{outdir}/cind_arr.{sfx}.npy', cind_arr)
+    np.save(f'{outdir}/sind_arr.{sfx}.npy', sind_arr)
+    np.save(f'{outdir}/D_bsp_j_D_bsp_k.{sfx}.npy', D_bsp_j_D_bsp_k)
+    np.save(f"{outdir}/data_model.{sfx}.npy", eigvals_true)
+    np.save(f'{outdir}/acoeffs_HMI.{sfx}.npy', GVARS.acoeffs_true)
+    np.save(f'{outdir}/acoeffs_sigma_HMI.{sfx}.npy', GVARS.acoeffs_sigma)
     print(f"--SAVING COMPLETE--")
 
     sys.exit()

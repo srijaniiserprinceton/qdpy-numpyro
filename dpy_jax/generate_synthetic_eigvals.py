@@ -30,7 +30,16 @@ parser.add_argument("--knot_num", help="number of knots beyond rth",
                     type=int, default=5)
 parser.add_argument("--load_mults", help="load mults from file",
                     type=int, default=0)
+parser.add_argument("--instrument", help="hmi or mdi",
+                    type=str, default="hmi")
+parser.add_argument("--tslen", help="72d or 360d",
+                    type=int, default=72)
+parser.add_argument("--daynum", help="day from MDI epoch",
+                    type=int, default=6328)
+parser.add_argument("--numsplits", help="number of splitting coefficients",
+                    type=int, default=18)
 ARGS = parser.parse_args()
+#------------------------------------------------------------------------# 
 
 with open(".n0-lmin-lmax.dat", "w") as f:
     f.write(f"{ARGS.n0}" + "\n" +
@@ -51,7 +60,11 @@ GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
                             rth=ARGS.rth,
                             knot_num=ARGS.knot_num,
                             load_from_file=ARGS.load_mults,
-                            relpath=outdir)
+                            relpath=outdir,
+                            instrument=ARGS.instrument,
+                            tslen=ARGS.tslen,
+                            daynum=ARGS.daynum,
+                            numsplits=ARGS.numsplits)
 
 __, GVARS_TR, __ = GVARS.get_all_GVAR()
 #-----------------------------------------------------------------#
@@ -115,12 +128,13 @@ if __name__ == "__main__":
 
     #--------saving miscellaneous files of eigvals and acoeffs---------#
     # saving the synthetic eigvals and their uncertainties
+    sfx = GVARS.filename_suffix
     outdir = f"{GVARS.scratch_dir}/dpy_jax"
-    np.save(f"{outdir}/eigvals_model.npy", eigvals_true/2./omega0_arr*GVARS.OM*1e6)
-    np.save(f'{outdir}/eigvals_sigma_model.npy', eigvals_sigma)
+    np.save(f"{outdir}/eigvals_model.{sfx}.npy", eigvals_true/2./omega0_arr*GVARS.OM*1e6)
+    np.save(f'{outdir}/eigvals_sigma_model.{sfx}.npy', eigvals_sigma)
     
     # saving the HMI acoeffs and their uncertainties
-    np.save(f'{outdir}/acoeffs_sigma_HMI.npy', GVARS.acoeffs_sigma)
-    np.save(f'{outdir}/acoeffs_HMI.npy', GVARS.acoeffs_true)
+    np.save(f'{outdir}/acoeffs_sigma_HMI.{sfx}.npy', GVARS.acoeffs_sigma)
+    np.save(f'{outdir}/acoeffs_HMI.{sfx}.npy', GVARS.acoeffs_true)
 
     #-----------------------------------------------------------------#

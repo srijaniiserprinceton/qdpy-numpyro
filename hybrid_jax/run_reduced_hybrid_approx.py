@@ -73,7 +73,7 @@ soln_summary['params']['dpy']['lmin'] = int(ARGS_D[1])
 soln_summary['params']['dpy']['lmax'] = int(ARGS_D[2])
 soln_summary['params']['dpy']['rth'] = ARGS_D[3]
 soln_summary['params']['dpy']['knot_num'] = int(ARGS_D[4])
-soln_summary['params']['dpy']['GVARS'] = GVARS_D
+soln_summary['params']['dpy']['GVARS'] = jf.dict2obj(GVARS_D.__dict__)
 #------------------------------------------------------------------------# 
 ARGS_Q = np.loadtxt(f"../qdpy_jax/.n0-lmin-lmax.dat")
 GVARS_Q = gvar_jax.GlobalVars(n0=int(ARGS_Q[0]),
@@ -88,7 +88,7 @@ soln_summary['params']['qdpy']['lmin'] = int(ARGS_Q[1])
 soln_summary['params']['qdpy']['lmax'] = int(ARGS_Q[2])
 soln_summary['params']['qdpy']['rth'] = ARGS_Q[3]
 soln_summary['params']['qdpy']['knot_num'] = int(ARGS_Q[4])
-soln_summary['params']['qdpy']['GVARS'] = GVARS_Q
+soln_summary['params']['qdpy']['GVARS'] = jf.dict2obj(GVARS_Q.__dict__)
 
 #-------------loading precomputed files for the problem-------------------# 
 data_D = np.load(f'{dpy_dir}/data_model.npy')

@@ -11,6 +11,14 @@ parser.add_argument("--store_hess", help="store hessians",
                     type=bool, default=False)
 parser.add_argument("--read_hess", help="store hessians",
                     type=bool, default=False)
+parser.add_argument("--instrument", help="hmi or mdi",
+                    type=str, default="hmi")
+parser.add_argument("--tslen", help="72 or 360",
+                    type=int, default=72)
+parser.add_argument("--daynum", help="day from MDI epoch",
+                    type=int, default=6328)
+parser.add_argument("--numsplits", help="number of splitting coefficients",
+                    type=int, default=18)
 PARGS = parser.parse_args()
 #------------------------------------------------------------------------# 
 import numpy as np
@@ -55,7 +63,11 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             rth=ARGS[3],
                             knot_num=int(ARGS[4]),
                             load_from_file=int(ARGS[5]),
-                            relpath=outdir)
+                            relpath=outdir,
+                            instrument=PARGS.instrument,
+                            tslen=PARGS.tslen,
+                            daynum=PARGS.daynum,
+                            numsplits=PARGS.numsplits)
 
 soln_summary = {}
 soln_summary['params'] = {}
@@ -65,22 +77,23 @@ soln_summary['params']['dpy']['lmin'] = int(ARGS[1])
 soln_summary['params']['dpy']['lmax'] = int(ARGS[2])
 soln_summary['params']['dpy']['rth'] = ARGS[3]
 soln_summary['params']['dpy']['knot_num'] = int(ARGS[4])
-soln_summary['params']['dpy']['GVARS'] = GVARS
+soln_summary['params']['dpy']['GVARS'] = jf.dict2obj(GVARS.__dict__)
 #-------------loading precomputed files for the problem-------------------# 
-data = np.load(f'{outdir}/data_model.npy')
-true_params_flat = np.load(f'{outdir}/true_params_flat.npy')
-param_coeff_flat = np.load(f'{outdir}/param_coeff_flat.npy')
-fixed_part = np.load(f'{outdir}/fixed_part.npy')
-acoeffs_sigma_HMI = np.load(f'{outdir}/acoeffs_sigma_HMI.npy')
-acoeffs_HMI = np.load(f'{outdir}/acoeffs_HMI.npy')
-cind_arr = np.load(f'{outdir}/cind_arr.npy')
-sind_arr = np.load(f'{outdir}/sind_arr.npy')
+sfx = GVARS.filename_suffix
+data = np.load(f'{outdir}/data_model.{sfx}.npy')
+true_params_flat = np.load(f'{outdir}/true_params_flat.{sfx}.npy')
+param_coeff_flat = np.load(f'{outdir}/param_coeff_flat.{sfx}.npy')
+fixed_part = np.load(f'{outdir}/fixed_part.{sfx}.npy')
+acoeffs_sigma_HMI = np.load(f'{outdir}/acoeffs_sigma_HMI.{sfx}.npy')
+acoeffs_HMI = np.load(f'{outdir}/acoeffs_HMI.{sfx}.npy')
+cind_arr = np.load(f'{outdir}/cind_arr.{sfx}.npy')
+sind_arr = np.load(f'{outdir}/sind_arr.{sfx}.npy')
 # Reading RL poly from precomputed file
 # shape (nmults x (smax+1) x 2*ellmax+1) 
-RL_poly = np.load(f'{outdir}/RL_poly.npy')
+RL_poly = np.load(f'{outdir}/RL_poly.{sfx}.npy')
 # model_params_sigma = np.load(f'{outdir}/model_params_sigma.npy')*100.
-sigma2scale = np.load(f'{outdir}/sigma2scale.npy')
-D_bsp_j_D_bsp_k = np.load(f'{outdir}/D_bsp_j_D_bsp_k.npy')
+sigma2scale = np.load(f'{outdir}/sigma2scale.{sfx}.npy')
+D_bsp_j_D_bsp_k = np.load(f'{outdir}/D_bsp_j_D_bsp_k.{sfx}.npy')
 #------------------------------------------------------------------------# 
 nmults = len(GVARS.ell0_arr)
 num_j = len(GVARS.s_arr)
@@ -309,11 +322,11 @@ loss_threshold = 1e-12
 maxiter = 20
 itercount = 0
 
-hsuffix = f"{int(ARGS[4])}s.{GVARS.eigtype}.{GVARS.tslen}d"
+hsuffix = f"{int(ARGS[4])}s.{GVARS.eigtype}"
 print(hsuffix)
 if PARGS.read_hess:
-    data_hess_dpy = np.load(f"{outdir}/dhess.{hsuffix}.npy")
-    model_hess_dpy = np.load(f"{outdir}/mhess.{hsuffix}.npy")
+    data_hess_dpy = np.load(f"{outdir}/dhess.{hsuffix}.{sfx}.npy")
+    model_hess_dpy = np.load(f"{outdir}/mhess.{hsuffix}.{sfx}.npy")
 else:
     data_hess_dpy = jnp.asarray(data_hess_fn(c_init))
     model_hess_dpy = jnp.asarray(model_hess_fn(c_init))
@@ -323,8 +336,8 @@ hess_inv = jnp.linalg.inv(total_hess)
 
 
 if PARGS.store_hess:
-    np.save(f"{outdir}/dhess.{hsuffix}.npy", data_hess_dpy)
-    np.save(f"{outdir}/mhess.{hsuffix}.npy", model_hess_dpy)
+    np.save(f"{outdir}/dhess.{hsuffix}.{sfx}.npy", data_hess_dpy)
+    np.save(f"{outdir}/mhess.{hsuffix}.{sfx}.npy", model_hess_dpy)
 
 
 tdiff = 0

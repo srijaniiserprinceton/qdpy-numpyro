@@ -11,12 +11,18 @@ parser.add_argument("--lmin", help="min angular degree", type=int)
 parser.add_argument("--lmax", help="max angular degree", type=int)
 parser.add_argument("--exclude_qdpy", help="choose modes not in qdpy",
                     type=int, default=0)
-parser.add_argument("--instrument", help="mdi or hmi",
-                    type=str, default='hmi')
 parser.add_argument("--outdir", help="dpy or qdpy",
                     type=str, default='dpy_jax')
+parser.add_argument("--instrument", help="hmi or mdi",
+                    type=str, default="hmi")
+parser.add_argument("--tslen", help="72d or 360d",
+                    type=int, default="72")
+parser.add_argument("--daynum", help="day from MDI epoch",
+                    type=int, default=6328)
+parser.add_argument("--numsplits", help="number of splitting coefficients",
+                    type=int, default=18)
 ARGS = parser.parse_args()
-#-----------------------------------------------------------------------
+#------------------------------------------------------------------------# 
 # {{{ def get_exclude_mask(exclude_qdpy=False):
 def get_exclude_mask(exclude_qdpy=False):
     mask = np.ones_like(obsdata[:, 0], dtype=np.bool)
@@ -78,7 +84,10 @@ def print_multiplet_list(nl_arr):
 #-----------------------------------------------------------------------
 nmin, nmax = ARGS.nmin, ARGS.nmax
 lmin, lmax = ARGS.lmin, ARGS.lmax
-GVARS = gvar_jax.GlobalVars()
+GVARS = gvar_jax.GlobalVars(instrument=ARGS.instrument,
+                            tslen=ARGS.tslen,
+                            daynum=ARGS.daynum,
+                            numsplits=ARGS.numsplits)
 outdir = f"{GVARS.scratch_dir}/{ARGS.outdir}"
 obsdata = GVARS.hmidata_in # only use of GVARS
 mask_qdpy = get_exclude_mask(ARGS.exclude_qdpy)
@@ -92,6 +101,7 @@ nl_arr, omega_arr = get_multiplet_list(ARGS.exclude_qdpy)
 
 #---------------------- printing and saving ---------------------------
 print_multiplet_list(tuple(map(tuple, nl_arr)))
+sfx = GVARS.filename_suffix
 print(f'Total multiplets: {len(nl_arr)}')
-np.save(f'{outdir}/qdpy_multiplets.npy', nl_arr)
-np.save(f'{outdir}/omega_qdpy_multiplets.npy', omega_arr)
+np.save(f'{outdir}/qdpy_multiplets.{sfx}.npy', nl_arr)
+np.save(f'{outdir}/omega_qdpy_multiplets.{sfx}.npy', omega_arr)

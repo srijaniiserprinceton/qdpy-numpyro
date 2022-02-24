@@ -1,6 +1,6 @@
 from collections import namedtuple
+import pickle5 as pickle
 from tqdm import tqdm
-import pickle
 import time
 
 from jax.lax import cond as cond
@@ -19,6 +19,14 @@ def load_obj(name):
     with open(name + '.pkl', 'rb') as f:
         return pickle.load(f)
     return None
+
+
+class dict2obj(object):
+    """Turns a dictionary into a class"""
+    def __init__(self, dictionary):
+        """Constructor"""
+        for key in dictionary:
+            setattr(self, key, dictionary[key])
 
 
 def time_run(f, *args, unit="seconds", prefix="execution", Niter=1,

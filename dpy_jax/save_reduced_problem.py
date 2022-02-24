@@ -8,7 +8,18 @@ from scipy.stats import norm
 from scipy import integrate
 
 NAX = np.newaxis
-
+#-----------------------------------------------------------------------#
+parser = argparse.ArgumentParser()
+parser.add_argument("--instrument", help="hmi or mdi",
+                    type=str, default="hmi")
+parser.add_argument("--tslen", help="72 or 360",
+                    type=int, default=72)
+parser.add_argument("--daynum", help="day from MDI epoch",
+                    type=int, default=6328)
+parser.add_argument("--numsplits", help="number of splitting coefficients",
+                    type=int, default=18)
+PARGS = parser.parse_args()
+#------------------------------------------------------------------------# 
 import jax.numpy as jnp
 from jax.config import config
 import jax
@@ -44,7 +55,11 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             rth=ARGS[3],
                             knot_num=int(ARGS[4]),
                             load_from_file=int(ARGS[5]),
-                            relpath=outdir)
+                            relpath=outdir,
+                            instrument=PARGS.instrument,
+                            tslen=PARGS.tslen,
+                            daynum=PARGS.daynum,
+                            numsplits=PARGS.numsplits)
 
 GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 outdir = f"{GVARS.scratch_dir}/dpy_jax"
@@ -59,10 +74,11 @@ smin_ind, smax_ind = (smin-1)//2, (smax-1)//2
 sind_arr = np.arange(smin_ind, smax_ind+1)
 
 #-----------------loading miscellaneous files--------------------------#
-eigvals_model = jnp.asarray(np.load(f'{outdir}/eigvals_model.npy'))
-eigvals_sigma_model = jnp.asarray(np.load(f'{outdir}/eigvals_sigma_model.npy'))
-acoeffs_HMI = jnp.asarray(np.load(f'{outdir}/acoeffs_HMI.npy'))
-acoeffs_sigma_HMI = jnp.asarray(np.load(f'{outdir}/acoeffs_sigma_HMI.npy'))
+sfx = GVARS.filename_suffix
+eigvals_model = jnp.asarray(np.load(f'{outdir}/eigvals_model.{sfx}.npy'))
+eigvals_sigma_model = jnp.asarray(np.load(f'{outdir}/eigvals_sigma_model.{sfx}.npy'))
+acoeffs_HMI = jnp.asarray(np.load(f'{outdir}/acoeffs_HMI.{sfx}.npy'))
+acoeffs_sigma_HMI = jnp.asarray(np.load(f'{outdir}/acoeffs_sigma_HMI.{sfx}.npy'))
 #----------------------------------------------------------------------#
 
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse, omega0_arr =\
@@ -193,15 +209,16 @@ for i in range(num_params):
     # sigma2scale[i] = abs(carr_sigma_flat[i])
 
 #-------------saving miscellaneous files-------------------#
-np.save(f'{outdir}/fixed_part.npy', diag_evals_fixed)
-np.save(f'{outdir}/param_coeff_flat.npy', noc_diag_flat)
-np.save(f'{outdir}/true_params_flat.npy', true_params_flat)
-np.save(f'{outdir}/sigma2scale.npy', sigma2scale)
+sfx = GVARS.filename_suffix
+np.save(f'{outdir}/fixed_part.{sfx}.npy', diag_evals_fixed)
+np.save(f'{outdir}/param_coeff_flat.{sfx}.npy', noc_diag_flat)
+np.save(f'{outdir}/true_params_flat.{sfx}.npy', true_params_flat)
+np.save(f'{outdir}/sigma2scale.{sfx}.npy', sigma2scale)
 # np.save(f'{outdir}/model_params_sigma.npy', carr_sigma_flat*20.)
-np.save(f'{outdir}/data_model.npy', eigvals_model)
-np.save(f'{outdir}/cind_arr.npy', cind_arr)
-np.save(f'{outdir}/sind_arr.npy', sind_arr)
-np.save(f'{outdir}/D_bsp_j_D_bsp_k.npy', D_bsp_j_D_bsp_k)
+np.save(f'{outdir}/data_model.{sfx}.npy', eigvals_model)
+np.save(f'{outdir}/cind_arr.{sfx}.npy', cind_arr)
+np.save(f'{outdir}/sind_arr.{sfx}.npy', sind_arr)
+np.save(f'{outdir}/D_bsp_j_D_bsp_k.{sfx}.npy', D_bsp_j_D_bsp_k)
 print(f"--SAVING COMPLETE--")
 
 # plotting for visual verification of renormalization
