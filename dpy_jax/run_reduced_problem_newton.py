@@ -394,7 +394,7 @@ plot_acoeffs.plot_acoeffs_dm_scaled(final_acoeffs, data_acoeffs,
 #----------------------------------------------------------------------# 
 # reconverting back to model_params in units of true_params_flat
 c_arr_fit = c_arr/true_params_flat
-np.save(f"{outdir}/carr_fit_{mu:.1e}.npy", c_arr)
+np.save(f"{outdir}/carr_fit_{mu:.5e}.npy", c_arr)
 
 for i in range(len_s):
     print(c_arr_fit[i::len_s])
