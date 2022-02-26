@@ -1,5 +1,6 @@
 import os
 import time
+from tqdm import tqdm
 import argparse
 #------------------------------------------------------------------------------
 parser = argparse.ArgumentParser()
@@ -306,11 +307,11 @@ def iterative_RLS(c_arr, carr_fixed, fp, data_iter, iternum=0, lossthr=1e-3):
         loss_arr.append(loss)
         itercount += 1
         t2 = time.time()
-        print_info(itercount, t2-t1,
-                   data_misfit, loss_diff, abs(grads).max(), model_misfit)
+        # print_info(itercount, t2-t1,
+        #            data_misfit, loss_diff, abs(grads).max(), model_misfit)
         t2 = time.time()
     t2s = time.time()
-    print(f"-------------------------------------------------------------------------")
+    # print(f"-------------------------------------------------------------------------")
     return c_arr
     #
 
@@ -382,6 +383,7 @@ t1s = time.time()
 data_acoeffs_iter = data_acoeffs*1.0
 c_arr_allk = [c_init]
 kiter = 0
+kmax = 6
 delta_k = 100000
 
 print(f"a5 = {data_acoeffs_iter[0::len_s][:5]}")
@@ -395,8 +397,8 @@ print(f"a5 = {data_acoeffs_iter[0::len_s][:5]}")
 ctot_local = c_arr * 1.0
 c_arr_total = c_arr * 1.0
 
-while(kiter < 4):
-    for ii in range(2**kiter * N0):
+while(kiter < kmax):
+    for ii in tqdm(range(2**kiter * N0), desc=f"k={kiter}"):
         c_arr = 0.0 * c_init
         c_arr = iterative_RLS(c_arr, GVARS.ctrl_arr_dpt_full*0.0,
                               fixed_part*0.0, data_acoeffs_iter, iternum=2**kiter+1)
@@ -404,9 +406,10 @@ while(kiter < 4):
         ctot_local += c_arr
         data_acoeffs_iter = data_misfit_arr_fn(c_arr, fixed_part*0.0,
                                                data_acoeffs_iter)*acoeffs_sigma_HMI
-        prntarr = c_arr_total[0::len_s]/true_params_flat[0::len_s]
-        print(f"c5 = {prntarr[:5]}")
-        print(f"a5 = {data_acoeffs_iter[0::len_s][:5]}")
+
+    prntarr = c_arr_total[0::len_s]/true_params_flat[0::len_s]
+    print(f"c5 = {prntarr[:5]}")
+    print(f"a5 = {data_acoeffs_iter[0::len_s][:5]}")
     c_arr_allk.append(ctot_local)
     kiter += 1
     ctot_local = 0.0
@@ -433,6 +436,7 @@ plot_acoeffs.plot_acoeffs_dm_scaled(final_acoeffs, data_acoeffs,
 # c_arr_fit = jf.model_denorm(c_arr, true_params_flat, sigma2scale)\
 #             /true_params_flat
 # c_arr_fit = sum(c_arr_allk)/true_params_flat
+np.save(f"{outdir}/carr_iterative_{mu:.1e}_{kmax}k.npy", c_arr_total)
 c_arr_fit = c_arr_total/true_params_flat
 
 for i in range(len_s):
