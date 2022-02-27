@@ -2,6 +2,7 @@ from sunpy.net import jsoc
 from sunpy.net import attrs as a
 import pandas as pd
 import numpy as np
+import os
 import drms
 import time
 
@@ -29,7 +30,7 @@ pt = pd.read_table(f'{ipdir}/daylist.txt', delim_whitespace=True,
 
 #----------------------------------------------------------------------#
 day1 = pt['DATE'][0]  #[i+30]
-day2 = "2021-31-12"   #pt['DATE'][i+30]
+day2 = pt['DATE'][1] #"2021-31-12"   #pt['DATE'][i+30]
 print(f"day1 = {day1}; day2 = {day2}")
 print(f"atime = {a.Time(f'{day1}T00:00:00', f'{day2}T00:00:00')}")
 #----------------------------------------------------------------------#
@@ -40,8 +41,8 @@ response = client.search(a.Time(f'{day1}T00:00:00', f'{day2}T00:00:00'),
                          a.jsoc.Segment(segments[1]),
                          a.jsoc.Segment(segments[2]),
                          a.jsoc.Segment(segments[3]),
-                         a.jsoc.PrimeKey('LMIN', ell) &
-                         a.jsoc.PrimeKey('LMAX', ell) &
+                         a.jsoc.PrimeKey('LMIN', '0') &
+                         a.jsoc.PrimeKey('LMAX', '200') &
                          a.jsoc.PrimeKey('NDT', '138240') &
                          a.jsoc.PrimeKey('NACOEFF', '6') &
                          a.jsoc.PrimeKey('RADEXP', '-6') &
