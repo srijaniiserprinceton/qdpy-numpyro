@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from scipy.integrate import simps
 import scipy.interpolate as interp
 from scipy.special import legendre as scipy_legendre
+from preprocess import rename_files as RN
 import argparse
 
 NAX = np.newaxis
@@ -29,7 +30,8 @@ with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
 ipdir = f"{scratch_dir}/input_files"
-dldir = f"{ipdir}/{INSTR}"
+opdir = f"{ipdir}/{INSTR}"
+dldir = f"{opdir}/dlfiles"
 #----------------------------------------------------------------------#
 
 def writefitsfile(a, fname, overwrite=False):
@@ -108,9 +110,9 @@ def load_data(fname_re):
     """Reads hemispherical rotation data and returns full rotation profiles"""
 
     # Reading radial-mesh, rotation profile and error
-    rmesh = np.loadtxt(f'{dldir}/rmesh.{INSTR}')[::4]
     rot2d = np.loadtxt(f'{fname_re[0]}')
     err2d = np.loadtxt(f'{fname_re[1]}')
+    rmesh = np.loadtxt(f'{fname_re[2]}')[::4]
     lenr = len(rmesh)
 
     # converting hemispherical theta-mesh to full spherical mesh
@@ -154,11 +156,13 @@ if __name__=="__main__":
     r_global = np.loadtxt(f"{ipdir}/r_jesper.dat")
     fnames_rot2d = get_fnames("rot")
     fnames_err2d = get_fnames("err")
+    fnames_rmesh = get_fnames("rmesh")
     smax = 5
 
     for i in range(len(fnames_rot2d)):
         fname_re = [fnames_rot2d[i],
-                    fnames_err2d[i]]
+                    fnames_err2d[i],
+                    fnames_rmesh[i]]
         print(fname_re[0])
         (rmesh, theta), (rot2d, err2d) = load_data(fname_re)
         lenr = len(rmesh)
@@ -166,10 +170,11 @@ if __name__=="__main__":
         es = get_interpolated_ws(err2d, smax)
         wsig = []
 
-        fname_splits = fnames_rot2d[i].split('.')
+        newname = RN.get_newname(fnames_rot2d[i])
+        fname_splits = newname.split('.')
         mdi_day = fname_splits[2]
         numsplits = fname_splits[3]
 
-        np.savetxt(f'{dldir}/wsr.{INSTR}.{ARGS.tslen}.{mdi_day}.{numsplits}', ws)
-        np.savetxt(f'{dldir}/err.{INSTR}.{ARGS.tslen}.{mdi_day}.{numsplits}', es)
+        np.savetxt(f'{opdir}/wsr.{INSTR}.{ARGS.tslen}.{mdi_day}.{numsplits}', ws)
+        np.savetxt(f'{opdir}/err.{INSTR}.{ARGS.tslen}.{mdi_day}.{numsplits}', es)
 

@@ -1,11 +1,32 @@
 from sunpy.net import jsoc
 from sunpy.net import attrs as a
+import argparse
 import pandas as pd
 import numpy as np
 import os
+import sys
 import drms
 import time
 
+current_dir = os.path.dirname(os.path.realpath(__file__))
+package_dir = os.path.dirname(current_dir)
+try:
+    with open(f"{current_dir}/.jsoc_config", "r") as f:
+        jsoc_config = f.read().splitlines()
+    user_email = jsoc_config[0]
+except FileNotFoundError:
+    print(f"Please enter JSOC registered email in {current_dir}/.jsoc_config")
+    sys.exit()
+#-----------------------------------------------------------------------#
+PARSER = argparse.ArgumentParser()
+PARSER.add_argument("--instrument", help="hmi or mdi",
+                    type=str, default="hmi")
+PARSER.add_argument("--tslen", help="72d or 360d",
+                    type=str, default="72d")
+ARGS = PARSER.parse_args()
+del PARSER
+#-----------------------------------------------------------------------#
+INSTR = ARGS.instrument
 #------------------------ directory structure --------------------------#
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
@@ -13,10 +34,13 @@ with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
 ipdir = f"{scratch_dir}/input_files"
-dldir = f"{ipdir}/hmi"
+instrdir = f"{ipdir}/{INSTR}"
+dldir = f"{instrdir}/dlfiles"
+
+if not os.path.isdir(instrdir): os.mkdir(instrdir)
+if not os.path.isdir(dldir): os.mkdir(dldir)
 #----------------------------------------------------------------------#
 series_name = "hmi.V_sht_2drls"
-user_email = "g.samarth@tifr.res.in"
 
 drms_client = drms.Client()
 segment_info = drms_client.info(series_name)
@@ -62,4 +86,5 @@ while requests.status > 0:
     count += 1
 print(f" status = {requests.status}: Ready for download")
 res = client.get_request(requests, path=dldir)
+os.system(f"cd {dldir}; rm $(ls | egrep -v '138240.6')")
 #----------------------------------------------------------------------#
