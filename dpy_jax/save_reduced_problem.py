@@ -18,6 +18,10 @@ parser.add_argument("--daynum", help="day from MDI epoch",
                     type=int, default=6328)
 parser.add_argument("--numsplits", help="number of splitting coefficients",
                     type=int, default=18)
+parser.add_argument("--smin", help="smin",
+                    type=int, default=1)
+parser.add_argument("--smax", help="smax",
+                    type=int, default=5)
 PARGS = parser.parse_args()
 #------------------------------------------------------------------------# 
 import jax.numpy as jnp
@@ -69,7 +73,7 @@ ind_min, ind_max = 0, GVARS.ctrl_arr_dpt_clipped.shape[1]-1
 cind_arr = np.arange(ind_min, ind_max+1)
 
 # the angular degrees we want to invert for
-smin, smax = 5, 5
+smin, smax = PARGS.smin, PARGS.smax
 smin_ind, smax_ind = (smin-1)//2, (smax-1)//2
 sind_arr = np.arange(smin_ind, smax_ind+1)
 

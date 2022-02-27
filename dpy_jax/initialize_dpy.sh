@@ -3,6 +3,8 @@ NMIN_DEFAULT=0
 NMAX_DEFAULT=30
 LMIN_DEFAULT=5
 LMAX_DEFAULT=295
+SMIN_DEFAULT=1
+SMAX_DEFAULT=5
 KNOTNUM_DEFAULT=15
 RTH_DEFAULT=0.9
 EXCLUDE_QDPY_MODES_DEFAULT=0
@@ -18,6 +20,8 @@ read -p "nmin (default=$NMIN_DEFAULT)= " NMIN
 read -p "nmax (default=$NMAX_DEFAULT)= " NMAX
 read -p "lmin (default=$LMIN_DEFAULT)= " LMIN
 read -p "lmax (default=$LMAX_DEFAULT)= " LMAX
+read -p "smin (default=$SMIN_DEFAULT)= " SMIN
+read -p "smax (default=$SMAX_DEFAULT)= " SMAX
 read -p "knot_num (default=$KNOTNUM_DEFAULT)= " KNOTNUM
 read -p "rth (default=$RTH_DEFAULT)= " RTH
 read -p "exclude_qdpy (default=$EXCLUDE_QDPY_MODES_DEFAULT)= " EXCLUDE_QDPY_MODES
@@ -34,6 +38,8 @@ NMIN="${NMIN:-$NMIN_DEFAULT}"
 NMAX="${NMAX:-$NMAX_DEFAULT}"
 LMIN="${LMIN:-$LMIN_DEFAULT}"
 LMAX="${LMAX:-$LMAX_DEFAULT}"
+SMIN="${SMIN:-$SMIN_DEFAULT}"
+SMAX="${SMAX:-$SMAX_DEFAULT}"
 KNOTNUM="${KNOTNUM:-$KNOTNUM_DEFAULT}"
 RTH="${RTH:-$RTH_DEFAULT}"
 EXCLUDE_QDPY_MODES="${EXCLUDE_QDPY_MODES:-$EXCLUDE_QDPY_MODES_DEFAULT}"
@@ -47,6 +53,8 @@ echo "nmin      = $NMIN"
 echo "nmax      = $NMAX"
 echo "lmin      = $LMIN"
 echo "lmax      = $LMAX"
+echo "smin      = $SMIN"
+echo "smax      = $SMAX"
 echo "knot_num  = $KNOTNUM"
 echo "rth       = $RTH"
 echo "excl_qdpy = $EXCLUDE_QDPY_MODES"
@@ -85,6 +93,6 @@ echo "       -- `tail -1 .rl.out`"
 
 echo "[ 4. ] Saving reduced problem ..."
 python save_reduced_problem.py --instrument $INSTR --tslen $TSLEN \
-	   --daynum $DAYNUM --numsplits $NUMSPLIT
+	   --daynum $DAYNUM --numsplits $NUMSPLIT --smin $SMIN --smax $SMAX
 echo "       -- DONE"
 echo "----- INITIALIZATION COMPLETE --------------------"
