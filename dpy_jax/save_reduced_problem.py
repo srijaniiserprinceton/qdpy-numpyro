@@ -12,12 +12,6 @@ NAX = np.newaxis
 parser = argparse.ArgumentParser()
 parser.add_argument("--instrument", help="hmi or mdi",
                     type=str, default="hmi")
-parser.add_argument("--tslen", help="72 or 360",
-                    type=int, default=72)
-parser.add_argument("--daynum", help="day from MDI epoch",
-                    type=int, default=6328)
-parser.add_argument("--numsplits", help="number of splitting coefficients",
-                    type=int, default=18)
 parser.add_argument("--smin", help="smin",
                     type=int, default=1)
 parser.add_argument("--smax", help="smax",
@@ -52,7 +46,7 @@ from dpy_jax import sparse_precompute_acoeff as precompute
 from plotter import plot_model_renorm as plot_renorm
 
 
-ARGS = np.loadtxt(".n0-lmin-lmax.dat")
+ARGS = np.loadtxt(f"{current_dir}/.n0-lmin-lmax.dat")
 GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             lmin=int(ARGS[1]),
                             lmax=int(ARGS[2]),
@@ -61,9 +55,9 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             load_from_file=int(ARGS[5]),
                             relpath=outdir,
                             instrument=PARGS.instrument,
-                            tslen=PARGS.tslen,
-                            daynum=PARGS.daynum,
-                            numsplits=PARGS.numsplits)
+                            tslen=int(ARGS[6]),
+                            daynum=int(ARGS[7]),
+                            numsplits=int(ARGS[8]))
 
 GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 outdir = f"{GVARS.scratch_dir}/dpy_jax"

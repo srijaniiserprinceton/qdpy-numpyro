@@ -46,3 +46,17 @@ if(ARGS.s == 1):
                 --lmin {lmin} --lmax {lmax} --instrument {instr} --tslen {tslen}\
                 --daynum {daynum} --numsplits {numsplits} --outdir {outdir_wrt_scratchout}\
                 --exclude_qdpy 0 >{mlist_out} 2>{mlist_err}')
+
+    #-------------------------------GENERATE---------------------------------#
+    generate_py = f"{package_dir}/dpy_jax/generate_synthetic_eigvals.py"
+
+    # copying the sparsee_precompute_acoeff.py to the local run directory
+    os.system(f"cp {package_dir}/dpy_jax/sparse_precompute_acoeff.py \
+                {ARGS.rundir}/sparse_precompute_acoeff_batch.py")
+
+    print(f"{ARGS.rundir}")
+
+    os.system(f"python {generate_py} --load_mults 1 \
+                --knot_num {knotnum} --rth {rth} --instrument {instr} \
+                --tslen {tslen} --daynum {daynum} --numsplits {numsplits} \
+                --batch_run 1 --batch_rundir {ARGS.rundir}")

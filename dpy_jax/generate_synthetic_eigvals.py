@@ -15,7 +15,7 @@ package_dir = os.path.dirname(current_dir)
 with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
-outdir = f"{scratch_dir}/dpy_jax"
+
 #-----------------------------------------------------------------#
 parser = argparse.ArgumentParser()
 parser.add_argument("--n0", help="radial order",
@@ -38,21 +38,36 @@ parser.add_argument("--daynum", help="day from MDI epoch",
                     type=int, default=6328)
 parser.add_argument("--numsplits", help="number of splitting coefficients",
                     type=int, default=18)
+parser.add_argument("--batch_run", help="flag to indicate its a batch run",
+                    type=int, default=0)
+parser.add_argument("--batch_rundir", help="local directory for batch run",
+                    type=str, default=".")
 ARGS = parser.parse_args()
 #------------------------------------------------------------------------# 
 
-with open(".n0-lmin-lmax.dat", "w") as f:
+with open(f"{ARGS.batch_rundir}/.n0-lmin-lmax.dat", "w") as f:
     f.write(f"{ARGS.n0}" + "\n" +
             f"{ARGS.lmin}" + "\n" +
             f"{ARGS.lmax}"+ "\n" +
             f"{ARGS.rth}" + "\n" +
             f"{ARGS.knot_num}" + "\n" +
-            f"{ARGS.load_mults}")
+            f"{ARGS.load_mults}" + "\n" + 
+            f"{ARGS.tslen}" + "\n" + 
+            f"{ARGS.daynum}" + "\n" +
+            f"{ARGS.numsplits}")
+    
 #-----------------------------------------------------------------#
 # importing local package 
 from qdpy import globalvars as gvar_jax
 from qdpy import build_hypermatrix_sparse as build_hm_sparse
-import sparse_precompute_acoeff as precompute
+
+if(not ARGS.batch_run):
+    import sparse_precompute_acoeff as precompute
+    outdir = f"{scratch_dir}/dpy_jax"
+else:
+    sys.path.append(f"{ARGS.batch_rundir}")
+    import sparse_precompute_acoeff_batch as precompute
+    outdir = f"{ARGS.batch_rundir}"
 #-----------------------------------------------------------------#
 GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
                             lmin=ARGS.lmin,
@@ -129,7 +144,12 @@ if __name__ == "__main__":
     #--------saving miscellaneous files of eigvals and acoeffs---------#
     # saving the synthetic eigvals and their uncertainties
     sfx = GVARS.filename_suffix
-    outdir = f"{GVARS.scratch_dir}/dpy_jax"
+    
+    if(not ARGS.batch_run):
+        outdir = f"{GVARS.scratch_dir}/dpy_jax"
+    else:
+        outdir = f"{ARGS.batch_rundir}"
+        
     np.save(f"{outdir}/eigvals_model.{sfx}.npy", eigvals_true/2./omega0_arr*GVARS.OM*1e6)
     np.save(f'{outdir}/eigvals_sigma_model.{sfx}.npy', eigvals_sigma)
     

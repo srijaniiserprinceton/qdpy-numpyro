@@ -44,6 +44,11 @@ for i in range(len(data_daynum_list)):
     # making new directory
     os.mkdir(batch_subdirpath)
 
+
+# adding optional parameters to not use default
+lmin = 200
+lmax = 201
+
 smin_arr = np.array([1, 3, 5])
 smax_arr = np.array([1, 3, 5])
 
@@ -57,6 +62,7 @@ for i in range(len(data_daynum_list)):
         
         # getting dictionary of run params
         run_params = make_run_params.make_run_params(smin=smin,smax=smax,
+                                                     lmin=lmin,lmax=lmax,
                                                      daynum=daynum)
 
         with open(f"{run_dir}/.params_smin_{smin}_smax_{smax}.dat", "w") as f:
