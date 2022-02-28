@@ -2,6 +2,8 @@ import os
 import time
 from tqdm import tqdm
 import argparse
+from datetime import date
+from datetime import datetime
 #------------------------------------------------------------------------------
 parser = argparse.ArgumentParser()
 parser.add_argument("--mu", help="regularization",
@@ -25,7 +27,6 @@ import numpy as np
 from collections import namedtuple
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-import arviz as az
 import sys
 #------------------------------------------------------------------------------
 
@@ -55,6 +56,7 @@ with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
 outdir = f"{scratch_dir}/dpy_jax"
+summdir = f"{scratch_dir}/summaryfiles"
 plotdir = f"{scratch_dir}/plots"
 #------------------------------------------------------------------------# 
 ARGS = np.loadtxt(".n0-lmin-lmax.dat")
@@ -107,7 +109,7 @@ len_s = len(sind_arr)
 nc = len(cind_arr)
 
 mu_scaling = np.array([1., 1., 1.])
-# knee_mu = np.array([2.15443e-5, 1.59381e-7, 1.29155e-7])
+knee_mu = np.array([2.15443e-5, 1.59381e-7, 1.29155e-7])
 # mu_scaling = knee_mu/knee_mu[0]
 
 # slicing the Pjl correctly in angular degree s
@@ -263,15 +265,6 @@ len_data = len(data_acoeffs)
 # the regularizing parameter
 mu = PARGS.mu
 
-
-# changing the regularization as a function of depth
-mu_depth = np.zeros_like(GVARS.ctrl_arr_dpt_full[0,:])
-rth_soft = 0.80
-width = 0.003
-mu_depth = 0.5 * (1 - np.tanh((GVARS.knot_locs - rth_soft)/width))
-mu_depth = 1e10 * jnp.sqrt(jnp.asarray(mu_depth)) / mu
-
-
 #---------------------- jitting the functions --------------------------#
 data_hess_fn = hessian(data_misfit_fn)
 model_hess_fn = hessian(model_misfit_fn)
@@ -313,14 +306,10 @@ def iterative_RLS(c_arr, carr_fixed, fp, data_iter, iternum=0, lossthr=1e-3):
     t2s = time.time()
     # print(f"-------------------------------------------------------------------------")
     return c_arr
-    #
-
-
+    
 
 #-----------------------the main training loop--------------------------#
 # initialization of params
-# c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))*1e-4
-# c_init += np.random.rand(len(c_init))
 c_init = np.ones_like(true_params_flat) * true_params_flat
 print(f"Number of parameters = {len(c_init)}")
 
@@ -386,13 +375,13 @@ kiter = 0
 kmax = 6
 delta_k = 100000
 
-print(f"a5 = {data_acoeffs_iter[0::len_s][:5]}")
+print(f"a5 = {data_acoeffs_iter[0::len_s][:6]}")
 c_arr = iterative_RLS(c_init, GVARS.ctrl_arr_dpt_full, fixed_part, data_acoeffs_iter)
 data_acoeffs_iter = data_misfit_arr_fn(c_arr, fixed_part,
                                        data_acoeffs_iter)*acoeffs_sigma_HMI
 prntarr = c_arr[0::len_s]/true_params_flat[0::len_s]
-print(f"c5 = {prntarr[:5]}")
-print(f"a5 = {data_acoeffs_iter[0::len_s][:5]}")
+print(f"c5 = {prntarr[:6]}")
+print(f"a5 = {data_acoeffs_iter[0::len_s][:6]}")
 
 ctot_local = c_arr * 1.0
 c_arr_total = c_arr * 1.0
@@ -408,8 +397,8 @@ while(kiter < kmax):
                                                data_acoeffs_iter)*acoeffs_sigma_HMI
 
     prntarr = c_arr_total[0::len_s]/true_params_flat[0::len_s]
-    print(f"c5 = {prntarr[:5]}")
-    print(f"a5 = {data_acoeffs_iter[0::len_s][:5]}")
+    print(f"c5 = {prntarr[:6]}")
+    print(f"a5 = {data_acoeffs_iter[0::len_s][:6]}")
     c_arr_allk.append(ctot_local)
     kiter += 1
     ctot_local = 0.0
@@ -432,12 +421,15 @@ plot_acoeffs.plot_acoeffs_dm_scaled(final_acoeffs, data_acoeffs,
                                     acoeffs_sigma_HMI, 'final')
 #----------------------------------------------------------------------# 
 
-# reconverting back to model_params in units of true_params_flat
-# c_arr_fit = jf.model_denorm(c_arr, true_params_flat, sigma2scale)\
-#             /true_params_flat
-# c_arr_fit = sum(c_arr_allk)/true_params_flat
 np.save(f"{outdir}/carr_iterative_{mu:.1e}_{kmax}k.npy", c_arr_total)
 c_arr_fit = c_arr_total/true_params_flat
+
+# finding chisq
+total_misfit = data_misfit_arr_fn(c_arr_total, fixed_part,
+                                  data_acoeffs)
+# degrees of freedom
+dof = len(pred_acoeffs) - len(c_arr_total)
+chisq = total_misfit/dof
 
 for i in range(len_s):
     print(c_arr_fit[i::len_s])
@@ -449,13 +441,6 @@ c_arr_fit_full = jf.c4fit_2_c4plot(GVARS, c_arr_fit*true_params_flat,
 # converting ctrl points to wsr and plotting
 fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full,
                                    ctrl_zero_error, 'fit')
-
-#------------------------------------------------------------------------#
-with open(f"{current_dir}/reg_misfit.txt", "a") as f:
-    f.seek(0, os.SEEK_END)
-    opstr = f"{mu:18.12e}, {data_misfit:18.12e}, {model_misfit:18.12e}\n"
-    f.write(opstr)
-
 #------------------------------------------------------------------------# 
 # plotting the hessians for analysis
 fig, ax = plt.subplots(1, 2, figsize=(10,5))
