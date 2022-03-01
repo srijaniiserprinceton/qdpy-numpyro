@@ -67,3 +67,9 @@ if(ARGS.s == 1):
     
     os.system(f"python {rlpoly_py} --outdir {ARGS.rundir} --instrument {instr} \
                 --batch_run 1 >{rl_out} 2>{rl_err}")
+    
+    #-------------------------SAVE REDUCED PROBLEM-----------------------------#
+    save_reduced_py = f"{package_dir}/dpy_jax/save_reduced_problem.py"
+    
+    os.system(f"python {save_reduced_py} --instrument {instr} --smin {smin} \
+                --smax {smax} --batch_run 1 --batch_rundir {ARGS.rundir}")

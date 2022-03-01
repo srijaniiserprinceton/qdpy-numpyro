@@ -16,6 +16,10 @@ parser.add_argument("--smin", help="smin",
                     type=int, default=1)
 parser.add_argument("--smax", help="smax",
                     type=int, default=5)
+parser.add_argument("--batch_run", help="flag to indicate its a batch run",
+                    type=int, default=0)
+parser.add_argument("--batch_rundir", help="local directory for batch run",
+                    type=str, default=".")
 PARGS = parser.parse_args()
 #------------------------------------------------------------------------# 
 import jax.numpy as jnp
@@ -37,16 +41,23 @@ package_dir = os.path.dirname(current_dir)
 with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
-outdir = f"{scratch_dir}/dpy_jax"
+
 #----------------------import local packages------------------------#
 from qdpy import build_hypermatrix_sparse as build_hm_sparse
 from qdpy import globalvars as gvar_jax
 from qdpy import jax_functions as jf
-from dpy_jax import sparse_precompute_acoeff as precompute
 from plotter import plot_model_renorm as plot_renorm
 
+if(not PARGS.batch_run):
+    outdir = f"{scratch_dir}/dpy_jax"
+    ARGS = np.loadtxt(f"{current_dir}/.n0-lmin-lmax.dat")
+    from dpy_jax import sparse_precompute_acoeff as precompute
+else:
+    outdir = f"{PARGS.batch_rundir}"
+    ARGS = np.loadtxt(f"{PARGS.batch_rundir}/.n0-lmin-lmax.dat")
+    sys.path.append(f"{PARGS.batch_rundir}")
+    import sparse_precompute_acoeff_batch as precompute
 
-ARGS = np.loadtxt(f"{current_dir}/.n0-lmin-lmax.dat")
 GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             lmin=int(ARGS[1]),
                             lmax=int(ARGS[2]),
@@ -60,7 +71,7 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             numsplits=int(ARGS[8]))
 
 GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
-outdir = f"{GVARS.scratch_dir}/dpy_jax"
+
 #-------------------parameters to be inverted for--------------------#
 # the indices of ctrl points that we want to invert for
 ind_min, ind_max = 0, GVARS.ctrl_arr_dpt_clipped.shape[1]-1
@@ -218,7 +229,3 @@ np.save(f'{outdir}/cind_arr.{sfx}.npy', cind_arr)
 np.save(f'{outdir}/sind_arr.{sfx}.npy', sind_arr)
 np.save(f'{outdir}/D_bsp_j_D_bsp_k.{sfx}.npy', D_bsp_j_D_bsp_k)
 print(f"--SAVING COMPLETE--")
-
-# plotting for visual verification of renormalization
-# plot_renorm.visualize_model_renorm(true_params_flat, true_params_samples,
-#                                    sigma2scale, jf.model_renorm, len(sind_arr))
