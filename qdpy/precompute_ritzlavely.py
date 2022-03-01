@@ -47,7 +47,7 @@ if __name__ == '__main__':
                                 rth=ARGS[3],
                                 knot_num=int(ARGS[4]),
                                 load_from_file=int(ARGS[5]),
-                                relpath=outdir,
+                                relpath=ipdir,
                                 instrument=PARGS.instrument,
                                 tslen=int(ARGS[6]),
                                 daynum=int(ARGS[7]),

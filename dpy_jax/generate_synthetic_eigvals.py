@@ -44,8 +44,14 @@ parser.add_argument("--batch_rundir", help="local directory for batch run",
                     type=str, default=".")
 ARGS = parser.parse_args()
 #------------------------------------------------------------------------# 
+if(not ARGS.batch_run):
+    n0lminlmax_dir = f"{package_dir}/dpy_jax"
+    outdir = f"{scratch_dir}/dpy_jax"
+else:
+    n0lminlmax_dir = f"{ARGS.batch_rundir}"
+    outdir = f"{ARGS.batch_rundir}"
 
-with open(f"{ARGS.batch_rundir}/.n0-lmin-lmax.dat", "w") as f:
+with open(f"{n0lminlmax_dir}/.n0-lmin-lmax.dat", "w") as f:
     f.write(f"{ARGS.n0}" + "\n" +
             f"{ARGS.lmin}" + "\n" +
             f"{ARGS.lmax}"+ "\n" +
@@ -60,14 +66,6 @@ with open(f"{ARGS.batch_rundir}/.n0-lmin-lmax.dat", "w") as f:
 # importing local package 
 from qdpy import globalvars as gvar_jax
 from qdpy import build_hypermatrix_sparse as build_hm_sparse
-
-if(not ARGS.batch_run):
-    import sparse_precompute_acoeff as precompute
-    outdir = f"{scratch_dir}/dpy_jax"
-else:
-    sys.path.append(f"{ARGS.batch_rundir}")
-    import sparse_precompute_acoeff_batch as precompute
-    outdir = f"{ARGS.batch_rundir}"
 #-----------------------------------------------------------------#
 GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
                             lmin=ARGS.lmin,
@@ -75,13 +73,20 @@ GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
                             rth=ARGS.rth,
                             knot_num=ARGS.knot_num,
                             load_from_file=ARGS.load_mults,
-                            relpath=outdir,
+                            relpath=n0lminlmax_dir,
                             instrument=ARGS.instrument,
                             tslen=ARGS.tslen,
                             daynum=ARGS.daynum,
                             numsplits=ARGS.numsplits)
 
 __, GVARS_TR, __ = GVARS.get_all_GVAR()
+
+# the only import which needs .n0-lmin-lmax.dat to be created beforehand
+if(not ARGS.batch_run):
+    import sparse_precompute_acoeff as precompute
+else:
+    sys.path.append(f"{ARGS.batch_rundir}")
+    import sparse_precompute_acoeff_batch as precompute
 #-----------------------------------------------------------------#
 # precomputing the perform tests and checks and generate true synthetic eigvals
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse, omega0_arr =\
@@ -114,6 +119,8 @@ def compare_hypmat():
     # comparing with qdpt.py
     np.testing.assert_array_almost_equal(evals_dpy, evals_qdpt)
     
+    print('Eigval test with qdPy passed')
+
     return evals_dpy
 
 #-----------------------------------------------------------------#
@@ -144,12 +151,7 @@ if __name__ == "__main__":
     #--------saving miscellaneous files of eigvals and acoeffs---------#
     # saving the synthetic eigvals and their uncertainties
     sfx = GVARS.filename_suffix
-    
-    if(not ARGS.batch_run):
-        outdir = f"{GVARS.scratch_dir}/dpy_jax"
-    else:
-        outdir = f"{ARGS.batch_rundir}"
-        
+            
     np.save(f"{outdir}/eigvals_model.{sfx}.npy", eigvals_true/2./omega0_arr*GVARS.OM*1e6)
     np.save(f'{outdir}/eigvals_sigma_model.{sfx}.npy', eigvals_sigma)
     

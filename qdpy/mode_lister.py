@@ -1,6 +1,11 @@
 import numpy as np
 import argparse
 import sys
+import os
+
+current_dir = os.path.dirname(os.path.realpath(__file__))
+package_dir = os.path.dirname(current_dir)
+
 #-------------- local imports --------------------------------
 from qdpy import globalvars as gvar_jax
 #------------------------- argument parser -----------------------------
@@ -88,7 +93,7 @@ GVARS = gvar_jax.GlobalVars(instrument=ARGS.instrument,
                             tslen=ARGS.tslen,
                             daynum=ARGS.daynum,
                             numsplits=ARGS.numsplits)
-outdir = f"{GVARS.scratch_dir}/{ARGS.outdir}"
+outdir = f"{package_dir}/{ARGS.outdir}"
 obsdata = GVARS.hmidata_in # only use of GVARS
 mask_qdpy = get_exclude_mask(ARGS.exclude_qdpy)
 

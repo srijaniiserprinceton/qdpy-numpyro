@@ -64,7 +64,7 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             rth=ARGS[3],
                             knot_num=int(ARGS[4]),
                             load_from_file=int(ARGS[5]),
-                            relpath=outdir,
+                            relpath=current_dir,
                             instrument=PARGS.instrument,
                             tslen=int(ARGS[6]),
                             daynum=int(ARGS[7]),
@@ -219,6 +219,7 @@ for i in range(num_params):
 
 #-------------saving miscellaneous files-------------------#
 sfx = GVARS.filename_suffix
+
 np.save(f'{outdir}/fixed_part.{sfx}.npy', diag_evals_fixed)
 np.save(f'{outdir}/param_coeff_flat.{sfx}.npy', noc_diag_flat)
 np.save(f'{outdir}/true_params_flat.{sfx}.npy', true_params_flat)
