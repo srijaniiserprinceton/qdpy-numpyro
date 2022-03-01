@@ -54,9 +54,16 @@ if(ARGS.s == 1):
     os.system(f"cp {package_dir}/dpy_jax/sparse_precompute_acoeff.py \
                 {ARGS.rundir}/sparse_precompute_acoeff_batch.py")
 
-    print(f"{ARGS.rundir}")
 
     os.system(f"python {generate_py} --load_mults 1 \
                 --knot_num {knotnum} --rth {rth} --instrument {instr} \
                 --tslen {tslen} --daynum {daynum} --numsplits {numsplits} \
                 --batch_run 1 --batch_rundir {ARGS.rundir}")
+    
+    #------------------------RITZLAVELY POLYNOMIALS---------------------------#
+    rlpoly_py = f"{package_dir}/qdpy/precompute_ritzlavely.py"
+    rl_out = f"{ARGS.rundir}/.rl.out"
+    rl_err = f"{ARGS.rundir}/.rl.err"
+    
+    os.system(f"python {rlpoly_py} --outdir {ARGS.rundir} --instrument {instr} \
+                --batch_run 1 >{rl_out} 2>{rl_err}")

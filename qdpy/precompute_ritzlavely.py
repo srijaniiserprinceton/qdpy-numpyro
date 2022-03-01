@@ -9,12 +9,8 @@ parser.add_argument("--outdir", help="dpy or qdpy",
                     type=str, default='dpy_jax')
 parser.add_argument("--instrument", help="hmi or mdi",
                     type=str, default="hmi")
-parser.add_argument("--tslen", help="72 or 360",
-                    type=int, default=72)
-parser.add_argument("--daynum", help="day from MDI epoch",
-                    type=int, default=6328)
-parser.add_argument("--numsplits", help="number of splitting coefficients",
-                    type=int, default=18)
+parser.add_argument("--batch_run", help="flag to indicate its a batch run",
+                    type=int, default=0)
 PARGS = parser.parse_args()
 #-----------------------------------------------------------------------
 
@@ -23,8 +19,13 @@ package_dir = os.path.dirname(current_dir)
 with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
-outdir = f"{scratch_dir}/{PARGS.outdir}"
-ipdir = f"{package_dir}/{PARGS.outdir}"
+
+if(not PARGS.batch_run):
+    outdir = f"{scratch_dir}/{PARGS.outdir}"
+    ipdir = f"{package_dir}/{PARGS.outdir}"
+else:
+    outdir = f"{PARGS.outdir}"
+    ipdir = f"{PARGS.outdir}"
 
 #-----------------------------------------------------------------------
 def gen_RL_poly():
@@ -48,9 +49,9 @@ if __name__ == '__main__':
                                 load_from_file=int(ARGS[5]),
                                 relpath=outdir,
                                 instrument=PARGS.instrument,
-                                tslen=PARGS.tslen,
-                                daynum=PARGS.daynum,
-                                numsplits=PARGS.numsplits)
+                                tslen=int(ARGS[6]),
+                                daynum=int(ARGS[7]),
+                                numsplits=int(ARGS[8]))
 
     jmax = GVARS.smax
     RL_poly = gen_RL_poly()

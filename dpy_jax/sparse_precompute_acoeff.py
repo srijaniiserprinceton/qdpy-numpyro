@@ -27,7 +27,6 @@ jax_minus1pow_vec = jf.jax_minus1pow_vec
 jax_Omega_ = jit(jf.jax_Omega)
 jax_gamma_ = jit(jf.jax_gamma)
 
-print(f"{current_dir}")
 ARGS = np.loadtxt(f"{current_dir}/.n0-lmin-lmax.dat")
 
 # instrument name is taken to be the default in globalvars.
