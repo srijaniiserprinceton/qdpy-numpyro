@@ -26,6 +26,8 @@ parser.add_argument("--daynum", help="day from MDI epoch",
                     type=int, default=6328)
 parser.add_argument("--numsplits", help="number of splitting coefficients",
                     type=int, default=18)
+parser.add_argument("--batch_run", help="flag to indicate its a batch run",
+                    type=int, default=0)
 ARGS = parser.parse_args()
 #------------------------------------------------------------------------# 
 # {{{ def get_exclude_mask(exclude_qdpy=False):
@@ -93,7 +95,11 @@ GVARS = gvar_jax.GlobalVars(instrument=ARGS.instrument,
                             tslen=ARGS.tslen,
                             daynum=ARGS.daynum,
                             numsplits=ARGS.numsplits)
-outdir = f"{package_dir}/{ARGS.outdir}"
+if(not ARGS.batch_run):
+    outdir = f"{package_dir}/{ARGS.outdir}"
+else:
+    outdir = f"{GVARS.scratch_dir}/{ARGS.outdir}"
+    
 obsdata = GVARS.hmidata_in # only use of GVARS
 mask_qdpy = get_exclude_mask(ARGS.exclude_qdpy)
 

@@ -42,9 +42,9 @@ if(ARGS.s == 1):
     mlist_out = f"{ARGS.rundir}/.mlist.out"
     mlist_err = f"{ARGS.rundir}/.mlist.err"
     
-    os.system(f'python {mode_lister_py} --nmin {nmin} --nmax {nmax}\
-                --lmin {lmin} --lmax {lmax} --instrument {instr} --tslen {tslen}\
-                --daynum {daynum} --numsplits {numsplits} --outdir {outdir_wrt_scratchout}\
+    os.system(f'python {mode_lister_py} --nmin {nmin} --nmax {nmax} --batch_run 1 \
+                --lmin {lmin} --lmax {lmax} --instrument {instr} --tslen {tslen} \
+                --daynum {daynum} --numsplits {numsplits} --outdir {outdir_wrt_scratchout} \
                 --exclude_qdpy 0 >{mlist_out} 2>{mlist_err}')
 
     #-------------------------------GENERATE---------------------------------#
