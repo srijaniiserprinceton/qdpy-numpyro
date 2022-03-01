@@ -73,3 +73,15 @@ if(ARGS.s == 1):
     
     os.system(f"python {save_reduced_py} --instrument {instr} --smin {smin} \
                 --smax {smax} --batch_run 1 --batch_rundir {ARGS.rundir}")
+
+else:
+    RPARAMS = np.loadtxt(f"{ARGS.rundir}/.params_smin_{ARGS.s}_smax_{ARGS.s}.dat")
+
+    nmin, nmax, lmin, lmax, smin, smax, knotnum, rth, tslen, daynum, numsplits =\
+                                                                params2vars(RPARAMS)
+    
+    #-------------------------SAVE REDUCED PROBLEM-----------------------------#             
+    save_reduced_py = f"{package_dir}/dpy_jax/save_reduced_problem.py"
+    
+    os.system(f"python {save_reduced_py} --instrument {instr} --smin {smin} \
+                --smax {smax} --batch_run 1 --batch_rundir {ARGS.rundir}")
