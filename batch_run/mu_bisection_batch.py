@@ -54,8 +54,8 @@ if mf1 > mf2:
     leftmu = mu_limits[0]
     rightmu = mu_limits[1]
 else:
-    leftval = mu_limits[1]
-    rightval = mu_limits[0]
+    leftmu = mu_limits[1]
+    rightmu = mu_limits[0]
 
 maxiter = 20
 
