@@ -35,7 +35,7 @@ print('JAX using:', xla_bridge.get_backend().platform)
 config.update('jax_platform_name', 'gpu')
 config.update('jax_enable_x64', True)
 
-#------------------------------------------------------------------
+#-------------------------------------------------------------------------#
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
 with open(f"{package_dir}/.config", "r") as f:

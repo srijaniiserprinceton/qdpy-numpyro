@@ -20,7 +20,7 @@ with open(f"{package_dir}/.config", "r") as f:
 scratch_dir = dirnames[1]
 
 # reading the instrument from the rundir                                                      
-local_rundir = re.split('[/]+', ARGS.rundir, flags=re.IGNORECASE)[-1]
+local_rundir = re.split('[/]+', PARGS.batch_rundir, flags=re.IGNORECASE)[-1]
 instr = re.split('[_]+', local_rundir, flags=re.IGNORECASE)[0]
 #-----------------------------------------------------------------------# 
 
@@ -33,16 +33,19 @@ else:
     outdir = f"{PARGS.batch_rundir}"
 
 run_newton_py = f"{package_dir}/dpy_jax/run_reduced_problem_newton.py"
+tempout = f"{PARGS.batch_rundir}/temp.out"
+temperr = f"{PARGS.batch_rundir}/temp.err"
+
 
 mu_limits = [1e-15, 1e-3]
 print(f"Running python scripts")
 
 os.system(f"python {run_newton_py} --read_hess 1 --instrument {instr} \
-            --mu {mu_limits[0]} --batch_run 1 --batch_rundir {PARGS.rundir} \
-            >{PARGS.rundir}/temp.out 2>{PARGS.rundir}/emp.err")
+            --mu {mu_limits[0]} --batch_run 1 --batch_rundir {PARGS.batch_rundir} \
+            >{tempout} 2>{temperr}")
 os.system(f"python {run_newton_py} --read_hess 1 --instrument {instr} \
-            --mu {mu_limit[1]} --batch_run 1 --batch_rundir {PARGS.rundir} \
-            >{PARGS.rundir}/temp.out 2>{PARGS.rundir}/emp.err")
+            --mu {mu_limits[1]} --batch_run 1 --batch_rundir {PARGS.batch_rundir} \
+            >{tempout} 2>{temperr}")
 
 # val0 corresponds to iterative solution
 fname = fnmatch.filter(os.listdir(PARGS.batch_rundir), 'carr_iterative_*.npy')[0]
@@ -69,17 +72,17 @@ for i in range(maxiter):
     log_muval = 0.5*(np.log10(leftmu) + np.log10(rightmu))
     muval = 10**log_muval
     os.system(f"python {run_newton_py} --read_hess 1 --instrument {instr} \
-                --mu {muval} --batch_run 1 --batch_rundir {PARGS.rundir} \
-                >{PARGS.rundir}/temp.out 2>{PARGS.rundir}/emp.err")
+                --mu {muval} --batch_run 1 --batch_rundir {PARGS.batch_rundir} \
+                >{tempout} 2>{temperr}")
 
     muval1 = 10**(0.5*(np.log10(leftmu) + log_muval))
     muval2 = 10**(0.5*(np.log10(rightmu) + log_muval))
     os.system(f"python {run_newton_py} --read_hess 1 --instrument {instr} \
-                --mu {muval1} --batch_run 1 --batch_rundir {PARGS.rundir} \
-                >{PARGS.rundir}/temp.out 2>{PARGS.rundir}/emp.err")
+                --mu {muval1} --batch_run 1 --batch_rundir {PARGS.batch_rundir} \
+                >{tempout} 2>{temperr}")
     os.system(f"python {run_newton_py} --read_hess 1 --instrument {instr} \
-                --mu {muval2} --batch_run 1 --batch_rundir {PARGS.rundir} \
-                >{PARGS.rundir}/temp.out 2>{PARGS.rundir}/emp.err")
+                --mu {muval2} --batch_run 1 --batch_rundir {PARGS.batch_rundir} \
+                >{tempout} 2>{temperr}")
     
     val1 = np.load(f'{outdir}/carr_fit_{muval1:.5e}.npy')
     val2 = np.load(f'{outdir}/carr_fit_{muval2:.5e}.npy')
