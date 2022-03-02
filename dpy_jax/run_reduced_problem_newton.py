@@ -17,6 +17,8 @@ parser.add_argument("--batch_run", help="flag to indicate its a batch run",
                     type=int, default=0)
 parser.add_argument("--batch_rundir", help="local directory for batch run",
                     type=str, default=".")
+parser.add_argument("--plot", help="plot",
+                    type=bool, default=False)
 PARGS = parser.parse_args()
 #------------------------------------------------------------------------# 
 import numpy as np
@@ -254,7 +256,6 @@ _hess_fn = jit(hess_fn)
 _update_H = jit(update_H)
 _update_cgrad = jit(update_cgrad)
 _loss_fn = jit(loss_fn)
-#-----------------------------------------------------------------------#
 #---------------checking that the loaded data are correct----------------#
 pred = fixed_part + true_params_flat @ param_coeff_flat
 pred_acoeffs = jnp.zeros(num_j * nmults)
@@ -277,15 +278,16 @@ data_acoeffs = GVARS.acoeffs_true
 data_acoeffs_out_HMI = GVARS.acoeffs_out_HMI
 print(f"data_acoeffs = {data_acoeffs[:15]}")
 #----------------------------------------------------------------------# 
-# plotting acoeffs pred and data to see if we should expect got fit
-plot_acoeffs.plot_acoeffs_datavsmodel(pred_acoeffs, data_acoeffs,
-                                      data_acoeffs_out_HMI,
-                                      acoeffs_sigma_HMI, 'ref',
-                                      plotdir=plotdir)
-plot_acoeffs.plot_acoeffs_dm_scaled(pred_acoeffs, data_acoeffs,
-                                    data_acoeffs_out_HMI,
-                                    acoeffs_sigma_HMI, 'ref',
-                                    plotdir=plotdir)
+if PARGS.plot:
+    # plotting acoeffs pred and data to see if we should expect got fit
+    plot_acoeffs.plot_acoeffs_datavsmodel(pred_acoeffs, data_acoeffs,
+                          data_acoeffs_out_HMI,
+                          acoeffs_sigma_HMI, 'ref',
+                          plotdir=plotdir)
+    plot_acoeffs.plot_acoeffs_dm_scaled(pred_acoeffs, data_acoeffs,
+                        data_acoeffs_out_HMI,
+                        acoeffs_sigma_HMI, 'ref',
+                        plotdir=plotdir)
 #----------------------------------------------------------------------# 
 len_data = len(data_acoeffs) # length of data
 mu = PARGS.mu # regularization parameter
@@ -303,27 +305,29 @@ c_init *= true_params_flat
 print(f"Number of parameters = {len(c_init)}")
 
 #------------------plotting the initial profiles-------------------#                     
-c_arr_init_full = jf.c4fit_2_c4plot(GVARS, c_init,
-                                    sind_arr, cind_arr)
+if PARGS.plot:
+    c_arr_init_full = jf.c4fit_2_c4plot(GVARS, c_init,
+                                        sind_arr, cind_arr)
 
-# converting ctrl points to wsr and plotting
-ctrl_zero_error = np.zeros_like(c_arr_init_full)
-init_plot = postplotter.postplotter(GVARS, c_arr_init_full, ctrl_zero_error, 'init',
-                                    plotdir=plotdir)
+    # converting ctrl points to wsr and plotting
+    ctrl_zero_error = np.zeros_like(c_arr_init_full)
+    init_plot = postplotter.postplotter(GVARS, c_arr_init_full, ctrl_zero_error, 'init',
+                                        plotdir=plotdir)
 #----------------------------------------------------------------------#
 # plotting acoeffs from initial data and HMI data
 pred_init = fixed_part + c_init @ param_coeff_flat
 init_acoeffs = jnp.zeros(num_j * nmults)
 __, init_acoeffs = foril(0, nmults, loop_in_mults, (pred_init, init_acoeffs))
 
-plot_acoeffs.plot_acoeffs_datavsmodel(init_acoeffs, data_acoeffs,
-                                      data_acoeffs_out_HMI,
-                                      acoeffs_sigma_HMI, 'init',
-                                      plotdir=plotdir)
-plot_acoeffs.plot_acoeffs_dm_scaled(init_acoeffs, data_acoeffs,
-                                    data_acoeffs_out_HMI,
-                                    acoeffs_sigma_HMI, 'init',
-                                    plotdir=plotdir)
+if PARGS.plot:
+    plot_acoeffs.plot_acoeffs_datavsmodel(init_acoeffs, data_acoeffs,
+                                          data_acoeffs_out_HMI,
+                                          acoeffs_sigma_HMI, 'init',
+                                          plotdir=plotdir)
+    plot_acoeffs.plot_acoeffs_dm_scaled(init_acoeffs, data_acoeffs,
+                                        data_acoeffs_out_HMI,
+                                        acoeffs_sigma_HMI, 'init',
+                                        plotdir=plotdir)
 #----------------------------------------------------------------------#
 # print(f"mu depth shape = {mu_depth.shape}")
 print(f"ctrl full shape = {GVARS.ctrl_arr_dpt_full.shape}")
@@ -397,15 +401,15 @@ print(f"chisq = {chisq:.5f}")
 # plotting acoeffs from initial data and HMI data
 final_acoeffs = data_misfit_arr_fn(c_arr)*acoeffs_sigma_HMI + data_acoeffs
 
-plot_acoeffs.plot_acoeffs_datavsmodel(final_acoeffs, data_acoeffs,
-                                      data_acoeffs_out_HMI,
-                                      acoeffs_sigma_HMI, 'final',
-                                      plotdir=plotdir)
-
-plot_acoeffs.plot_acoeffs_dm_scaled(final_acoeffs, data_acoeffs,
-                                    data_acoeffs_out_HMI,
-                                    acoeffs_sigma_HMI, 'final',
-                                    plotdir=plotdir)
+if PARGS.plot:
+    plot_acoeffs.plot_acoeffs_datavsmodel(final_acoeffs, data_acoeffs,
+                                          data_acoeffs_out_HMI,
+                                          acoeffs_sigma_HMI, 'final',
+                                          plotdir=plotdir)
+    plot_acoeffs.plot_acoeffs_dm_scaled(final_acoeffs, data_acoeffs,
+                                        data_acoeffs_out_HMI,
+                                        acoeffs_sigma_HMI, 'final',
+                                        plotdir=plotdir)
 #----------------------------------------------------------------------# 
 # reconverting back to model_params in units of true_params_flat
 c_arr_fit = c_arr/true_params_flat
@@ -432,19 +436,19 @@ C_m = jf.get_model_covariance(G_g_inv, C_d)
 ctrl_arr_err = jnp.sqrt(jnp.diag(C_m))
 
 #------------------plotting the post fitting profiles-------------------#
-c_arr_fit_full = jf.c4fit_2_c4plot(GVARS, c_arr_fit*true_params_flat,
-                                   sind_arr, cind_arr)
+if PARGS.plot:
+    c_arr_fit_full = jf.c4fit_2_c4plot(GVARS, c_arr_fit*true_params_flat,
+                                       sind_arr, cind_arr)
 
-# making the full error array to pass into c4fit_2_c4plot
-ctrl_arr_err_full = np.zeros_like(c_arr_fit_full)
-ctrl_arr_err_full[sind_arr, -len(true_params_flat)//len_s:] =\
-                            jnp.reshape(ctrl_arr_err, (len_s, -1), 'F')
+    # making the full error array to pass into c4fit_2_c4plot
+    ctrl_arr_err_full = np.zeros_like(c_arr_fit_full)
+    ctrl_arr_err_full[sind_arr, -len(true_params_flat)//len_s:] =\
+                                jnp.reshape(ctrl_arr_err, (len_s, -1), 'F')
+    c_arr_err_full = jnp.reshape(ctrl_arr_err_full, (len_s, -1), 'F')
 
-c_arr_err_full = jnp.reshape(ctrl_arr_err_full, (len_s, -1), 'F')
-
-# converting ctrl points to wsr and plotting
-fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full, ctrl_arr_err_full, 'fit',
-                                   plotdir=plotdir)
+    # converting ctrl points to wsr and plotting
+    fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full, ctrl_arr_err_full, 'fit',
+                                       plotdir=plotdir)
 
 # plotting the hessians for analysis
 fig, ax = plt.subplots(1, 2, figsize=(10,5))

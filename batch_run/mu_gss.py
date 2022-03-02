@@ -44,7 +44,7 @@ def f(mu1):
 invphi = (np.sqrt(5) - 1) / 2  # 1 / phi
 invphi2 = (3 - np.sqrt(5)) / 2  # 1 / phi^2
 
-def gssrec(f, a, b, tol=1e-1, h=None, c=None, d=None, fc=None, fd=None):
+def gssrec(f, a, b, tol=1e-1, h=None, hp=None, c=None, d=None, fc=None, fd=None):
     """ Golden-section search, recursive.
 
     Given a function f with a single local minimum in
@@ -62,8 +62,10 @@ def gssrec(f, a, b, tol=1e-1, h=None, c=None, d=None, fc=None, fd=None):
     """
 
     (a, b) = (min(a, b), max(a, b))
-    if h is None: h = (10**b - 10**a)/(10**a)*100.
-    if h <= tol: return (a, b)
+    hp = (10**b - 10**a)/(10**a)*100.
+    if hp <= tol: return (a, b)
+    
+    if h is None: h = b - a
     if c is None: c = a + invphi2 * h
     if d is None: d = a + invphi * h
     if fc is None: fc = f(10**c)
