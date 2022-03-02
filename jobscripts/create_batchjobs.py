@@ -20,6 +20,7 @@ f"""#!/bin/bash
 #PBS -q small
 echo \"Starting at \"`date`
 cd $PBS_O_WORKDIR
+{pythonpath} {package_dir}/batch_run/initialize_batch_runs.py
 parallel --jobs 4 < $PBS_O_WORKDIR/ipjobs_batch.sh
 echo \"Finished at \"`date`
 """
