@@ -4,7 +4,7 @@ NMAX_DEFAULT=30
 LMIN_DEFAULT=5
 LMAX_DEFAULT=295
 KNOTNUM_DEFAULT=15
-RTH_DEFAULT=0.8
+RTH_DEFAULT=0.9
 INSTR_DEFAULT="hmi"
 TSLEN_DEFAULT=72
 DAYNUM_DEFAULT=6328
@@ -66,8 +66,7 @@ echo "       -- DONE"
 
 echo "[ 3. ] Creating Ritzwoller Lavely polynomials ..."
 python ../qdpy/precompute_ritzlavely.py --outdir "qdpy_jax" \
-	   --instrument $INSTR --tslen $TSLEN --daynum $DAYNUM --numsplits $NUMSPLIT \
-	   >.rl.out 2>.rl.err
+	   --instrument $INSTR >.rl.out 2>.rl.err
 echo "       -- `tail -1 .rl.out`"
 
 echo "----- INITIALIZATION COMPLETE --------------------"

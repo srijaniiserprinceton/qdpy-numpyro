@@ -29,9 +29,6 @@ with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
 
-outdir = f"{scratch_dir}/qdpy_jax"
-
-
 def model():
     eigval_model = np.array([])
 
@@ -76,8 +73,6 @@ if __name__ == "__main__":
     from qdpy import jax_functions as jf
     from qdpy import globalvars as gvar_jax
     from qdpy import build_hypermatrix_sparse as build_hm_sparse
-
-    from qdpy_jax import sparse_precompute as precompute
     #-----------------------------------------------------------------#
     parser = argparse.ArgumentParser()
     parser.add_argument("--n0", help="radial order",
@@ -100,15 +95,36 @@ if __name__ == "__main__":
                         type=int, default=6328)
     parser.add_argument("--numsplits", help="number of splitting coefficients",
                         type=int, default=18)
+    parser.add_argument("--batch_run", help="flag to indicate its a batch run",
+                        type=int, default=0)
+    parser.add_argument("--batch_rundir", help="local directory for batch run",
+                        type=str, default=".")
     ARGS = parser.parse_args()
 
-    with open(".n0-lmin-lmax.dat", "w") as f:
+    if(not ARGS.batch_run):
+        n0lminlmax_dir = f"{package_dir}/qdpy_jax"
+        outdir = f"{scratch_dir}/qdpy_jax"
+    else:
+        n0lminlmax_dir = f"{ARGS.batch_rundir}"
+        outdir = f"{ARGS.batch_rundir}"
+
+    with open(f"{n0lminlmax_dir}/.n0-lmin-lmax.dat", "w") as f:
         f.write(f"{ARGS.n0}" + "\n" +
                 f"{ARGS.lmin}" + "\n" +
                 f"{ARGS.lmax}"+ "\n" +
                 f"{ARGS.rth}" + "\n" +
                 f"{ARGS.knot_num}" + "\n" +
-                f"{ARGS.load_mults}")
+                f"{ARGS.load_mults}" + "\n" +
+                f"{ARGS.tslen}" + "\n" +
+                f"{ARGS.daynum}" + "\n" +
+                f"{ARGS.numsplits}")
+
+
+    if(not ARGS.batch_run):
+        from qdpy_jax import sparse_precompute as precompute
+    else:
+        sys.path.append(f"{ARGS.batch_rundir}")
+        import sparse_precompute_batch as precompute
 
     #--------------------------------------------------------------------#
     GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
@@ -117,7 +133,7 @@ if __name__ == "__main__":
                                 rth=ARGS.rth,
                                 knot_num=ARGS.knot_num,
                                 load_from_file=ARGS.load_mults,
-                                relpath=outdir,
+                                relpath=n0lminlmax_dir,
                                 instrument=ARGS.instrument,
                                 tslen=ARGS.tslen,
                                 daynum=ARGS.daynum,
@@ -150,7 +166,7 @@ if __name__ == "__main__":
     nc = GVARS.nc
     len_s = len(GVARS.s_arr)
     nmults = len(GVARS.n0_arr)
-    dim_hyper = int(np.loadtxt('.dimhyper'))
+    dim_hyper = int(np.loadtxt(f'{n0lminlmax_dir}/.dimhyper'))
     len_hyper_arr = fixed_hypmat_all_sparse.shape[-1]
     ellmax = np.max(GVARS.ell0_arr)
 

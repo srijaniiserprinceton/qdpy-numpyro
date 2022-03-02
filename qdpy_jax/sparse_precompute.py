@@ -15,11 +15,6 @@ from qdpy_jax import prune_multiplets
 from qdpy_jax import build_cenmult_and_nbs as build_cnm
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
-package_dir = os.path.dirname(current_dir)
-with open(f"{package_dir}/.config", "r") as f:
-    dirnames = f.read().splitlines()
-scratch_dir = dirnames[1]
-outdir = f"{scratch_dir}/qdpy_jax"
 
 # defining functions used in multiplet functions in the script
 getnt4cenmult = build_cnm.getnt4cenmult
@@ -30,14 +25,19 @@ _find_idx = wigmap.find_idx
 jax_Omega_ = jf.jax_Omega
 jax_gamma_ = jf.jax_gamma
 
-ARGS = np.loadtxt(".n0-lmin-lmax.dat")
+ARGS = np.loadtxt(f"{current_dir}/.n0-lmin-lmax.dat")
+
+# instrument name is taken to be the default in globalvars.
 GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             lmin=int(ARGS[1]),
                             lmax=int(ARGS[2]),
                             rth=ARGS[3],
                             knot_num=int(ARGS[4]),
                             load_from_file=int(ARGS[5]),
-                            relpath=outdir)
+                            relpath=current_dir,
+                            tslen=int(ARGS[6]),
+                            daynum=int(ARGS[7]),
+                            numsplits=int(ARGS[8]))
 
 GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx =\
@@ -341,7 +341,7 @@ def build_hypmat_all_cenmults():
     nmults = len(GVARS.n0_arr)
     dim_hyper = get_dim_hyper()
 
-    np.savetxt('.dimhyper', np.array([dim_hyper]), fmt='%d')
+    np.savetxt(f'{current_dir}/.dimhyper', np.array([dim_hyper]), fmt='%d')
 
     # storing as a list of sparse matrices
     # the fixed hypat (the part of hypermatrix that does not
