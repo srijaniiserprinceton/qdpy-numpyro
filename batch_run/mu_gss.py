@@ -82,4 +82,4 @@ val0 = np.load(f'{PARGS.rundir}/{fname}')
 
 mu_limits = [1e-15, 1e-3]
 muvals = gssrec(f, np.log10(mu_limits[0]), np.log10(mu_limits[1]))
-np.save(f"{outdir}/muval.s{PARGS.s}.npy", muvals[0])
+np.save(f"{outdir}/muval.s{PARGS.s}.npy", 10**muvals[0])
