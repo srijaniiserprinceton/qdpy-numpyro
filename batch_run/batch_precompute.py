@@ -28,8 +28,8 @@ package_dir = os.path.dirname(current_dir)
 local_rundir = re.split('[/]+', ARGS.rundir, flags=re.IGNORECASE)[-1]
 instr = re.split('[_]+', local_rundir, flags=re.IGNORECASE)[0]
 
-#-------------------------READING THE RUNPARAMS---------------------------#
 if(ARGS.s == 1):
+    #-------------------------READING THE RUNPARAMS---------------------------#
     RPARAMS = np.loadtxt(f"{ARGS.rundir}/.params_smin_1_smax_1.dat")
 
     nmin, nmax, lmin, lmax, smin, smax, knotnum, rth, tslen, daynum, numsplits =\
@@ -75,6 +75,7 @@ if(ARGS.s == 1):
                 --smax {smax} --batch_run 1 --batch_rundir {ARGS.rundir}")
 
 else:
+    #-------------------------READING THE RUNPARAMS---------------------------#
     RPARAMS = np.loadtxt(f"{ARGS.rundir}/.params_smin_{ARGS.s}_smax_{ARGS.s}.dat")
 
     nmin, nmax, lmin, lmax, smin, smax, knotnum, rth, tslen, daynum, numsplits =\

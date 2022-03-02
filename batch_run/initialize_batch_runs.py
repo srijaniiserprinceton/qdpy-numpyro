@@ -43,6 +43,10 @@ for i in range(len(data_daynum_list)):
             
     # making new directory
     os.mkdir(batch_subdirpath)
+    
+    # making sub directories needed
+    os.mkdir(f"{batch_subdirpath}/plots")
+    os.mkdir(f"{batch_subdirpath}/summaryfiles")
 
 
 # adding optional parameters to not use default

@@ -13,11 +13,11 @@ package_dir = os.path.dirname(current_dir)
 with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
-plotdir = f"{scratch_dir}/plots"
+plotdir_global = f"{scratch_dir}/plots"
 
 class postplotter:
     def __init__(self, GVARS, ctrl_arr_fit_full, ctrl_arr_err_full, tag,
-                 color='red'):
+                 color='red', plotdir=plotdir_global):
         self.GVARS = GVARS
         self.r = GVARS.r
         self.OM = GVARS.OM
@@ -29,6 +29,7 @@ class postplotter:
         self.knot_ind_th = GVARS.knot_ind_th
         self.spl_deg = GVARS.spl_deg
         self.tag = tag
+        self.plotdir = plotdir
 
         # plotting
         self.plot_fit_wsr()
@@ -99,7 +100,7 @@ class postplotter:
         ax[2,1].set_xlim([0, 1])
         
         plt.tight_layout()
-        plt.savefig(f'{plotdir}/{self.tag}_wsr.pdf')
+        plt.savefig(f'{self.plotdir}/{self.tag}_wsr.pdf')
         plt.close()
         return fig, ax
 
@@ -168,7 +169,7 @@ class postplotter:
         ax[2,1].set_xlim([0, 1])
 
         plt.tight_layout()
-        plt.savefig(f'{plotdir}/{self.tag}_wsr_with_error.pdf')
+        plt.savefig(f'{self.plotdir}/{self.tag}_wsr_with_error.pdf')
         plt.close()
     
 
@@ -222,7 +223,7 @@ class postplotter:
         ax[2,1].set_xlim([0, 1])
         
         plt.tight_layout()
-        plt.savefig(f'{plotdir}/{self.tag}_wsr_zoom.pdf')
+        plt.savefig(f'{self.plotdir}/{self.tag}_wsr_zoom.pdf')
         plt.close()
 
     def plot_omega_rtheta(self, theta=np.arange(15, 105, 15)):
@@ -284,9 +285,9 @@ class postplotter:
             axs.set_xlabel("$r$ in $R_{\odot}$", size=16)
             axs.set_title(f"$\\Omega(r)$ at $\\theta=${(90-th):.1f}")
             axs.legend()
-            fig.savefig(f"{plotdir}/{self.tag}_omega_th{(90-th):04.1f}.pdf")
+            fig.savefig(f"{self.plotdir}/{self.tag}_omega_th{(90-th):04.1f}.pdf")
             plt.close(fig)
-        fig1.savefig(f"{plotdir}/{self.tag}_omega_all.pdf")
+        fig1.savefig(f"{self.plotdir}/{self.tag}_omega_all.pdf")
         plt.close(fig1)
 
         # converting to muHz
@@ -324,7 +325,7 @@ class postplotter:
         ax[2,1].set_xlim([0, 1])
         
         plt.tight_layout()
-        plt.savefig(f'{plotdir}/{self.tag}_wsr_zoom.pdf')
+        plt.savefig(f'{self.plotdir}/{self.tag}_wsr_zoom.pdf')
         plt.close()
 
 

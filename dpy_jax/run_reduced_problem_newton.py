@@ -13,12 +13,10 @@ parser.add_argument("--read_hess", help="store hessians",
                     type=bool, default=False)
 parser.add_argument("--instrument", help="hmi or mdi",
                     type=str, default="hmi")
-parser.add_argument("--tslen", help="72 or 360",
-                    type=int, default=72)
-parser.add_argument("--daynum", help="day from MDI epoch",
-                    type=int, default=6328)
-parser.add_argument("--numsplits", help="number of splitting coefficients",
-                    type=int, default=18)
+parser.add_argument("--batch_run", help="flag to indicate its a batch run",
+                    type=int, default=0)
+parser.add_argument("--batch_rundir", help="local directory for batch run",
+                    type=str, default=".")
 PARGS = parser.parse_args()
 #------------------------------------------------------------------------# 
 import numpy as np
@@ -52,22 +50,32 @@ package_dir = os.path.dirname(current_dir)
 with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
-outdir = f"{scratch_dir}/dpy_jax"
-summdir = f"{scratch_dir}/summaryfiles"
-plotdir = f"{scratch_dir}/plots"
+
+if(not PARGS.batch_run):
+    n0lminlmax_dir = f"{package_dir}/dpy_jax"
+    outdir = f"{scratch_dir}/dpy_jax"
+    summdir = f"{scratch_dir}/summaryfiles"
+    plotdir = f"{scratch_dir}/plots"
+
+else:
+    n0lminlmax_dir = f"{PARGS.batch_rundir}"
+    outdir = f"{PARGS.batch_rundir}"
+    summdir = f"{PARGS.batch_rundir}/summaryfiles"
+    plotdir = f"{PARGS.batch_rundir}/plots"
+
 #----------------------------------------------------------------------#
-ARGS = np.loadtxt(".n0-lmin-lmax.dat")
+ARGS = np.loadtxt(f"{n0lminlmax_dir}/.n0-lmin-lmax.dat")
 GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             lmin=int(ARGS[1]),
                             lmax=int(ARGS[2]),
                             rth=ARGS[3],
                             knot_num=int(ARGS[4]),
                             load_from_file=int(ARGS[5]),
-                            relpath=outdir,
+                            relpath=n0lminlmax_dir,
                             instrument=PARGS.instrument,
-                            tslen=PARGS.tslen,
-                            daynum=PARGS.daynum,
-                            numsplits=PARGS.numsplits)
+                            tslen=int(ARGS[6]),
+                            daynum=int(ARGS[7]),
+                            numsplits=int(ARGS[8]))
 
 soln_summary = {}
 soln_summary['params'] = {}
@@ -272,10 +280,12 @@ print(f"data_acoeffs = {data_acoeffs[:15]}")
 # plotting acoeffs pred and data to see if we should expect got fit
 plot_acoeffs.plot_acoeffs_datavsmodel(pred_acoeffs, data_acoeffs,
                                       data_acoeffs_out_HMI,
-                                      acoeffs_sigma_HMI, 'ref')
+                                      acoeffs_sigma_HMI, 'ref',
+                                      plotdir=plotdir)
 plot_acoeffs.plot_acoeffs_dm_scaled(pred_acoeffs, data_acoeffs,
                                     data_acoeffs_out_HMI,
-                                    acoeffs_sigma_HMI, 'ref')
+                                    acoeffs_sigma_HMI, 'ref',
+                                    plotdir=plotdir)
 #----------------------------------------------------------------------# 
 len_data = len(data_acoeffs) # length of data
 mu = PARGS.mu # regularization parameter
@@ -298,7 +308,8 @@ c_arr_init_full = jf.c4fit_2_c4plot(GVARS, c_init,
 
 # converting ctrl points to wsr and plotting
 ctrl_zero_error = np.zeros_like(c_arr_init_full)
-init_plot = postplotter.postplotter(GVARS, c_arr_init_full, ctrl_zero_error, 'init')
+init_plot = postplotter.postplotter(GVARS, c_arr_init_full, ctrl_zero_error, 'init',
+                                    plotdir=plotdir)
 #----------------------------------------------------------------------#
 # plotting acoeffs from initial data and HMI data
 pred_init = fixed_part + c_init @ param_coeff_flat
@@ -307,10 +318,12 @@ __, init_acoeffs = foril(0, nmults, loop_in_mults, (pred_init, init_acoeffs))
 
 plot_acoeffs.plot_acoeffs_datavsmodel(init_acoeffs, data_acoeffs,
                                       data_acoeffs_out_HMI,
-                                      acoeffs_sigma_HMI, 'init')
+                                      acoeffs_sigma_HMI, 'init',
+                                      plotdir=plotdir)
 plot_acoeffs.plot_acoeffs_dm_scaled(init_acoeffs, data_acoeffs,
                                     data_acoeffs_out_HMI,
-                                    acoeffs_sigma_HMI, 'init')
+                                    acoeffs_sigma_HMI, 'init',
+                                    plotdir=plotdir)
 #----------------------------------------------------------------------#
 # print(f"mu depth shape = {mu_depth.shape}")
 print(f"ctrl full shape = {GVARS.ctrl_arr_dpt_full.shape}")
@@ -386,11 +399,13 @@ final_acoeffs = data_misfit_arr_fn(c_arr)*acoeffs_sigma_HMI + data_acoeffs
 
 plot_acoeffs.plot_acoeffs_datavsmodel(final_acoeffs, data_acoeffs,
                                       data_acoeffs_out_HMI,
-                                      acoeffs_sigma_HMI, 'final')
+                                      acoeffs_sigma_HMI, 'final',
+                                      plotdir=plotdir)
 
 plot_acoeffs.plot_acoeffs_dm_scaled(final_acoeffs, data_acoeffs,
                                     data_acoeffs_out_HMI,
-                                    acoeffs_sigma_HMI, 'final')
+                                    acoeffs_sigma_HMI, 'final',
+                                    plotdir=plotdir)
 #----------------------------------------------------------------------# 
 # reconverting back to model_params in units of true_params_flat
 c_arr_fit = c_arr/true_params_flat
@@ -428,7 +443,8 @@ ctrl_arr_err_full[sind_arr, -len(true_params_flat)//len_s:] =\
 c_arr_err_full = jnp.reshape(ctrl_arr_err_full, (len_s, -1), 'F')
 
 # converting ctrl points to wsr and plotting
-fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full, ctrl_arr_err_full, 'fit')
+fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full, ctrl_arr_err_full, 'fit',
+                                   plotdir=plotdir)
 
 # plotting the hessians for analysis
 fig, ax = plt.subplots(1, 2, figsize=(10,5))

@@ -13,7 +13,7 @@ plotdir = f"{scratch_dir}/plots"
 
 
 def plot_acoeffs_datavsmodel(pred_acoeffs, data_acoeffs, data_acoeffs_out_HMI,
-                             data_acoeffs_sigma, label):
+                             data_acoeffs_sigma, label, plotdir=plotdir):
     
     pred_acoeffs_plot = np.reshape(pred_acoeffs, (3,-1), 'F')
     data_acoeffs_plot = np.reshape(data_acoeffs, (3,-1), 'F')
@@ -37,7 +37,7 @@ def plot_acoeffs_datavsmodel(pred_acoeffs, data_acoeffs, data_acoeffs_out_HMI,
         plt.close()
 
 def plot_acoeffs_dm_scaled(pred_acoeffs, data_acoeffs, data_acoeffs_out_HMI,
-                           data_acoeffs_sigma, label):
+                           data_acoeffs_sigma, label, plotdir=plotdir):
 
     pred_acoeffs_plot = np.reshape(pred_acoeffs, (3, -1), 'F')
     data_acoeffs_plot = np.reshape(data_acoeffs, (3, -1), 'F')
