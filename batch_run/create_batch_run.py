@@ -19,12 +19,12 @@ batchnames = [filename for filename in os.listdir(batch_dir) if
 
 for bname in batchnames:
     with open(f"{bashscr_dir}/{bname}.sh", "w") as f:
-        f.write(f"{pythonpath} {current_dir}/batch_precompute.py --outdir {batch_dir}/{bname} --s 1\n")
-        f.write(f"{pythonpath} {current_dir}/batch_iterative_inversion.py --outdir {batch_dir}/{bname} --s 1\n")
-        f.write(f"{pythonpath} {current_dir}/mu_bisection.py --rundir {batch_dir}/{bname} --s 1\n")
-        f.write(f"{pythonpath} {current_dir}/batch_precompute.py --outdir {batch_dir}/{bname} --s 3\n")
-        f.write(f"{pythonpath} {current_dir}/batch_iterative_inversion.py --outdir {batch_dir}/{bname} --s 3\n")
-        f.write(f"{pythonpath} {current_dir}/mu_bisection.py --rundir {batch_dir}/{bname} --s 3\n")
-        f.write(f"{pythonpath} {current_dir}/batch_precompute.py --outdir {batch_dir}/{bname} --s 5\n")
-        f.write(f"{pythonpath} {current_dir}/batch_iterative_inversion.py --outdir {batch_dir}/{bname} --s 5\n")
-        f.write(f"{pythonpath} {current_dir}/mu_bisection.py --rundir {batch_dir}/{bname} --s 5")
+        f.write(f"{pythonpath} {current_dir}/batch_precompute.py --rundir {batch_dir}/{bname} --s 1\n")
+        f.write(f"{pythonpath} {current_dir}/batch_iterative_inversion.py --rundir {batch_dir}/{bname} --s 1\n")
+        f.write(f"{pythonpath} {current_dir}/mu_bisection_batch.py --rundir {batch_dir}/{bname} --s 1\n")
+        f.write(f"{pythonpath} {current_dir}/batch_precompute.py --rundir {batch_dir}/{bname} --s 3\n")
+        f.write(f"{pythonpath} {current_dir}/batch_iterative_inversion.py --rundir {batch_dir}/{bname} --s 3\n")
+        f.write(f"{pythonpath} {current_dir}/mu_bisection_batch.py --rundir {batch_dir}/{bname} --s 3\n")
+        f.write(f"{pythonpath} {current_dir}/batch_precompute.py --rundir {batch_dir}/{bname} --s 5\n")
+        f.write(f"{pythonpath} {current_dir}/batch_iterative_inversion.py --rundir {batch_dir}/{bname} --s 5\n")
+        f.write(f"{pythonpath} {current_dir}/mu_bisection_batch.py --rundir {batch_dir}/{bname} --s 5")
