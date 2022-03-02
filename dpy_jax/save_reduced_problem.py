@@ -49,22 +49,23 @@ from qdpy import jax_functions as jf
 from plotter import plot_model_renorm as plot_renorm
 
 if(not PARGS.batch_run):
+    n0lminlmax_dir = f"{package_dir}/dpy_jax"
     outdir = f"{scratch_dir}/dpy_jax"
-    ARGS = np.loadtxt(f"{current_dir}/.n0-lmin-lmax.dat")
     from dpy_jax import sparse_precompute_acoeff as precompute
 else:
+    n0lminlmax_dir = f"{PARGS.batch_rundir}"
     outdir = f"{PARGS.batch_rundir}"
-    ARGS = np.loadtxt(f"{PARGS.batch_rundir}/.n0-lmin-lmax.dat")
     sys.path.append(f"{PARGS.batch_rundir}")
     import sparse_precompute_acoeff_batch as precompute
 
+ARGS = np.loadtxt(f"{n0lminlmax_dir}/.n0-lmin-lmax.dat")
 GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             lmin=int(ARGS[1]),
                             lmax=int(ARGS[2]),
                             rth=ARGS[3],
                             knot_num=int(ARGS[4]),
                             load_from_file=int(ARGS[5]),
-                            relpath=current_dir,
+                            relpath=n0lminlmax_dir,
                             instrument=PARGS.instrument,
                             tslen=int(ARGS[6]),
                             daynum=int(ARGS[7]),

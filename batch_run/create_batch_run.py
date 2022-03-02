@@ -21,10 +21,10 @@ for bname in batchnames:
     with open(f"{bashscr_dir}/{bname}.sh", "w") as f:
         f.write(f"{pythonpath} {current_dir}/batch_precompute.py --rundir {batch_dir}/{bname} --s 1\n")
         f.write(f"{pythonpath} {current_dir}/batch_iterative_inversion.py --rundir {batch_dir}/{bname} --s 1\n")
-        f.write(f"{pythonpath} {current_dir}/mu_bisection_batch.py --rundir {batch_dir}/{bname} --s 1\n")
+        f.write(f"{pythonpath} {current_dir}/mu_gss.py --rundir {batch_dir}/{bname} --s 1\n")
         f.write(f"{pythonpath} {current_dir}/batch_precompute.py --rundir {batch_dir}/{bname} --s 3\n")
         f.write(f"{pythonpath} {current_dir}/batch_iterative_inversion.py --rundir {batch_dir}/{bname} --s 3\n")
-        f.write(f"{pythonpath} {current_dir}/mu_bisection_batch.py --rundir {batch_dir}/{bname} --s 3\n")
+        f.write(f"{pythonpath} {current_dir}/mu_gss.py --rundir {batch_dir}/{bname} --s 3\n")
         f.write(f"{pythonpath} {current_dir}/batch_precompute.py --rundir {batch_dir}/{bname} --s 5\n")
         f.write(f"{pythonpath} {current_dir}/batch_iterative_inversion.py --rundir {batch_dir}/{bname} --s 5\n")
-        f.write(f"{pythonpath} {current_dir}/mu_bisection_batch.py --rundir {batch_dir}/{bname} --s 5")
+        f.write(f"{pythonpath} {current_dir}/mu_gss.py --rundir {batch_dir}/{bname} --s 5")
