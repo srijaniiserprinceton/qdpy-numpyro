@@ -1,4 +1,5 @@
 import numpy as np
+import re
 import argparse
 import sys
 import os
@@ -29,12 +30,24 @@ parser.add_argument("--numsplits", help="number of splitting coefficients",
 parser.add_argument("--batch_run", help="flag to indicate its a batch run",
                     type=int, default=0)
 ARGS = parser.parse_args()
+
+GVARS = gvar_jax.GlobalVars(instrument=ARGS.instrument,
+                            tslen=ARGS.tslen,
+                            daynum=ARGS.daynum,
+                            numsplits=ARGS.numsplits)
+sfx = GVARS.filename_suffix
+
+if(not ARGS.batch_run):
+    n0lminlmax_dir = f"{GVARS.scratch_dir}/qdpy_jax"
+else:
+    batch_rundir = re.split('[/]+', ARGS.outdir, flags=re.IGNORECASE)[:-1]
+    n0lminlmax_dir = f"{GVARS.scratch_dir}/{os.path.join(*batch_rundir)}/qdpy_files"
 #------------------------------------------------------------------------# 
 # {{{ def get_exclude_mask(exclude_qdpy=False):
 def get_exclude_mask(exclude_qdpy=False):
     mask = np.ones_like(obsdata[:, 0], dtype=np.bool)
     if exclude_qdpy:
-        qdpy_mults = np.load(f'{GVARS.scratch_dir}/qdpy_jax/qdpy_multiplets.npy')
+        qdpy_mults = np.load(f'{n0lminlmax_dir}/qdpy_multiplets.{sfx}.npy')
         qdpy_ell = qdpy_mults[:, 1]
         qdpy_enn = qdpy_mults[:, 0]
         for i in range(len(qdpy_ell)):
@@ -91,10 +104,7 @@ def print_multiplet_list(nl_arr):
 #-----------------------------------------------------------------------
 nmin, nmax = ARGS.nmin, ARGS.nmax
 lmin, lmax = ARGS.lmin, ARGS.lmax
-GVARS = gvar_jax.GlobalVars(instrument=ARGS.instrument,
-                            tslen=ARGS.tslen,
-                            daynum=ARGS.daynum,
-                            numsplits=ARGS.numsplits)
+
 if(not ARGS.batch_run):
     outdir = f"{package_dir}/{ARGS.outdir}"
 else:
@@ -112,7 +122,6 @@ nl_arr, omega_arr = get_multiplet_list(ARGS.exclude_qdpy)
 
 #---------------------- printing and saving ---------------------------
 print_multiplet_list(tuple(map(tuple, nl_arr)))
-sfx = GVARS.filename_suffix
 print(f'Total multiplets: {len(nl_arr)}')
 np.save(f'{outdir}/qdpy_multiplets.{sfx}.npy', nl_arr)
 np.save(f'{outdir}/omega_qdpy_multiplets.{sfx}.npy', omega_arr)
