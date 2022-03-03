@@ -17,7 +17,6 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy import sparse as sp_sparse
 import sys
-
 #----------------------JAX related modules-------------------------------#
 import jax
 from jax import random
