@@ -23,7 +23,6 @@ from collections import namedtuple
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import matplotlib.pyplot as plt
 import numpy as np
-import arviz as az
 import sys
 #------------------------------------------------------------------------# 
 import jax
@@ -158,10 +157,12 @@ nc_D = len(cind_arr_D)
 # slicing the Pjl correctly in angular degree s
 Pjl_D = RL_poly_D[:, smin_D:smax_D+1:2, :]
 
+'''
 knee_mu = np.hstack((np.load(f"{PARGS.mu_batchdir}/muval.s1.npy"),
                      np.load(f"{PARGS.mu_batchdir}/muval.s3.npy"),
                      np.load(f"{PARGS.mu_batchdir}/muval.s5.npy")))
-
+'''
+knee_mu = np.array([1e-4, 1e-5, 1e-4])
 #-----------------------------------------------------------------------# 
 nmults_Q = len(GVARS_Q.ell0_arr)
 num_j_Q = len(GVARS_Q.s_arr)
@@ -397,8 +398,12 @@ if PARGS.synth:
 
 else:
     print("Using observed data")
+    '''
     data_acoeffs_D = GVARS_D.acoeffs_true
     data_acoeffs_Q = GVARS_Q.acoeffs_true
+    '''
+    data_acoeffs_D = GVARS_D.acoeffs_out_HMI
+    data_acoeffs_Q = GVARS_Q.acoeffs_out_HMI
 
 data_acoeffs_out_HMI_D = GVARS_D.acoeffs_out_HMI
 data_acoeffs_out_HMI_Q = GVARS_Q.acoeffs_out_HMI

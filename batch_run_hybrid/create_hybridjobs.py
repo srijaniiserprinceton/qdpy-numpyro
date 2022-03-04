@@ -11,7 +11,7 @@ scratch_dir = dirnames[1]
 _pythonpath = subprocess.check_output("which python",
                                         shell=True)
 pythonpath = _pythonpath.decode("utf-8").split("\n")[0]
-execpath = f"{package_dir}/hybrid_jax/run_reduced_problem_hybrid_batch.py"
+execpath = f"{package_dir}/hybrid_jax/run_reduced_hybrid_batch.py"
 
 batchnames = [filename for filename in os.listdir(f"{scratch_dir}/batch_runs_hybrid") if 
               (os.path.isdir(f"{scratch_dir}/batch_runs_hybrid/{filename}") and filename[0]!='.')]
@@ -20,7 +20,7 @@ print(batchnames)
 for bname in batchnames:
     print(f"Creating job for {bname}")
     batch_hybrid_dir = f"{scratch_dir}/batch_runs_hybrid/{bname}"
-    mu_batchdir = f"{scratch_dir}/batch_runs/{bname}"
+    mu_batchdir = f"{scratch_dir}/batch_runs_dpy/{bname}"
     instr = bname.split('_')[0]
     job_str = f"{pythonpath} {execpath} "
     job_args = (f"--mu 1.0 --instrument {instr} --mu_batchdir {mu_batchdir} " +
@@ -40,5 +40,21 @@ echo \"Starting at \"`date`
 echo \"Finished at \"`date`
 """
 
+    slurm_str = \
+    f"""#!/bin/bash
+#SBATCH --job-name={jobname}
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=40
+#SBATCH --mem=150G
+#SBATCH --time=00:30:00
+echo \"Starting at \"`date`
+    
+{job_str} {job_args}
+echo \"Finished at \"`date`
+"""
+
     with open(f"{package_dir}/jobscripts/gnup_hybrid_{bname}.pbs", "w") as f:
         f.write(gnup_str)
+
+    with open(f"{package_dir}/jobscripts/gnup_hybrid_{bname}.slurm", "w") as f:
+        f.write(slurm_str)

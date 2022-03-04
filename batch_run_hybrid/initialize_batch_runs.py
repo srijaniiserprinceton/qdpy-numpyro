@@ -72,7 +72,7 @@ def write_paramsfile(dirname, fname, run_params):
 nmin, nmax, lmin, lmax = 0, 0, 200, 210
 nmin_q, nmax_q, lmin_q, lmax_q = 0, 0, 200, 201
 
-s_arr = np.array([1, 3, 5])
+smin, smax = 1, 5
 
 # writing the parameters in each run directory for bookkeeping
 for i in range(len(data_daynum_list)):
@@ -83,32 +83,23 @@ for i in range(len(data_daynum_list)):
 
     #--------------------------------------------------------------------#
     # making dpy params file for full modeset for hessian                           
-    for j in range(len(s_arr)):
-        for k in range(j, len(s_arr)):
-            smin, smax = s_arr[j], s_arr[k]
-            fname = f".params_smin_{smin}_smax_{smax}.dat"
-
-            # making dpy-full params file
-            run_params = make_run_params.make_run_params(nmin=nmin, nmax=nmax,
-                                                         lmin=lmin, lmax=lmax,
-                                                         smin=smin, smax=smax,
-                                                         daynum=daynum)
-            smin, smax = run_params.smin, run_params.smax
-            write_paramsfile(rundir_dpy_full_hess, fname, run_params)
-
-            # making qdpy params file
-            run_params = make_run_params.make_run_params(nmin=nmin_q, nmax=nmax_q,
-                                                         lmin=lmin_q, lmax=lmax_q,
-                                                         smin=smin, smax=smax,
-                                                         daynum=daynum)
-            smin, smax = run_params.smin, run_params.smax
-            write_paramsfile(rundir_qdpy, fname, run_params)
-
-            # making dpy params file
-            run_params = make_run_params.make_run_params(nmin=nmin, nmax=nmax,
-                                                         lmin=lmin, lmax=lmax,
-                                                         smin=smin, smax=smax,
-                                                         daynum=daynum,
-                                                         exclude_qdpy=1)
-            smin, smax = run_params.smin, run_params.smax
-            write_paramsfile(rundir_dpy, fname, run_params)
+    fname = f".params_smin_{smin}_smax_{smax}.dat"
+    
+    # making dpy-full params file
+    run_params = make_run_params.make_run_params(nmin=nmin, nmax=nmax,
+                                                 lmin=lmin, lmax=lmax,
+                                                 daynum=daynum)
+    write_paramsfile(rundir_dpy_full_hess, fname, run_params)
+    
+    # making qdpy params file
+    run_params = make_run_params.make_run_params(nmin=nmin_q, nmax=nmax_q,
+                                                 lmin=lmin_q, lmax=lmax_q,
+                                                 daynum=daynum)
+    write_paramsfile(rundir_qdpy, fname, run_params)
+    
+    # making dpy params file
+    run_params = make_run_params.make_run_params(nmin=nmin, nmax=nmax,
+                                                 lmin=lmin, lmax=lmax,
+                                                 daynum=daynum,
+                                                exclude_qdpy=1)
+    write_paramsfile(rundir_dpy, fname, run_params)

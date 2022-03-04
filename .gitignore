@@ -16,6 +16,7 @@ qdpy_iofiles
 *.log
 *.sh
 *.pbs
+*.slurm
 hmi*
 mdi*
 *.pkl

@@ -20,7 +20,7 @@ pythonpath = _pythonpath.decode("utf-8").split("\n")[0]
 batchnames = [filename for filename in os.listdir(batch_dir) if 
               (os.path.isdir(f"{batch_dir}/{filename}") and filename[0]!='.')]
 
-some_mu = 1e-5
+some_mu = 1.0
 
 run_newton_py = f"{package_dir}/dpy_jax/run_reduced_problem_newton.py"
 
