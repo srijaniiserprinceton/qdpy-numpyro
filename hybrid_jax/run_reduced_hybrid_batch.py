@@ -15,6 +15,8 @@ parser.add_argument("--noise", help="add noise",
                     type=bool, default=True)
 parser.add_argument("--rundir", help="local directory for batch run",
                     type=str, default=".")
+parser.add_argument("--mu_batchdir", help="directory of converged mu",
+                    type=str, default=".")
 PARGS = parser.parse_args()
 #------------------------------------------------------------------------# 
 from collections import namedtuple
@@ -156,9 +158,9 @@ nc_D = len(cind_arr_D)
 # slicing the Pjl correctly in angular degree s
 Pjl_D = RL_poly_D[:, smin_D:smax_D+1:2, :]
 
-# mu_scaling = np.array([1., 1., 1.])
-knee_mu = np.array([2.12696e-5, 9.92329e-6, 3.84844e-5])
-mu_scaling = knee_mu
+knee_mu = np.hstack((np.load(f"{PARGS.mu_batchdir}/muval.s1.npy"),
+                     np.load(f"{PARGS.mu_batchdir}/muval.s3.npy"),
+                     np.load(f"{PARGS.mu_batchdir}/muval.s5.npy")))
 
 #-----------------------------------------------------------------------# 
 nmults_Q = len(GVARS_Q.ell0_arr)
@@ -267,7 +269,7 @@ def data_misfit_fn_Q(c_arr):
     return jnp.sum(jnp.square(data_misfit_arr_Q))
 
 
-def model_misfit_fn(c_arr, mu_scale=mu_scaling):
+def model_misfit_fn(c_arr, mu_scale=knee_mu):
     # Djk is the same for s=1, 3, 5
     Djk = D_bsp_j_D_bsp_k
     sidx, eidx = 0, GVARS_D.knot_ind_th

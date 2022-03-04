@@ -7,16 +7,27 @@ package_dir = os.path.dirname(current_dir)
 with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
-batch_hybrid_dir = f"{scratch_dir}/batch_runs_hybrid"
 
 _pythonpath = subprocess.check_output("which python",
                                         shell=True)
 pythonpath = _pythonpath.decode("utf-8").split("\n")[0]
-jobname = f"dpt.RLS"
 execpath = f"{package_dir}/hybrid_jax/run_reduced_problem_hybrid_batch.py"
 
-gnup_str = \
-f"""#!/bin/bash
+batchnames = [filename for filename in os.listdir(f"{scratch_dir}/batch_runs_hybrid") if 
+              (os.path.isdir(f"{scratch_dir}/batch_runs_hybrid/{filename}") and filename[0]!='.')]
+print(batchnames)
+
+for bname in batchnames:
+    print(f"Creating job for {bname}")
+    batch_hybrid_dir = f"{scratch_dir}/batch_runs_hybrid/{bname}"
+    mu_batchdir = f"{scratch_dir}/batch_runs/{bname}"
+    instr = bname.split('_')[0]
+    job_str = f"{pythonpath} {execpath} "
+    job_args = (f"--mu 1.0 --instrument {instr} --mu_batchdir {mu_batchdir} " +
+                f"--rundir {batch_hybrid_dir}")
+    jobname = f"hybrid-{bname}"
+    gnup_str = \
+    f"""#!/bin/bash
 #PBS -N {jobname}
 #PBS -o out-{jobname}.log
 #PBS -e err-{jobname}.log
@@ -24,20 +35,10 @@ f"""#!/bin/bash
 #PBS -l walltime=06:00:00
 #PBS -q small
 echo \"Starting at \"`date`
-cd $PBS_O_WORKDIR
-module load GnuParallel
-cd ../dpy_jax
-parallel --jobs 4 < $PBS_O_WORKDIR/ipjobs_dpt_rls.sh
+    
+{job_str} {job_args}
 echo \"Finished at \"`date`
 """
 
-with open(f"{package_dir}/jobscripts/gnup_dpt_rls.pbs", "w") as f:
-    f.write(gnup_str)
-
-with open(f"{package_dir}/jobscripts/ipjobs_dpt_rls.sh", "w") as f:
-    for idx, muval in enumerate(mu_list):
-        ipjobs_str = f"{pythonpath} {execpath} "
-        job_args = f"--mu {muval} --read_hess 1"
-        outfile = f" >{package_dir}/jobscripts/logs/qdrls.{idx:03d}.out"
-        errfile = f" 2>{package_dir}/jobscripts/logs/qdrls.{idx:03d}.err"
-        f.write(ipjobs_str + job_args + outfile + errfile + " \n")
+    with open(f"{package_dir}/jobscripts/gnup_hybrid_{bname}.pbs", "w") as f:
+        f.write(gnup_str)

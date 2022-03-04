@@ -17,6 +17,8 @@ parser.add_argument("--batch_run", help="flag to indicate its a batch run",
                     type=int, default=0)
 parser.add_argument("--batch_rundir", help="local directory for batch run",
                     type=str, default=".")
+parser.add_argument("--mu_batchdir", help="directory of converged mu",
+                    type=str, default=".")
 parser.add_argument("--plot", help="plot",
                     type=bool, default=False)
 PARGS = parser.parse_args()
@@ -53,18 +55,25 @@ with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
 
-if(not PARGS.batch_run):
+if (not PARGS.batch_run):
     n0lminlmax_dir = f"{package_dir}/dpy_jax"
     outdir = f"{scratch_dir}/dpy_jax"
     summdir = f"{scratch_dir}/summaryfiles"
     plotdir = f"{scratch_dir}/plots"
+    knee_mu = np.array([1., 1., 1.])
 
 else:
     n0lminlmax_dir = f"{PARGS.batch_rundir}"
     outdir = f"{PARGS.batch_rundir}"
     summdir = f"{PARGS.batch_rundir}/summaryfiles"
     plotdir = f"{PARGS.batch_rundir}/plots"
-
+    try:
+        knee_mu = np.hstack((np.load(f"{PARGS.mu_batchdir}/muval.s1.npy"),
+                             np.load(f"{PARGS.mu_batchdir}/muval.s3.npy"),
+                             np.load(f"{PARGS.mu_batchdir}/muval.s5.npy")))
+    except FileNotFoundError:
+        knee_mu = np.array([1., 1., 1.])
+print(f"knee_mu = {knee_mu}")
 #----------------------------------------------------------------------#
 ARGS = np.loadtxt(f"{n0lminlmax_dir}/.n0-lmin-lmax.dat")
 GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
@@ -113,9 +122,6 @@ smax = max(GVARS.s_arr)
 len_s = len(sind_arr) # number of s to fit
 nc = len(cind_arr) # number of c to fit
 
-knee_mu = np.array([2.12696e-5, 9.92329e-6, 3.84844e-5])
-# mu_scaling = knee_mu
-mu_scaling = np.array([1., 1., 1.])
 
 #------------------------------------------------------------------------#
 # slicing the Pjl correctly in angular degree s and computing normalization
@@ -205,7 +211,7 @@ def get_GT_Cd_inv(c_arr):
     return GT_Cd_inv
 
 
-def model_misfit_fn(c_arr, mu_scale=mu_scaling):
+def model_misfit_fn(c_arr, mu_scale=knee_mu):
     # Djk is the same for s=1, 3, 5
     Djk = D_bsp_j_D_bsp_k
     sidx, eidx = 0, GVARS.knot_ind_th
