@@ -450,6 +450,7 @@ if PARGS.plot:
     fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full, ctrl_arr_err_full, 'fit',
                                        plotdir=plotdir)
 
+'''
 # plotting the hessians for analysis
 fig, ax = plt.subplots(1, 2, figsize=(10,5))
 
@@ -466,6 +467,7 @@ fig.colorbar(im2, cax=cax, orientation='vertical')
 plt.tight_layout()
 plt.savefig(f'{plotdir}/hessians.png')
 plt.close()
+'''
 
 soln_summary['c_arr_fit'] = c_arr_fit
 soln_summary['true_params_flat'] = true_params_flat

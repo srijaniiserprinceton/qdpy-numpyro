@@ -3,14 +3,17 @@ import shutil
 import numpy as np
 import fnmatch
 import re
-import sys
 import argparse
+import sys
 
 import make_run_params
 
-#-------------------------------------------------------------------#
+#----------------------READING THE INSTRUMENT--------------------------#
 parser = argparse.ArgumentParser()
+parser.add_argument("--hmi_mdi", help="whether to use hmi or mdi",
+                    type=str, default='hmi')
 ARGS = parser.parse_args()
+instr = ARGS.hmi_mdi
 
 #--------------------------------------------------------------------#
 current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -18,10 +21,10 @@ package_dir = os.path.dirname(current_dir)
 with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
-datadir = f"{scratch_dir}/input_files/hmi"
+datadir = f"{scratch_dir}/input_files/{instr}"
 
 #------------------READING THE DATA FILE NAMES-----------------------#
-datafnames = fnmatch.filter(os.listdir(datadir), 'hmi.in.*')
+datafnames = fnmatch.filter(os.listdir(datadir), '{instr}.in.*')
 
 # list to store the available daynum
 data_daynum_list = []

@@ -13,9 +13,7 @@ parser.add_argument("--synth", help="use synthetic data",
                     type=bool, default=False)
 parser.add_argument("--noise", help="add noise",
                     type=bool, default=True)
-parser.add_argument("--batch_run", help="flag to indicate its a batch run",
-                        type=int, default=0)
-parser.add_argument("--batch_rundir", help="local directory for batch run",
+parser.add_argument("--rundir", help="local directory for batch run",
                     type=str, default=".")
 PARGS = parser.parse_args()
 #------------------------------------------------------------------------# 
@@ -42,7 +40,7 @@ config.update('jax_enable_x64', True)
 print(jax.devices())
 #------------------------------------------------------------------------# 
 from qdpy import globalvars as gvar_jax
-from qdpy import jax_functions_dpy as jf
+from qdpy import jax_functions as jf
 #------------------------------------------------------------------------# 
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
@@ -50,28 +48,16 @@ with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
 
-if(not PARGS.batch_run):
-    n0lminlmax_dir_dpy = f"{package_dir}/dpy_jax"
-    n0lminlmax_dir_qdpy = f"{package_dir}/qdpy_jax"
-    outdir = f"{scratch_dir}/hybrid_jax"
-    summdir = f"{scratch_dir}/summaryfiles"
-    plotdir = f"{scratch_dir}/plots"
-    # defining the directories for dpy_jax and qdpy_jax files
-    dpy_dir = f"{scratch_dir}/dpy_jax"
-    qdpy_dir = f"{scratch_dir}/qdpy_jax"
+n0lminlmax_dir_dpy = f"{PARGS.rundir}/dpy_files"
+n0lminlmax_dir_qdpy = f"{PARGS.rundir}/qdpy_files"
+outdir = f"{PARGS.rundir}"
+summdir = f"{PARGS.rundir}/summaryfiles"
+plotdir = f"{PARGS.rundir}/plots"
 
-
-else:
-    n0lminlmax_dir_dpy = f"{PARGS.batch_rundir}/dpy_files"
-    n0lminlmax_dir_qdpy = f"{PARGS.batch_rundir}/qdpy_files"
-    outdir = f"{PARGS.batch_rundir}"
-    summdir = f"{PARGS.batch_rundir}/summaryfiles"
-    plotdir = f"{PARGS.batch_rundir}/plots"
-    # defining the directories for dpy_jax and qdpy_jax files
-    dpy_dir = f"{PARGS.batch_rundir}/dpy_files"
-    qdpy_dir = f"{PARGS.batch_rundir}/qdpy_files"
-
-
+# defining the directories for dpy_jax and qdpy_jax files
+dpy_dir = f"{PARGS.rundir}/dpy_files"
+dpyfull_dir = f"{PARGS.rundir}/dpy_full_hess"
+qdpy_dir = f"{PARGS.rundir}/qdpy_files"
 #------------------------------------------------------------------------# 
 sys.path.append(f"{package_dir}/plotter")
 import postplotter
@@ -92,9 +78,9 @@ GVARS_D = gvar_jax.GlobalVars(n0=int(ARGS_D[0]),
                               load_from_file=int(ARGS_D[5]),
                               relpath=n0lminlmax_dir_dpy,
                               instrument=PARGS.instrument,
-                              tslen=int(ARGS[6]),
-                              daynum=int(ARGS[7]),
-                              numsplits=int(ARGS[8]))
+                              tslen=int(ARGS_D[6]),
+                              daynum=int(ARGS_D[7]),
+                              numsplits=int(ARGS_D[8]))
 
 soln_summary['params']['dpy']['n0'] = int(ARGS_D[0])
 soln_summary['params']['dpy']['lmin'] = int(ARGS_D[1])
@@ -112,9 +98,9 @@ GVARS_Q = gvar_jax.GlobalVars(n0=int(ARGS_Q[0]),
                               load_from_file=int(ARGS_Q[5]),
                               relpath=n0lminlmax_dir_qdpy,
                               instrument=PARGS.instrument,
-                              tslen=int(ARGS[6]),
-                              daynum=int(ARGS[7]),
-                              numsplits=int(ARGS[8])))
+                              tslen=int(ARGS_Q[6]),
+                              daynum=int(ARGS_Q[7]),
+                              numsplits=int(ARGS_Q[8]))
 
 soln_summary['params']['qdpy']['n0'] = int(ARGS_Q[0])
 soln_summary['params']['qdpy']['lmin'] = int(ARGS_Q[1])
@@ -124,35 +110,37 @@ soln_summary['params']['qdpy']['knot_num'] = int(ARGS_Q[4])
 soln_summary['params']['qdpy']['GVARS'] = jf.dict2obj(GVARS_Q.__dict__)
 
 #-------------loading precomputed files for the problem-------------------# 
-data_D = np.load(f'{dpy_dir}/data_model.npy')
-true_params_flat_D = np.load(f'{dpy_dir}/true_params_flat.npy')
-param_coeff_flat_D = np.load(f'{dpy_dir}/param_coeff_flat.npy')
-fixed_part_D = np.load(f'{dpy_dir}/fixed_part.npy')
-acoeffs_sigma_HMI_D = np.load(f'{dpy_dir}/acoeffs_sigma_HMI.npy')
-acoeffs_HMI_D = np.load(f'{dpy_dir}/acoeffs_HMI.npy')
-cind_arr_D = np.load(f'{dpy_dir}/cind_arr.npy')
-sind_arr_D = np.load(f'{dpy_dir}/sind_arr.npy')
+sfxD = GVARS_D.filename_suffix
+data_D = np.load(f'{dpy_dir}/data_model.{sfxD}.npy')
+true_params_flat_D = np.load(f'{dpy_dir}/true_params_flat.{sfxD}.npy')
+param_coeff_flat_D = np.load(f'{dpy_dir}/param_coeff_flat.{sfxD}.npy')
+fixed_part_D = np.load(f'{dpy_dir}/fixed_part.{sfxD}.npy')
+acoeffs_sigma_HMI_D = np.load(f'{dpy_dir}/acoeffs_sigma_HMI.{sfxD}.npy')
+acoeffs_HMI_D = np.load(f'{dpy_dir}/acoeffs_HMI.{sfxD}.npy')
+cind_arr_D = np.load(f'{dpy_dir}/cind_arr.{sfxD}.npy')
+sind_arr_D = np.load(f'{dpy_dir}/sind_arr.{sfxD}.npy')
 # Reading RL poly from precomputed file
 # shape (nmults x (smax+1) x 2*ellmax+1) 
-RL_poly_D = np.load(f'{dpy_dir}/RL_poly.npy')
-sigma2scale = np.load(f'{dpy_dir}/sigma2scale.npy')
-D_bsp_j_D_bsp_k = np.load(f'{dpy_dir}/D_bsp_j_D_bsp_k.npy')
+RL_poly_D = np.load(f'{dpy_dir}/RL_poly.{sfxD}.npy')
+sigma2scale = np.load(f'{dpy_dir}/sigma2scale.{sfxD}.npy')
+D_bsp_j_D_bsp_k = np.load(f'{dpy_dir}/D_bsp_j_D_bsp_k.{sfxD}.npy')
 
 #-------------loading precomputed files for the problem-------------------#
-data_Q = np.load(f'{qdpy_dir}/data_model.npy')
-true_params_flat_Q = np.load(f'{qdpy_dir}/true_params_flat.npy')
-param_coeff_flat_Q = np.load(f'{qdpy_dir}/param_coeff_flat.npy')
-fixed_part_Q = np.load(f'{qdpy_dir}/fixed_part.npy')
-sparse_idx_Q = np.load(f'{qdpy_dir}/sparse_idx.npy')
-acoeffs_sigma_HMI_Q = np.load(f'{qdpy_dir}/acoeffs_sigma_HMI.npy')
-acoeffs_HMI_Q = np.load(f'{qdpy_dir}/acoeffs_HMI.npy')
-cind_arr_Q = np.load(f'{qdpy_dir}/cind_arr.npy')
-sind_arr_Q = np.load(f'{qdpy_dir}/sind_arr.npy')
-ell0_arr_Q = np.load(f'{qdpy_dir}/ell0_arr.npy')
-omega0_arr_Q = np.load(f'{qdpy_dir}/omega0_arr.npy')
+sfxQ = GVARS_Q.filename_suffix
+data_Q = np.load(f'{qdpy_dir}/data_model.{sfxQ}.npy')
+true_params_flat_Q = np.load(f'{qdpy_dir}/true_params_flat.{sfxQ}.npy')
+param_coeff_flat_Q = np.load(f'{qdpy_dir}/param_coeff_flat.{sfxQ}.npy')
+fixed_part_Q = np.load(f'{qdpy_dir}/fixed_part.{sfxQ}.npy')
+sparse_idx_Q = np.load(f'{qdpy_dir}/sparse_idx.{sfxQ}.npy')
+acoeffs_sigma_HMI_Q = np.load(f'{qdpy_dir}/acoeffs_sigma_HMI.{sfxQ}.npy')
+acoeffs_HMI_Q = np.load(f'{qdpy_dir}/acoeffs_HMI.{sfxQ}.npy')
+cind_arr_Q = np.load(f'{qdpy_dir}/cind_arr.{sfxQ}.npy')
+sind_arr_Q = np.load(f'{qdpy_dir}/sind_arr.{sfxQ}.npy')
+ell0_arr_Q = np.load(f'{qdpy_dir}/ell0_arr.{sfxQ}.npy')
+omega0_arr_Q = np.load(f'{qdpy_dir}/omega0_arr.{sfxQ}.npy')
 # Reading RL poly from precomputed file
 # shape (nmults x (smax+1) x 2*ellmax+1)
-RL_poly_Q = np.load(f'{qdpy_dir}/RL_poly.npy')
+RL_poly_Q = np.load(f'{qdpy_dir}/RL_poly.{sfxQ}.npy')
 
 #-------------------Miscellaneous parameters---------------------------#
 nmults_D = len(GVARS_D.ell0_arr)
@@ -200,9 +188,9 @@ del true_params_flat_D, true_params_flat_Q
 mu = PARGS.mu
 
 # calculating the DPT & model hessian once since it doesn't depend on c_arr
-suffix = f"{int(ARGS_Q[4])}s.{GVARS_Q.eigtype}.{GVARS_Q.tslen}d"
-data_hess_dpy = np.load(f"{dpy_dir}/dhess.{suffix}.npy")
-model_hess_dpy = np.load(f"{dpy_dir}/mhess.{suffix}.npy")
+suffix = f"{int(ARGS_Q[4])}s.{GVARS_Q.eigtype}.{sfxQ}"
+data_hess_dpy = np.load(f"{dpyfull_dir}/dhess.{suffix}.npy")
+model_hess_dpy = np.load(f"{dpyfull_dir}/mhess.{suffix}.npy")
 hess_inv = jnp.linalg.inv(data_hess_dpy + mu * model_hess_dpy)
 #------------------------------------------------------------------------#
 # calculating the denominator of DPT a-coefficient converion apriori
