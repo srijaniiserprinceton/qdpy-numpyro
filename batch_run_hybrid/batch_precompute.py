@@ -78,7 +78,7 @@ os.system(f"python {rlpoly_py} --outdir {rundir} --instrument {instr} \
             --batch_run 1 >{rl_out} 2>{rl_err}")
 
 #-------------------------SAVE REDUCED PROBLEM-----------------------------#
-if(ARGS.full_qdpy_dpy == 'qdpy'):
+if (ARGS.full_qdpy_dpy == 'qdpy'):
     save_reduced_py = f"{package_dir}/qdpy_jax/save_reduced_problem.py"
     # copying the sparsee_precompute_acoeff.py to the local run directory                     
     os.system(f"cp {package_dir}/qdpy_jax/sparse_precompute.py \

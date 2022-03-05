@@ -20,7 +20,7 @@ with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
 
-if(not PARGS.batch_run):
+if (not PARGS.batch_run):
     outdir = f"{scratch_dir}/{PARGS.outdir}"
     ipdir = f"{package_dir}/{PARGS.outdir}"
 else:
@@ -58,3 +58,4 @@ if __name__ == '__main__':
     print(f"Shape = {RL_poly.shape}")
     sfx = GVARS.filename_suffix
     np.save(f'{outdir}/RL_poly.{sfx}.npy', RL_poly)
+    print(f"Ritzlavely polynomials stored: {outdir}/RL_poly.{sfx}.npy")
