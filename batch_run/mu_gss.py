@@ -3,6 +3,10 @@ import re
 import numpy as np
 import argparse
 import fnmatch
+from qdpy import globalvars as gvar_jax
+from scipy.integrate import simps
+
+GVARS = gvar_jax.GlobalVars(rth=0.9, knot_num=15)
 
 #-----------------------------------------------------------------------#
 parser = argparse.ArgumentParser()
@@ -30,13 +34,28 @@ def compute_misfit(arr1, arr2):
     return np.sqrt(sum(abs(arr1 - arr2)**2))
 
 
+def compute_misfit_wsr(arr1, arr2):
+    if PARGS.s == 1: sind = 0
+    if PARGS.s == 3: sind = 1
+    if PARGS.s == 5: sind = 2
+    carr1 = GVARS.ctrl_arr_dpt_full * 1.0
+    carr2 = GVARS.ctrl_arr_dpt_full * 1.0
+    carr1[sind, GVARS.knot_ind_th:] = arr1
+    carr2[sind, GVARS.knot_ind_th:] = arr2
+    wsr1 = (carr1 @ GVARS.bsp_basis_full)[sind]
+    wsr2 = (carr2 @ GVARS.bsp_basis_full)[sind]
+    absdiff2 = abs(wsr1 - wsr2)**2
+    return np.sqrt(simps(absdiff2, x=GVARS.r))
+
+
+
 def f(mu1):
     os.system(f"python {run_newton_py} --read_hess 1 --instrument {instr} " +
               f"--mu {mu1} --batch_run 1 --batch_rundir {PARGS.rundir} " +
               f">{tempout} 2>{temperr}")
     
     val1 = np.load(f'{outdir}/carr_fit_{mu1:.5e}.npy')
-    mf = compute_misfit(val0, val1)
+    mf = compute_misfit_wsr(val0, val1)
     print(f" mu = {mu1:.5e}, misfit = {mf:.5e}")
     return mf
 
@@ -77,7 +96,8 @@ def gssrec(f, a, b, tol=1e-1, h=None, hp=None, c=None, d=None, fc=None, fd=None)
 
 #-----------------------------------------------------------------------# 
 # val0 corresponds to iterative solution
-fname = fnmatch.filter(os.listdir(PARGS.rundir), 'carr_iterative_*.npy')[0]
+# fname = fnmatch.filter(os.listdir(PARGS.rundir), 'carr_iterative_*.npy')[0]
+fname = fnmatch.filter(os.listdir(PARGS.rundir), 'true_params_flat_*.npy')[0]
 val0 = np.load(f'{PARGS.rundir}/{fname}')
 
 mu_limits = [1e-15, 1e-3]

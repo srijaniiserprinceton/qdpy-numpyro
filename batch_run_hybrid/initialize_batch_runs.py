@@ -69,8 +69,10 @@ def write_paramsfile(dirname, fname, run_params):
     return None
 
 
-nmin, nmax, lmin, lmax = 0, 0, 200, 210
-nmin_q, nmax_q, lmin_q, lmax_q = 0, 0, 200, 201
+# nmin, nmax, lmin, lmax = 0, 0, 200, 210
+# nmin_q, nmax_q, lmin_q, lmax_q = 0, 0, 200, 201
+nmin, nmax, lmin, lmax = 0, 30, 5, 295
+nmin_q, nmax_q, lmin_q, lmax_q = 0, 30, 161, 295
 
 smin, smax = 1, 5
 
@@ -101,5 +103,5 @@ for i in range(len(data_daynum_list)):
     run_params = make_run_params.make_run_params(nmin=nmin, nmax=nmax,
                                                  lmin=lmin, lmax=lmax,
                                                  daynum=daynum,
-                                                exclude_qdpy=1)
+                                                 exclude_qdpy=1)
     write_paramsfile(rundir_dpy, fname, run_params)

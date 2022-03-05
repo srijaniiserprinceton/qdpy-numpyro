@@ -490,10 +490,10 @@ loss_threshold = 1e-1
 maxiter = 50
 itercount = 0
 
-loss = _loss_fn(true_params_flat, dac_D, dac_Q, 1)
 model_misfit = model_misfit_fn(true_params_flat, 1)
+loss = _loss_fn(true_params_flat, data_acoeffs_D, data_acoeffs_Q, 1)
+grads = _grad_fn(true_params_flat, data_acoeffs_D, data_acoeffs_Q, 1)
 data_misfit = loss - mu * model_misfit
-grads = _grad_fn(true_params_flat, dac_D, dac_Q, 1)
 tinit = 0
 print(f'[{itercount:3d} | {tinit:6.1f} sec ] ' +
       f'data_misfit = {data_misfit:12.5e} loss-diff = {loss_diff:12.5e}; ' +
@@ -510,7 +510,7 @@ while ((abs(loss_diff) > loss_threshold) and
     grads = _grad_fn(c_arr, dac_D, dac_Q, 0)
     c_arr = _update_H(c_arr, grads, hess_inv)
     loss = _loss_fn(c_arr, dac_D, dac_Q, 0)
-    model_misfit = model_misfit_fn(c_arr, 0)
+    model_misfit = model_misfit_fn(c_arr+true_params_flat, 1)
     data_misfit = loss - mu*model_misfit
     loss_diff = loss_prev - loss
     loss_arr.append(loss)
