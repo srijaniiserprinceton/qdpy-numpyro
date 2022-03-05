@@ -385,7 +385,7 @@ t1s = time.time()
 data_acoeffs_iter = data_acoeffs*1.0
 c_arr_allk = [c_init]
 kiter = 0
-kmax = 6
+kmax = 5
 delta_k = 100000
 
 print(f"a5 = {data_acoeffs_iter[0::len_s][:6]}")
@@ -435,7 +435,6 @@ plot_acoeffs.plot_acoeffs_dm_scaled(final_acoeffs, data_acoeffs,
                                     acoeffs_sigma_HMI, 'final',
                                     plotdir=plotdir)
 #----------------------------------------------------------------------# 
-
 np.save(f"{outdir}/carr_iterative_{mu:.1e}_{kmax}k.npy", c_arr_total)
 c_arr_fit = c_arr_total/true_params_flat
 

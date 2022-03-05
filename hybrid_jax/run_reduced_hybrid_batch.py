@@ -398,12 +398,12 @@ if PARGS.synth:
 
 else:
     print("Using observed data")
-    '''
     data_acoeffs_D = GVARS_D.acoeffs_true
     data_acoeffs_Q = GVARS_Q.acoeffs_true
     '''
     data_acoeffs_D = GVARS_D.acoeffs_out_HMI
     data_acoeffs_Q = GVARS_Q.acoeffs_out_HMI
+    '''
 
 data_acoeffs_out_HMI_D = GVARS_D.acoeffs_out_HMI
 data_acoeffs_out_HMI_Q = GVARS_Q.acoeffs_out_HMI
