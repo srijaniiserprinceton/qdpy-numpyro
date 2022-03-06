@@ -6,7 +6,6 @@ import fnmatch
 from qdpy import globalvars as gvar_jax
 from scipy.integrate import simps
 
-GVARS = gvar_jax.GlobalVars(rth=0.9, knot_num=15)
 
 #-----------------------------------------------------------------------#
 parser = argparse.ArgumentParser()
@@ -30,6 +29,13 @@ tempout = f"{PARGS.rundir}/temp.out"
 temperr = f"{PARGS.rundir}/temp.err"
 outdir = f"{PARGS.rundir}"
 #-----------------------------------------------------------------------# 
+GVARS = gvar_jax.GlobalVars(rth=0.9, knot_num=15, relpath=PARGS.rundir)
+
+
+os.system(f"python {run_newton_py} --store_hess 1 --instrument {instr} " +
+      f"--mu {1.0} --batch_run 1 --batch_rundir {PARGS.rundir} " +
+      f">{tempout} 2>{temperr}")
+
 def compute_misfit(arr1, arr2):
     return np.sqrt(sum(abs(arr1 - arr2)**2))
 
@@ -51,6 +57,7 @@ def compute_misfit_wsr(arr1, arr2):
 
 def f(mu1):
     os.system(f"python {run_newton_py} --read_hess 1 --instrument {instr} " +
+    # os.system(f"python {run_newton_py} --instrument {instr} " +
               f"--mu {mu1} --batch_run 1 --batch_rundir {PARGS.rundir} " +
               f">{tempout} 2>{temperr}")
     
@@ -63,7 +70,7 @@ def f(mu1):
 invphi = (np.sqrt(5) - 1) / 2  # 1 / phi
 invphi2 = (3 - np.sqrt(5)) / 2  # 1 / phi^2
 
-def gssrec(f, a, b, tol=1e-1, h=None, hp=None, c=None, d=None, fc=None, fd=None):
+def gssrec(f, a, b, tol=1.0, h=None, hp=None, c=None, d=None, fc=None, fd=None):
     """ Golden-section search, recursive.
 
     Given a function f with a single local minimum in
@@ -97,7 +104,7 @@ def gssrec(f, a, b, tol=1e-1, h=None, hp=None, c=None, d=None, fc=None, fd=None)
 #-----------------------------------------------------------------------# 
 # val0 corresponds to iterative solution
 # fname = fnmatch.filter(os.listdir(PARGS.rundir), 'carr_iterative_*.npy')[0]
-fname = fnmatch.filter(os.listdir(PARGS.rundir), 'true_params_flat_*.npy')[0]
+fname = fnmatch.filter(os.listdir(PARGS.rundir), 'true_params_flat*.npy')[0]
 val0 = np.load(f'{PARGS.rundir}/{fname}')
 
 mu_limits = [1e-15, 1e-3]

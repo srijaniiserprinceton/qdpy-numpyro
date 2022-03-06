@@ -50,8 +50,8 @@ for i in range(len(data_daynum_list)):
 
 
 # adding optional parameters to not use default
-lmin = 5
-lmax = 295
+lmin = 200
+lmax = 210
 
 smin_arr = np.array([1, 3, 5])
 smax_arr = np.array([1, 3, 5])

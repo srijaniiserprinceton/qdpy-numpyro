@@ -73,6 +73,7 @@ else:
                              np.load(f"{PARGS.mu_batchdir}/muval.s5.npy")))
     except FileNotFoundError:
         knee_mu = np.array([1., 1., 1.])
+print(f"outdir = {outdir}")
 print(f"knee_mu = {knee_mu}")
 #----------------------------------------------------------------------#
 ARGS = np.loadtxt(f"{n0lminlmax_dir}/.n0-lmin-lmax.dat")
@@ -421,6 +422,7 @@ if PARGS.plot:
 # reconverting back to model_params in units of true_params_flat
 c_arr_fit = c_arr/true_params_flat
 np.save(f"{outdir}/carr_fit_{mu:.5e}.npy", c_arr)
+print(f"carrfit saved in: {outdir}/carr_fit_{mu:.5e}.npy")
 
 for i in range(len_s):
     print(c_arr_fit[i::len_s])
