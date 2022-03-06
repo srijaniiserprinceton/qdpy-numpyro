@@ -57,7 +57,7 @@ os.system(f'python {mode_lister_py} --nmin {nmin} --nmax {nmax} --batch_run 1 \
             --exclude_qdpy {exclude_qdpy} >{mlist_out} 2>{mlist_err}')
 
 #-------------------------------GENERATE---------------------------------#
-if(not ARGS.full_qdpy_dpy == 'qdpy'):
+if (not ARGS.full_qdpy_dpy == 'qdpy'):
     generate_py = f"{package_dir}/dpy_jax/generate_synthetic_eigvals.py"
     
     # copying the sparsee_precompute_acoeff.py to the local run directory
@@ -68,14 +68,6 @@ if(not ARGS.full_qdpy_dpy == 'qdpy'):
                --knot_num {knotnum} --rth {rth} --instrument {instr} \
                --tslen {tslen} --daynum {daynum} --numsplits {numsplits} \
                --batch_run 1 --batch_rundir {rundir}")
-
-#------------------------RITZLAVELY POLYNOMIALS---------------------------#
-rlpoly_py = f"{package_dir}/qdpy/precompute_ritzlavely.py"
-rl_out = f"{rundir}/.rl.out"
-rl_err = f"{rundir}/.rl.err"
-
-os.system(f"python {rlpoly_py} --outdir {rundir} --instrument {instr} \
-            --batch_run 1 >{rl_out} 2>{rl_err}")
 
 #-------------------------SAVE REDUCED PROBLEM-----------------------------#
 if (ARGS.full_qdpy_dpy == 'qdpy'):
@@ -93,3 +85,14 @@ else:
     
     os.system(f"python {save_reduced_py} --instrument {instr} --smin {smin} \
                 --smax {smax} --batch_run 1 --batch_rundir {rundir}")
+
+
+#------------------------RITZLAVELY POLYNOMIALS---------------------------#
+rlpoly_py = f"{package_dir}/qdpy/precompute_ritzlavely.py"
+rl_out = f"{rundir}/.rl.out"
+rl_err = f"{rundir}/.rl.err"
+
+os.system(f"python {rlpoly_py} --outdir {rundir} --instrument {instr} \
+            --batch_run 1 >{rl_out} 2>{rl_err}")
+
+
