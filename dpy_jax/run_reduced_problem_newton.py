@@ -73,13 +73,10 @@ else:
         knee_mu = np.hstack((np.load(f"{PARGS.mu_batchdir}/muval.s1.npy"),
                              np.load(f"{PARGS.mu_batchdir}/muval.s3.npy"),
                              np.load(f"{PARGS.mu_batchdir}/muval.s5.npy")))
-        found_optimal = True
     except FileNotFoundError:
         knee_mu = np.array([1., 1., 1.])
         found_optimal = False
 
-if found_optimal and PARGS.store_hess:
-    knee_mu *= 100.
 print(f"outdir = {outdir}")
 print(f"knee_mu = {knee_mu}")
 #----------------------------------------------------------------------#
@@ -129,7 +126,6 @@ smin = min(GVARS.s_arr)
 smax = max(GVARS.s_arr)
 len_s = len(sind_arr) # number of s to fit
 nc = len(cind_arr) # number of c to fit
-
 
 #------------------------------------------------------------------------#
 # slicing the Pjl correctly in angular degree s and computing normalization

@@ -122,15 +122,11 @@ try:
     knee_mu = np.hstack((np.load(f"{PARGS.batch_rundir}/muval.s1.npy"),
                          np.load(f"{PARGS.batch_rundir}/muval.s3.npy"),
                          np.load(f"{PARGS.batch_rundir}/muval.s5.npy")))
-    found_optimal = True
     print('Using optimal mu.')
 except FileNotFoundError:
     knee_mu = np.array([1., 1., 1.])
-    found_optimal = False
     print('Not using optimal mu.')
 
-if found_optimal:
-    knee_mu *= 100.
 
 print(f"knee_mu = {knee_mu}")
 # slicing the Pjl correctly in angular degree s
@@ -341,7 +337,7 @@ def iterative_RLS(c_arr, carr_fixed, fp, data_iter, iternum=0, lossthr=1e-3):
 
 #-----------------------the main training loop--------------------------#
 # initialization of params
-c_init = np.ones_like(true_params_flat) * true_params_flat * 1e+7
+c_init = np.ones_like(true_params_flat) * true_params_flat
 print(f"Number of parameters = {len(c_init)}")
 
 #------------------plotting the initial profiles-------------------#                     
