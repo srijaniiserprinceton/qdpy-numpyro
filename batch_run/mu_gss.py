@@ -52,7 +52,7 @@ def compute_misfit_wsr(arr1, arr2):
 def f(mu1):
     os.system(f"python {run_newton_py} --read_hess 1 --instrument {instr} " +
               f"--mu {mu1} --batch_run 1 --batch_rundir {PARGS.rundir} " +
-              f">{tempout} 2>{temperr}")
+              f"--s {PARGS.s} >{tempout} 2>{temperr}")
     
     val1 = np.load(f'{outdir}/carr_fit_{mu1:.5e}.npy')
     mf = compute_misfit_wsr(val0, val1)
@@ -97,7 +97,7 @@ def gssrec(f, a, b, tol=1e-1, h=None, hp=None, c=None, d=None, fc=None, fd=None)
 #-----------------------------------------------------------------------# 
 # val0 corresponds to iterative solution
 # fname = fnmatch.filter(os.listdir(PARGS.rundir), 'carr_iterative_*.npy')[0]
-fname = fnmatch.filter(os.listdir(PARGS.rundir), 'true_params_flat_*.npy')[0]
+fname = fnmatch.filter(os.listdir(PARGS.rundir), 'true_params_flat.*.npy')[0]
 val0 = np.load(f'{PARGS.rundir}/{fname}')
 
 mu_limits = [1e-15, 1e-3]

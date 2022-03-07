@@ -3,6 +3,7 @@ import re
 import sys
 import fnmatch
 import argparse
+import subprocess
 import numpy as np
 
 def params2vars(RP):
@@ -19,7 +20,7 @@ parser.add_argument("--rundir", help="local directory for one batch run",
 parser.add_argument("--s", help="the s case to run",
                     type=int)
 parser.add_argument("--mu", help="regularization",
-                    type=float, default=0.)
+                    type=float, default=1.0)
 ARGS = parser.parse_args()
 
 #-----------------------------QDPY DIRECTORY------------------------------#                   
@@ -30,14 +31,19 @@ package_dir = os.path.dirname(current_dir)
 local_rundir = re.split('[/]+', ARGS.rundir, flags=re.IGNORECASE)[-1]
 instr = re.split('[_]+', local_rundir, flags=re.IGNORECASE)[0]
 
+#----------------- getting full pythonpath -----------------------                            
+_pythonpath = subprocess.check_output("which python",
+                                        shell=True)
+pythonpath = _pythonpath.decode("utf-8").split("\n")[0]
+
 #--------------------------NEWTON RUN TO STORE HESS-----------------------#
 run_newton_py = f"{package_dir}/dpy_jax/run_reduced_problem_newton.py"
 
-os.system(f"python {run_newton_py} --mu {ARGS.mu} --store_hess 1 \
+os.system(f"{pythonpath} {run_newton_py} --mu {ARGS.mu} --store_hess 1 --s {ARGS.s}\
             --instrument {instr} --batch_run 1 --batch_rundir {ARGS.rundir}")
 
 #------------------------------ITERATIVE RUN------------------------------#
 run_iterative_py = f"{package_dir}/dpy_jax/run_reduced_problem_iterative.py"
 
-os.system(f"python {run_iterative_py} --mu {ARGS.mu} --read_hess 1 \
+os.system(f"{pythonpath} {run_iterative_py} --mu {ARGS.mu} --read_hess 1 --s {ARGS.s}\
             --instrument {instr} --batch_run 1 --batch_rundir {ARGS.rundir}")

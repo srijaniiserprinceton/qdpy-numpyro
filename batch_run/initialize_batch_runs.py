@@ -50,11 +50,12 @@ for i in range(len(data_daynum_list)):
 
 
 # adding optional parameters to not use default
-lmin = 5
-lmax = 295
 
-smin_arr = np.array([1, 3, 5])
-smax_arr = np.array([1, 3, 5])
+# nmin, nmax, lmin, lmax = 0, 30, 5, 295 
+nmin, nmax, lmin, lmax = 0, 0, 200, 201
+
+smin_arr = np.array([1, 3, 5, 1])
+smax_arr = np.array([1, 3, 5, 5])
 
 # writing the parameters in each run directory for bookkeeping
 for i in range(len(data_daynum_list)):
@@ -66,6 +67,7 @@ for i in range(len(data_daynum_list)):
         
         # getting dictionary of run params
         run_params = make_run_params.make_run_params(smin=smin,smax=smax,
+                                                     nmin=nmin,nmax=nmax,
                                                      lmin=lmin,lmax=lmax,
                                                      daynum=daynum)
 
