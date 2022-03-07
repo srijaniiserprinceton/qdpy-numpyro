@@ -16,8 +16,8 @@ def params2vars(RP):
 parser = argparse.ArgumentParser()
 parser.add_argument("--rundir", help="local directory for one batch run",
                     type=str)
-parser.add_argument("--s", help="the s case to run",
-                    type=int)
+parser.add_argument("--s", help="the s case to run; default is 0 which is all",
+                    type=int, default=0)
 ARGS = parser.parse_args()
 
 #-----------------------------QDPY DIRECTORY------------------------------# 
@@ -73,6 +73,20 @@ if(ARGS.s == 1):
     
     os.system(f"python {save_reduced_py} --instrument {instr} --smin {smin} \
                 --smax {smax} --batch_run 1 --batch_rundir {ARGS.rundir}")
+
+
+# to generate the precomptued files for the entire inversion (all s)
+elif(ARGS.s == 0):
+    #-------------------------READING THE RUNPARAMS---------------------------#               
+    RPARAMS = np.loadtxt(f"{ARGS.rundir}/.params_smin_1_smax_5.dat")
+    nmin, nmax, lmin, lmax, smin, smax, knotnum, rth, tslen, daynum, numsplits =\
+                                                                params2vars(RPARAMS)
+
+    #-------------------------SAVE REDUCED PROBLEM-----------------------------#              
+    save_reduced_py = f"{package_dir}/dpy_jax/save_reduced_problem.py"
+    os.system(f"python {save_reduced_py} --instrument {instr} --smin {smin} \
+                --smax {smax} --batch_run 1 --batch_rundir {ARGS.rundir}")
+
 
 else:
     #-------------------------READING THE RUNPARAMS---------------------------#

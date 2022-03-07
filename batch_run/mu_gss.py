@@ -59,7 +59,7 @@ def f(mu1):
     os.system(f"python {run_newton_py} --read_hess 1 --instrument {instr} " +
     # os.system(f"python {run_newton_py} --instrument {instr} " +
               f"--mu {mu1} --batch_run 1 --batch_rundir {PARGS.rundir} " +
-              f">{tempout} 2>{temperr}")
+              f"--s {PARGS.s} >{tempout} 2>{temperr}")
     
     val1 = np.load(f'{outdir}/carr_fit_{mu1:.5e}.npy')
     mf = compute_misfit_wsr(val0, val1)

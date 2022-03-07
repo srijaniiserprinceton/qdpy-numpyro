@@ -21,6 +21,8 @@ parser.add_argument("--mu_batchdir", help="directory of converged mu",
                     type=str, default=".")
 parser.add_argument("--plot", help="plot",
                     type=bool, default=False)
+parser.add_argument("--s", help="which s is being fit, default is 0 which is all",
+                    type=int, default=0)
 PARGS = parser.parse_args()
 #------------------------------------------------------------------------# 
 import numpy as np
@@ -60,7 +62,7 @@ if (not PARGS.batch_run):
     outdir = f"{scratch_dir}/dpy_jax"
     summdir = f"{scratch_dir}/summaryfiles"
     plotdir = f"{scratch_dir}/plots"
-    knee_mu = np.array([1.e-7, 1.e-7, 1.e-6])
+    knee_mu = np.array([1., 1., 1.])
 
 else:
     n0lminlmax_dir = f"{PARGS.batch_rundir}"
@@ -498,7 +500,7 @@ soln_summary['chisq'] = chisq
 todays_date = date.today()
 timeprefix = datetime.now().strftime("%H.%M")
 dateprefix = f"{todays_date.day:02d}.{todays_date.month:02d}.{todays_date.year:04d}"
-fsuffix = f"{dateprefix}-{timeprefix}-{hsuffix}"
-if(not PARGS.store_hess):
+fsuffix = f"{dateprefix}-{timeprefix}-{hsuffix}-{PARGS.s}"
+if(not PARGS.store_hess and not batch_run):
     jf.save_obj(soln_summary, f"{summdir}/summary.dpt-{fsuffix}")
 

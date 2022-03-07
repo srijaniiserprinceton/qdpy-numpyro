@@ -7,7 +7,7 @@ from datetime import datetime
 #------------------------------------------------------------------------------
 parser = argparse.ArgumentParser()
 parser.add_argument("--mu", help="regularization",
-                    type=float, default=0.)
+                    type=float, default=1.0)
 parser.add_argument("--store_hess", help="store hessians",
                     type=bool, default=False)
 parser.add_argument("--read_hess", help="store hessians",
@@ -18,6 +18,8 @@ parser.add_argument("--batch_run", help="flag to indicate its a batch run",
                     type=int, default=0)
 parser.add_argument("--batch_rundir", help="local directory for batch run",
                     type=str, default=".")
+parser.add_argument("--s", help="which s is being fit, default is 0 which is all",
+                    type=int, default=0)
 PARGS = parser.parse_args()
 #------------------------------------------------------------------------------
 
@@ -116,9 +118,14 @@ len_s = len(sind_arr)
 # number of c's to fit
 nc = len(cind_arr)
 
-mu_scaling = np.array([1., 1., 1.])
-knee_mu = np.array([2.15443e-5, 1.59381e-7, 1.29155e-7])
-# mu_scaling = knee_mu/knee_mu[0]
+try:
+    knee_mu = np.hstack((np.load(f"{PARGS.batch_rundir}/muval.s1.npy"),
+                         np.load(f"{PARGS.batch_rundir}/muval.s3.npy"),
+                         np.load(f"{PARGS.batch_rundir}/muval.s5.npy")))
+    print('Using optimal mu.')
+except FileNotFoundError:
+    knee_mu = np.array([1., 1., 1.])
+    print('Not using optimal mu.')
 
 # slicing the Pjl correctly in angular degree s
 Pjl = RL_poly[:, smin:smax+1:2, :]
@@ -202,7 +209,8 @@ print(f"[TESTING] pred_acoeffs = data_acoeffs: PASSED")
 
 #-----------------------------------------------------------------------#
 # changing to the HMI acoeffs if doing this for real data 
-data_acoeffs = GVARS.acoeffs_true
+# data_acoeffs = GVARS.acoeffs_true
+data_acoeffs = GVARS.acoeffs_out_HMI
 # np.random.seed(3)
 # data_acoeffs_err = np.random.normal(loc=0, scale=acoeffs_sigma_HMI)
 # data_acoeffs = data_acoeffs + 1.0*data_acoeffs_err
@@ -223,7 +231,7 @@ def data_misfit_fn(c_arr, fp, data_acoeffs_iter):
     return jnp.sum(jnp.square(data_misfit_arr))
 
 
-def model_misfit_fn(c_arr, carr_fixed, mu_scale=mu_scaling):
+def model_misfit_fn(c_arr, carr_fixed, mu_scale=knee_mu):
     # Djk is the same for s=1, 3, 5
     Djk = D_bsp_j_D_bsp_k
     sidx, eidx = 0, GVARS.knot_ind_th
@@ -385,7 +393,7 @@ t1s = time.time()
 data_acoeffs_iter = data_acoeffs*1.0
 c_arr_allk = [c_init]
 kiter = 0
-kmax = 5
+kmax = 8
 delta_k = 100000
 
 print(f"a5 = {data_acoeffs_iter[0::len_s][:6]}")
@@ -494,6 +502,6 @@ soln_summary['chisq'] = chisq
 todays_date = date.today()
 timeprefix = datetime.now().strftime("%H.%M")
 dateprefix = f"{todays_date.day:02d}.{todays_date.month:02d}.{todays_date.year:04d}"
-fsuffix = f"{dateprefix}-{timeprefix}-{hsuffix}"
+fsuffix = f"{dateprefix}-{timeprefix}-{hsuffix}-{PARGS.s}"
 jf.save_obj(soln_summary, f"{summdir}/summary.dpt.iterative-{fsuffix}")
 

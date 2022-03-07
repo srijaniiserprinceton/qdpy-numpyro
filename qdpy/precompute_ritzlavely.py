@@ -58,4 +58,3 @@ if __name__ == '__main__':
     print(f"Shape = {RL_poly.shape}")
     sfx = GVARS.filename_suffix
     np.save(f'{outdir}/RL_poly.{sfx}.npy', RL_poly)
-    print(f"Ritzlavely polynomials stored: {outdir}/RL_poly.{sfx}.npy")
