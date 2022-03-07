@@ -73,8 +73,13 @@ else:
         knee_mu = np.hstack((np.load(f"{PARGS.mu_batchdir}/muval.s1.npy"),
                              np.load(f"{PARGS.mu_batchdir}/muval.s3.npy"),
                              np.load(f"{PARGS.mu_batchdir}/muval.s5.npy")))
+        found_optimal = True
     except FileNotFoundError:
         knee_mu = np.array([1., 1., 1.])
+        found_optimal = False
+
+if found_optimal and PARGS.store_hess:
+    knee_mu *= 100.
 print(f"outdir = {outdir}")
 print(f"knee_mu = {knee_mu}")
 #----------------------------------------------------------------------#
@@ -226,8 +231,6 @@ def model_misfit_fn(c_arr, mu_scale=knee_mu):
         lambda_factor = jnp.trace(data_hess_dpy[i::len_s, i::len_s])
         lambda_factor /= len_data * len_s
         cDc += mu_scale[i] * cd @ Djk @ cd * lambda_factor
-        # norm_c = jnp.square(cd - GVARS.ctrl_arr_dpt_full[sind_arr[i]])
-        # cDc += jnp.sum(mu_depth * norm_c)
     return cDc
 
 
@@ -500,6 +503,6 @@ todays_date = date.today()
 timeprefix = datetime.now().strftime("%H.%M")
 dateprefix = f"{todays_date.day:02d}.{todays_date.month:02d}.{todays_date.year:04d}"
 fsuffix = f"{dateprefix}-{timeprefix}-{hsuffix}-{PARGS.s}"
-if(not PARGS.store_hess and not batch_run):
+if(not PARGS.store_hess and not PARGS.batch_run):
     jf.save_obj(soln_summary, f"{summdir}/summary.dpt-{fsuffix}")
 

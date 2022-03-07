@@ -122,11 +122,17 @@ try:
     knee_mu = np.hstack((np.load(f"{PARGS.batch_rundir}/muval.s1.npy"),
                          np.load(f"{PARGS.batch_rundir}/muval.s3.npy"),
                          np.load(f"{PARGS.batch_rundir}/muval.s5.npy")))
+    found_optimal = True
     print('Using optimal mu.')
 except FileNotFoundError:
     knee_mu = np.array([1., 1., 1.])
+    found_optimal = False
     print('Not using optimal mu.')
 
+if found_optimal:
+    knee_mu *= 100.
+
+print(f"knee_mu = {knee_mu}")
 # slicing the Pjl correctly in angular degree s
 Pjl = RL_poly[:, smin:smax+1:2, :]
 #------------------------------------------------------------------------#
@@ -147,6 +153,14 @@ acoeffs_sigma_HMI = jnp.asarray(acoeffs_sigma_HMI)
 aconv_denom = jnp.asarray(aconv_denom)
 
 #---------------------------------------------------------------------------
+def umax(arr):
+    maxval = max(arr)
+    minval = min(arr)
+    if abs(maxval) >= abs(minval):
+        return maxval
+    else:
+        return minval
+
 def print_info(itercount, tdiff, data_misfit, loss_diff, max_grads, model_misfit):
     print(f'[{itercount:3d} | ' +
           f'{tdiff:6.1f} sec ] ' +
@@ -327,7 +341,7 @@ def iterative_RLS(c_arr, carr_fixed, fp, data_iter, iternum=0, lossthr=1e-3):
 
 #-----------------------the main training loop--------------------------#
 # initialization of params
-c_init = np.ones_like(true_params_flat) * true_params_flat
+c_init = np.ones_like(true_params_flat) * true_params_flat * 1e+7
 print(f"Number of parameters = {len(c_init)}")
 
 #------------------plotting the initial profiles-------------------#                     
@@ -363,7 +377,7 @@ N0 = 5
 itercount = 0
 
 hsuffix = f"{int(ARGS[4])}s.{GVARS.eigtype}"
-print(hsuffix)
+print(hsuffix, f"{outdir}/dhess.{hsuffix}.{sfx}.npy")
 if PARGS.read_hess:
     data_hess_dpy = np.load(f"{outdir}/dhess.{hsuffix}.{sfx}.npy")
     model_hess_dpy = np.load(f"{outdir}/mhess.{hsuffix}.{sfx}.npy")
@@ -379,7 +393,6 @@ if PARGS.store_hess:
     np.save(f"{outdir}/dhess.{hsuffix}.{sfx}.npy", data_hess_dpy)
     np.save(f"{outdir}/mhess.{hsuffix}.{sfx}.npy", model_hess_dpy)
 
-
 tdiff = 0
 grads = _grad_fn(c_init, GVARS.ctrl_arr_dpt_full, fixed_part, data_acoeffs)
 loss = _loss_fn(c_init, GVARS.ctrl_arr_dpt_full, fixed_part, data_acoeffs)
@@ -389,19 +402,28 @@ print_info(itercount, tdiff, data_misfit, loss_diff, abs(grads).max(), model_mis
 steplen = 1.0e-2
 t1s = time.time()
 
+# print(f"grads = {grads[:10]}")
+# print(f"grad @ hess_inv = {(grads @ hess_inv)[:10]}")
+
 data_acoeffs_iter = data_acoeffs*1.0
 c_arr_allk = [c_init]
 kiter = 0
-kmax = 8
+kmax = 5
 delta_k = 100000
 
-print(f"a5 = {data_acoeffs_iter[0::len_s][:6]}")
+print(f"-----------------BEFORE FITTING ---------------------")
+for i in range(len_s):
+    s = 2*sind_arr[i] + 1
+    print(f"   a{s} = {data_acoeffs_iter[sind_arr[i]::3][:6]}")
+print(f"-----------------------------------------------------")
 c_arr = iterative_RLS(c_init, GVARS.ctrl_arr_dpt_full, fixed_part, data_acoeffs_iter)
 data_acoeffs_iter = data_misfit_arr_fn(c_arr, fixed_part,
                                        data_acoeffs_iter)*acoeffs_sigma_HMI
 prntarr = c_arr[0::len_s]/true_params_flat[0::len_s]
-print(f"c5 = {prntarr[:6]}")
-print(f"a5 = {data_acoeffs_iter[0::len_s][:6]}")
+for i in range(len_s):
+    s = 2*sind_arr[i] + 1
+    print(f"   c{s} = {prntarr[i::len_s][:6]}")
+    print(f"   a{s} = {data_acoeffs_iter[sind_arr[i]::3][:6]}")
 
 ctot_local = c_arr * 1.0
 c_arr_total = c_arr * 1.0
@@ -416,15 +438,21 @@ while(kiter < kmax):
         data_acoeffs_iter = data_misfit_arr_fn(c_arr, fixed_part*0.0,
                                                data_acoeffs_iter)*acoeffs_sigma_HMI
 
-    prntarr = c_arr_total[0::len_s]/true_params_flat[0::len_s]
-    print(f"c5 = {prntarr[:6]}")
-    print(f"a5 = {data_acoeffs_iter[0::len_s][:6]}")
+    prntarr = c_arr_total/true_params_flat
+    for i in range(len_s):
+        s = 2*sind_arr[i] + 1
+        print(f"   c{s} = {prntarr[i::len_s][:6]}")
+        print(f"   a{s} = {data_acoeffs_iter[i::len_s][:6]}")
     c_arr_allk.append(ctot_local)
     kiter += 1
     ctot_local = 0.0
 
-    delta_k = max(abs(c_arr_allk[-1] - c_arr_allk[-2]))
-    print(f"[{kiter}] --- delta_k = {delta_k}")
+    diff_ratio = (c_arr_allk[-1] - c_arr_allk[-2])/true_params_flat
+    print(f"[{kiter}] --- delta_k_old = {max(abs(diff_ratio*true_params_flat))}")
+    diff_ratio_s = [diff_ratio[i::len_s] for i in range(len_s)]
+    delta_k = [umax(diff_ratio_s[i]) for i in range(len_s)]
+    print(f"[{kiter}] --- delta_k_new = {delta_k}")
+    print(f"-----------------------------------------------------")
 
 
 #----------------------------------------------------------------------#
