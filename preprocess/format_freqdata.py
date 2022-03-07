@@ -72,8 +72,8 @@ def setup_reformatting(fname):
     mu = a[:, 2][sorted_idx]
     sind = a[:, 3][sorted_idx].astype('int')
 
-    ac_obs = a[:, 6][sorted_idx]
-    ac_inv = a[:, 7][sorted_idx]
+    ac_inv = a[:, 6][sorted_idx]
+    ac_obs = a[:, 7][sorted_idx]
     asig = a[:, -1][sorted_idx]
     ac_ois = (ac_obs, ac_inv, asig)
 

@@ -280,8 +280,7 @@ print(f"[TESTING] pred_acoeffs = data_acoeffs: PASSED")
 
 #---------------------- setting data-acoeffs ---------------------------#
 # changing to the HMI acoeffs if doing this for real data 
-# data_acoeffs = GVARS.acoeffs_true
-data_acoeffs = GVARS.acoeffs_out_HMI
+data_acoeffs = GVARS.acoeffs_true
 # np.random.seed(3)
 # data_acoeffs_err = np.random.normal(loc=0, scale=acoeffs_sigma_HMI)
 # data_acoeffs = data_acoeffs + 0.0*data_acoeffs_err
