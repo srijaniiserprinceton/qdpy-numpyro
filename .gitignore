@@ -20,3 +20,4 @@ qdpy_iofiles
 hmi*
 mdi*
 *.pkl
+jobscripts/bashbatch
