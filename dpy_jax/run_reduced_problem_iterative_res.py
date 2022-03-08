@@ -116,9 +116,7 @@ len_s = len(sind_arr)
 # number of c's to fit
 nc = len(cind_arr)
 
-mu_scaling = np.array([1., 1., 1.])
 knee_mu = np.array([2.15443e-5, 1.59381e-7, 1.29155e-7])
-# mu_scaling = knee_mu/knee_mu[0]
 
 # slicing the Pjl correctly in angular degree s
 Pjl = RL_poly[:, smin:smax+1:2, :]
@@ -223,7 +221,7 @@ def data_misfit_fn(c_arr, fp, data_acoeffs_iter):
     return jnp.sum(jnp.square(data_misfit_arr))
 
 
-def model_misfit_fn(c_arr, carr_fixed, mu_scale=mu_scaling):
+def model_misfit_fn(c_arr, carr_fixed, mu_scale=knee_mu):
     # Djk is the same for s=1, 3, 5
     Djk = D_bsp_j_D_bsp_k
     sidx, eidx = 0, GVARS.knot_ind_th
@@ -455,7 +453,7 @@ c_arr_fit_full = jf.c4fit_2_c4plot(GVARS, c_arr_fit*true_params_flat,
 
 # converting ctrl points to wsr and plotting
 fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full,
-                                   ctrl_zero_error, 'fit',
+                                   ctrl_zero_error, 'fit-iter-res-',
                                    plotdir=plotdir)
 #------------------------------------------------------------------------# 
 # plotting the hessians for analysis

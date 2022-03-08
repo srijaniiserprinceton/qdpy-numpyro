@@ -124,7 +124,7 @@ try:
                          np.load(f"{PARGS.batch_rundir}/muval.s5.npy")))
     print('Using optimal mu.')
 except FileNotFoundError:
-    knee_mu = np.array([1., 1., 1.])
+    knee_mu = np.array([1.e-3, 1.e-3, 1.e-3])
     print('Not using optimal mu.')
 
 
@@ -369,7 +369,7 @@ loss_diff = loss - 1.
 loss_arr = []
 loss_threshold = 1e-12
 maxiter = 20
-N0 = 5
+N0 = 3
 itercount = 0
 
 hsuffix = f"{int(ARGS[4])}s.{GVARS.eigtype}"
@@ -404,7 +404,7 @@ t1s = time.time()
 data_acoeffs_iter = data_acoeffs*1.0
 c_arr_allk = [c_init]
 kiter = 0
-kmax = 5
+kmax = 8
 delta_k = 100000
 
 print(f"-----------------BEFORE FITTING ---------------------")
@@ -485,7 +485,7 @@ c_arr_fit_full = jf.c4fit_2_c4plot(GVARS, c_arr_fit*true_params_flat,
 
 # converting ctrl points to wsr and plotting
 fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full,
-                                   ctrl_zero_error, 'fit',
+                                   ctrl_zero_error, 'fit-iter',
                                    plotdir=plotdir)
 #------------------------------------------------------------------------# 
 # plotting the hessians for analysis
