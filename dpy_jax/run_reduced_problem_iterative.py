@@ -440,7 +440,6 @@ while(kiter < kmax):
         print(f"   c{s} = {prntarr[i::len_s][:6]}")
         print(f"   a{s} = {data_acoeffs_iter[i::len_s][:6]}")
     c_arr_allk.append(ctot_local)
-    kiter += 1
     ctot_local = 0.0
 
     diff_ratio = (c_arr_allk[-1] - c_arr_allk[-2])/true_params_flat
@@ -449,6 +448,18 @@ while(kiter < kmax):
     delta_k = [umax(diff_ratio_s[i]) for i in range(len_s)]
     print(f"[{kiter}] --- delta_k_new = {delta_k}")
     print(f"-----------------------------------------------------")
+
+    #------------------plotting the post fitting profiles-------------------#
+    _ctot_full = jf.c4fit_2_c4plot(GVARS, c_arr_total,
+                                    sind_arr, cind_arr)
+
+    # converting ctrl points to wsr and plotting
+    fit_plot = postplotter.postplotter(GVARS, _ctot_full,
+                                       ctrl_zero_error, 'fit-kiter={kiter}',
+                                       plotdir=plotdir)
+    #------------------------------------------------------------------------# 
+    kiter += 1
+
 
 
 #----------------------------------------------------------------------#
