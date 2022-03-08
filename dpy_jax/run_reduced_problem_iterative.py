@@ -124,7 +124,7 @@ try:
                          np.load(f"{PARGS.batch_rundir}/muval.s5.npy")))
     print('Using optimal mu.')
 except FileNotFoundError:
-    knee_mu = np.array([1.e-3, 1.e-3, 1.e-3])
+    knee_mu = np.array([5.e-5, 5.e-5, 5.e-5])
     print('Not using optimal mu.')
 
 
@@ -337,7 +337,7 @@ def iterative_RLS(c_arr, carr_fixed, fp, data_iter, iternum=0, lossthr=1e-3):
 
 #-----------------------the main training loop--------------------------#
 # initialization of params
-c_init = np.ones_like(true_params_flat) * true_params_flat
+c_init = np.ones_like(true_params_flat) * true_params_flat * 1e-7
 print(f"Number of parameters = {len(c_init)}")
 
 #------------------plotting the initial profiles-------------------#                     
@@ -369,7 +369,7 @@ loss_diff = loss - 1.
 loss_arr = []
 loss_threshold = 1e-12
 maxiter = 20
-N0 = 3
+N0 = 5
 itercount = 0
 
 hsuffix = f"{int(ARGS[4])}s.{GVARS.eigtype}"
@@ -404,7 +404,7 @@ t1s = time.time()
 data_acoeffs_iter = data_acoeffs*1.0
 c_arr_allk = [c_init]
 kiter = 0
-kmax = 8
+kmax = 10
 delta_k = 100000
 
 print(f"-----------------BEFORE FITTING ---------------------")
@@ -455,7 +455,7 @@ while(kiter < kmax):
 
     # converting ctrl points to wsr and plotting
     fit_plot = postplotter.postplotter(GVARS, _ctot_full,
-                                       ctrl_zero_error, 'fit-kiter={kiter}',
+                                       ctrl_zero_error, f'fit-kiter={kiter}',
                                        plotdir=plotdir)
     #------------------------------------------------------------------------# 
     kiter += 1

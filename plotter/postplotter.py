@@ -17,7 +17,7 @@ plotdir_global = f"{scratch_dir}/plots"
 
 class postplotter:
     def __init__(self, GVARS, ctrl_arr_fit_full, ctrl_arr_err_full, tag,
-                 color='red', plotdir=plotdir_global):
+                 color='red', plotdir=plotdir_global, onlywsr=True):
         self.GVARS = GVARS
         self.r = GVARS.r
         self.OM = GVARS.OM
@@ -33,9 +33,10 @@ class postplotter:
 
         # plotting
         self.plot_fit_wsr()
-        self.plot_fit_wsr_w_error()
-        self.plot_fit_wsr_zoom()
-        self.plot_omega_rtheta()
+        if not onlywsr:
+            self.plot_fit_wsr_w_error()
+            self.plot_fit_wsr_zoom()
+            self.plot_omega_rtheta()
 
     def plot_fit_wsr(self, fig=None, ax=None, pcolor='red'):
         if fig == None and ax == None:
