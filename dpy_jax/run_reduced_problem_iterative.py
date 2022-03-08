@@ -122,7 +122,7 @@ try:
     knee_mu = np.hstack((np.load(f"{PARGS.batch_rundir}/muval.s1.npy"),
                          np.load(f"{PARGS.batch_rundir}/muval.s3.npy"),
                          np.load(f"{PARGS.batch_rundir}/muval.s5.npy")))
-    knee_mu *= 10.
+    knee_mu *= 100.
     print('Using optimal mu.')
 except FileNotFoundError:
     knee_mu = np.array([1.e-4, 1.e-4, 5.e-4])
@@ -157,6 +157,7 @@ def umax(arr):
         return maxval
     else:
         return minval
+
 
 def print_info(itercount, tdiff, data_misfit, loss_diff, max_grads, model_misfit):
     print(f'[{itercount:3d} | ' +
@@ -483,8 +484,11 @@ for i in range(len_s):
 ctot_local = c_arr * 1.0
 c_arr_total = c_arr * 1.0
 
+num_convg = 0
+
 while(kiter < kmax):
     for ii in tqdm(range(2**kiter * N0), desc=f"k={kiter}"):
+    # for ii in tqdm(range(N0), desc=f"k={kiter}"):
         c_arr = 0.0 * c_init
         c_arr = iterative_RLS(c_arr, GVARS.ctrl_arr_dpt_full*0.0,
                               fixed_part*0.0, data_acoeffs_iter, iternum=2**kiter+1)
@@ -512,7 +516,6 @@ while(kiter < kmax):
     diff_ratio_s = [diff_ratio[i::len_s] for i in range(len_s)]
     delta_k = [umax(diff_ratio_s[i]) for i in range(len_s)]
     print(f"[{kiter}] --- delta_k_new = {delta_k}")
-    print(f"-----------------------------------------------------")
 
     #------------------plotting the post fitting profiles-------------------#
     _ctot_full = jf.c4fit_2_c4plot(GVARS, c_arr_total,
@@ -525,7 +528,16 @@ while(kiter < kmax):
     #------------------------------------------------------------------------# 
     kiter += 1
 
+    convg = [di<0.65 for di in diffsig_k]
+    sum_convg = sum(convg)
+    print(f"k={kiter}; convg = {convg}")
+    if sum_convg != num_convg:
+        # kiter -= 2
+        num_convg = sum_convg * 1
 
+    if sum_convg == len_s:
+        break
+    print(f"-----------------------------------------------------")
 
 #----------------------------------------------------------------------#
 # plotting acoeffs from initial data and HMI data
