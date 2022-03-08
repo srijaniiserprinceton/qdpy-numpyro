@@ -122,9 +122,10 @@ try:
     knee_mu = np.hstack((np.load(f"{PARGS.batch_rundir}/muval.s1.npy"),
                          np.load(f"{PARGS.batch_rundir}/muval.s3.npy"),
                          np.load(f"{PARGS.batch_rundir}/muval.s5.npy")))
+    knee_mu *= 10.
     print('Using optimal mu.')
 except FileNotFoundError:
-    knee_mu = np.array([5.e-5, 5.e-5, 5.e-5])
+    knee_mu = np.array([1.e-4, 1.e-4, 5.e-4])
     print('Not using optimal mu.')
 
 
@@ -226,6 +227,36 @@ data_acoeffs = GVARS.acoeffs_true
 data_acoeffs_out_HMI = GVARS.acoeffs_out_HMI
 print(f"data_acoeffs = {data_acoeffs[:15]}")
 #-----------------------------------------------------------------------#
+def get_pc_pjl(c_arr):
+    pred = param_coeff_flat
+    pc_pjl = jnp.zeros((len(c_arr), num_j * nmults))
+
+    def loop_in_c(cind, pc):
+        def loop_in_mults2(mult_ind, pred_acoeff):
+            pred_omega = jdc(pred[cind], (mult_ind*dim_hyper,), (dim_hyper,))
+            pred_acoeff = jdc_update(pred_acoeff,
+                                    (Pjl[mult_ind] @ pred_omega)/aconv_denom[mult_ind],
+                                    (mult_ind * num_j,))
+            return pred_acoeff
+
+        pcpjl = foril(0, nmults, loop_in_mults2, pc[cind])
+        pc = jidx_update(pc,
+                         jidx[cind, :],
+                         pcpjl)
+        return pc
+
+    pc_pjl = foril(0, len(c_arr), loop_in_c, pc_pjl)
+    return pc_pjl
+
+
+def get_GT_Cd_inv(c_arr):
+    '''Function to compute G.T @ Cd_inv
+    for obtaining the G^{-g} later.'
+    '''
+    pc_pjl = get_pc_pjl(c_arr)
+    GT_Cd_inv= pc_pjl @ np.diag(1/acoeffs_sigma_HMI**2)
+    return GT_Cd_inv
+
 
 def data_misfit_arr_fn(c_arr, fp, data_acoeffs_iter):
     pred = fp + c_arr @ param_coeff_flat
@@ -274,6 +305,21 @@ def update_cgrad(c_arr, grads, steplen):
 def update_H(c_arr, grads, hess_inv):
     return jax.tree_multimap(lambda c, g, h: c - g @ h, c_arr, grads, hess_inv)
 
+
+def get_wsr(carr):
+    carr1 = GVARS.ctrl_arr_dpt_full * 1.0
+    for i in range(len_s):
+        carr1[sind_arr[i], GVARS.knot_ind_th:] = carr[i]
+    wsr_full = carr1 @ GVARS.bsp_basis_full
+    wsr = [wsr_full[sind_arr[i]] for i in range(len_s)]
+    return np.array(wsr)
+
+
+def compute_misfit_wsr(arr1, arr2, sig):
+    wsr1 = get_wsr(arr1)
+    wsr2 = get_wsr(arr2)
+    absdiff_by_sig = abs(wsr1 - wsr2)/sig
+    return [absdiff_by_sig[i] for i in range(len_s)]
 #----------------------------------------------------------------------# 
 # plotting acoeffs pred and data to see if we should expect got fit
 plot_acoeffs.plot_acoeffs_datavsmodel(pred_acoeffs, data_acoeffs,
@@ -333,7 +379,6 @@ def iterative_RLS(c_arr, carr_fixed, fp, data_iter, iternum=0, lossthr=1e-3):
     t2s = time.time()
     # print(f"-------------------------------------------------------------------------")
     return c_arr
-    
 
 #-----------------------the main training loop--------------------------#
 # initialization of params
@@ -369,7 +414,7 @@ loss_diff = loss - 1.
 loss_arr = []
 loss_threshold = 1e-12
 maxiter = 20
-N0 = 5
+N0 = 1
 itercount = 0
 
 hsuffix = f"{int(ARGS[4])}s.{GVARS.eigtype}"
@@ -389,6 +434,20 @@ if PARGS.store_hess:
     np.save(f"{outdir}/dhess.{hsuffix}.{sfx}.npy", data_hess_dpy)
     np.save(f"{outdir}/mhess.{hsuffix}.{sfx}.npy", model_hess_dpy)
 
+
+#----------------- finding sigma for carr iterative ------------------#
+# can be shown that the model covariance matrix has the following form
+# C_m = G^{-g} @ C_d @ G^{-g}.T
+# G^{-g} = total_hess_inv @ G.T @ C_d_inv
+
+GT_Cd_inv_k = get_GT_Cd_inv(true_params_flat)
+G_g_inv_k = hess_inv @ GT_Cd_inv_k
+C_d_k = jnp.diag(acoeffs_sigma_HMI**2)
+C_m_k = jf.get_model_covariance(G_g_inv_k, C_d_k)
+carr_sigma = jnp.sqrt(jnp.diag(C_m_k))
+wsr_sigma = get_wsr(carr_sigma)
+
+#----------------------------------------------------------------------#
 tdiff = 0
 grads = _grad_fn(c_init, GVARS.ctrl_arr_dpt_full, fixed_part, data_acoeffs)
 loss = _loss_fn(c_init, GVARS.ctrl_arr_dpt_full, fixed_part, data_acoeffs)
@@ -442,8 +501,14 @@ while(kiter < kmax):
     c_arr_allk.append(ctot_local)
     ctot_local = 0.0
 
-    diff_ratio = (c_arr_allk[-1] - c_arr_allk[-2])/true_params_flat
-    print(f"[{kiter}] --- delta_k_old = {max(abs(diff_ratio*true_params_flat))}")
+    diffval = c_arr_allk[-1] - c_arr_allk[-2]
+    diff_ratio = diffval/true_params_flat
+    diff_by_sigma = diffval/carr_sigma
+    # diffsig_s = [diff_by_sigma[i::len_s] for i in range(len_s)]
+    diffsig_s = compute_misfit_wsr(c_arr_allk[-1], c_arr_allk[-2], wsr_sigma)
+    diffsig_k = [max(diffsig_s[i]) for i in range(len_s)]
+    print(f"[{kiter}] --- delta_k_old = {max(abs(diffval))}")
+    print(f"[{kiter}] --- diff/sigma = {diffsig_k}")
     diff_ratio_s = [diff_ratio[i::len_s] for i in range(len_s)]
     delta_k = [umax(diff_ratio_s[i]) for i in range(len_s)]
     print(f"[{kiter}] --- delta_k_new = {delta_k}")
