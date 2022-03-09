@@ -1,5 +1,6 @@
 import os
 import time
+from scipy import integrate
 from tqdm import tqdm
 import argparse
 from datetime import date
@@ -320,7 +321,23 @@ def compute_misfit_wsr(arr1, arr2, sig):
     wsr1 = get_wsr(arr1)
     wsr2 = get_wsr(arr2)
     absdiff_by_sig = abs(wsr1 - wsr2)/sig
-    return [absdiff_by_sig[i] for i in range(len_s)]
+    diffsig_s = [absdiff_by_sig[i] for i in range(len_s)]
+    return [max(diffsig_s[i]) for i in range(len_s)]
+
+def compute_misfit_wsr_2(arr1, arr2, sig):
+    wsr1 = get_wsr(arr1)
+    wsr2 = get_wsr(arr2)
+    diff_by_sig = (wsr1 - wsr2)/sig
+    
+    integrand = diff_by_sig**2
+    
+    integral = integrate.trapz(integrand, GVARS.r, axis=1)
+    sum_integral_alls = np.sum(integral)
+    
+    sum_integral_alls_scaled = sum_integral_alls / (GVARS.r.max() - GVARS.rth)
+
+    return sum_integral_alls_scaled
+
 #----------------------------------------------------------------------# 
 # plotting acoeffs pred and data to see if we should expect got fit
 plot_acoeffs.plot_acoeffs_datavsmodel(pred_acoeffs, data_acoeffs,
@@ -476,6 +493,9 @@ c_arr = iterative_RLS(c_init, GVARS.ctrl_arr_dpt_full, fixed_part, data_acoeffs_
 data_acoeffs_iter = data_misfit_arr_fn(c_arr, fixed_part,
                                        data_acoeffs_iter)*acoeffs_sigma_HMI
 prntarr = c_arr[0::len_s]/true_params_flat[0::len_s]
+
+c_arr_allk.append(c_arr)
+
 for i in range(len_s):
     s = 2*sind_arr[i] + 1
     print(f"   c{s} = {prntarr[i::len_s][:6]}")
@@ -502,17 +522,21 @@ while(kiter < kmax):
         s = 2*sind_arr[i] + 1
         print(f"   c{s} = {prntarr[i::len_s][:6]}")
         print(f"   a{s} = {data_acoeffs_iter[i::len_s][:6]}")
-    c_arr_allk.append(ctot_local)
-    ctot_local = 0.0
+    # c_arr_allk.append(ctot_local)
+    c_arr_allk.append(c_arr_total)
+    ctot_local *= 0.0
 
     diffval = c_arr_allk[-1] - c_arr_allk[-2]
     diff_ratio = diffval/true_params_flat
     diff_by_sigma = diffval/carr_sigma
     # diffsig_s = [diff_by_sigma[i::len_s] for i in range(len_s)]
-    diffsig_s = compute_misfit_wsr(c_arr_allk[-1], c_arr_allk[-2], wsr_sigma)
-    diffsig_k = [max(diffsig_s[i]) for i in range(len_s)]
+    # diffsig_s = compute_misfit_wsr(c_arr_allk[-1], c_arr_allk[-2], wsr_sigma)
+    # diffsig_k = [max(diffsig_s[i]) for i in range(len_s)]
+    diffsig_k = compute_misfit_wsr(c_arr_allk[-1], c_arr_allk[-2], wsr_sigma)
+    int_k = compute_misfit_wsr_2(c_arr_allk[-1], c_arr_allk[-2], wsr_sigma)
     print(f"[{kiter}] --- delta_k_old = {max(abs(diffval))}")
     print(f"[{kiter}] --- diff/sigma = {diffsig_k}")
+    print(f"[{kiter}] --- int diff = {int_k}")
     diff_ratio_s = [diff_ratio[i::len_s] for i in range(len_s)]
     delta_k = [umax(diff_ratio_s[i]) for i in range(len_s)]
     print(f"[{kiter}] --- delta_k_new = {delta_k}")
@@ -528,6 +552,7 @@ while(kiter < kmax):
     #------------------------------------------------------------------------# 
     kiter += 1
 
+    '''
     convg = [di<0.65 for di in diffsig_k]
     sum_convg = sum(convg)
     print(f"k={kiter}; convg = {convg}")
@@ -537,6 +562,7 @@ while(kiter < kmax):
 
     if sum_convg == len_s:
         break
+    '''
     print(f"-----------------------------------------------------")
 
 #----------------------------------------------------------------------#
