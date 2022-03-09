@@ -123,7 +123,7 @@ try:
     knee_mu = np.hstack((np.load(f"{PARGS.batch_rundir}/muval.s1.npy"),
                          np.load(f"{PARGS.batch_rundir}/muval.s3.npy"),
                          np.load(f"{PARGS.batch_rundir}/muval.s5.npy")))
-    knee_mu *= 5.
+    knee_mu *= 120.
     print('Using optimal mu.')
 except FileNotFoundError:
     knee_mu = np.array([1.e-4, 1.e-4, 5.e-4])
@@ -481,7 +481,7 @@ t1s = time.time()
 data_acoeffs_iter = data_acoeffs*1.0
 c_arr_allk = [c_init]
 kiter = 0
-kmax = 10
+kmax = 5
 delta_k = 100000
 
 print(f"-----------------BEFORE FITTING ---------------------")
@@ -505,6 +505,7 @@ ctot_local = c_arr * 1.0
 c_arr_total = c_arr * 1.0
 
 num_convg = 0
+int_k = []
 
 while(kiter < kmax):
     for ii in tqdm(range(2**kiter * N0), desc=f"k={kiter}"):
@@ -533,14 +534,18 @@ while(kiter < kmax):
     # diffsig_s = compute_misfit_wsr(c_arr_allk[-1], c_arr_allk[-2], wsr_sigma)
     # diffsig_k = [max(diffsig_s[i]) for i in range(len_s)]
     diffsig_k = compute_misfit_wsr(c_arr_allk[-1], c_arr_allk[-2], wsr_sigma)
-    int_k = compute_misfit_wsr_2(c_arr_allk[-1], c_arr_allk[-2], wsr_sigma)
+    int_k.append(compute_misfit_wsr_2(c_arr_allk[-1], c_arr_allk[-2], wsr_sigma))
     print(f"[{kiter}] --- delta_k_old = {max(abs(diffval))}")
     print(f"[{kiter}] --- diff/sigma = {diffsig_k}")
-    print(f"[{kiter}] --- int diff = {int_k}")
+    print(f"[{kiter}] --- int diff = {int_k[-1]}")
     diff_ratio_s = [diff_ratio[i::len_s] for i in range(len_s)]
     delta_k = [umax(diff_ratio_s[i]) for i in range(len_s)]
     print(f"[{kiter}] --- delta_k_new = {delta_k}")
-
+    if kiter > 1:
+        if int_k[-1] > int_k[-2]:
+            c_arr_total = c_arr_allk[-2]
+            break
+    
     #------------------plotting the post fitting profiles-------------------#
     _ctot_full = jf.c4fit_2_c4plot(GVARS, c_arr_total,
                                     sind_arr, cind_arr)

@@ -48,8 +48,8 @@ for bname in batchnames:
         run_newton_py = f"{package_dir}/dpy_jax/run_reduced_problem_newton.py"
         run_iterative_py = f"{package_dir}/dpy_jax/run_reduced_problem_iterative.py"
         f.write(f"{pythonpath} {current_dir}/batch_precompute.py --rundir {batch_dir}/{bname} --s 0\n")
-        # f.write(f"{pythonpath} {run_newton_py} --mu 1.0 --store_hess 1 --s 0 --instrument {instr} --batch_run 1 --batch_rundir {batch_dir}/{bname} --mu_batchdir {batch_dir}/{bname}\n")
-        # f.write(f"cp {batch_dir}/{bname}/plots/fit_wsr.pdf {batch_dir}/{bname}/plots/fit_wsr_sall_optimal_mu.pdf\n")
+        f.write(f"{pythonpath} {run_newton_py} --mu 1.0 --store_hess 1 --s 0 --instrument {instr} --batch_run 1 --batch_rundir {batch_dir}/{bname} --mu_batchdir {batch_dir}/{bname}\n")
+        f.write(f"cp {batch_dir}/{bname}/plots/fit_wsr.pdf {batch_dir}/{bname}/plots/fit_wsr_sall_optimal_mu.pdf\n")
         f.write(f"{pythonpath} {run_iterative_py} --mu 1.0 --s 0 --instrument {instr} --batch_run 1 --batch_rundir {batch_dir}/{bname}\n") #--read_hess 1 
         f.write(f"cp {batch_dir}/{bname}/plots/fit_wsr.pdf {batch_dir}/{bname}/plots/fit_wsr_sall_iter.pdf\n")
         

@@ -502,4 +502,3 @@ dateprefix = f"{todays_date.day:02d}.{todays_date.month:02d}.{todays_date.year:0
 fsuffix = f"{dateprefix}-{timeprefix}-{hsuffix}-{PARGS.s}"
 if(not PARGS.store_hess and not PARGS.batch_run):
     jf.save_obj(soln_summary, f"{summdir}/summary.dpt-{fsuffix}")
-
