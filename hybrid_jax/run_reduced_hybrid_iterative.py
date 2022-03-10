@@ -504,22 +504,7 @@ plot_acoeffs.plot_acoeffs_dm_scaled(init_acoeffs_Q, data_acoeffs_Q,
                                     data_acoeffs_out_HMI_Q,
                                     acoeffs_sigma_HMI_Q, 'init_Q',
                                     plotdir=plotdir)
-#----------------- finding sigma for carr iterative ------------------#
-# can be shown that the model covariance matrix has the following form
-# C_m = G^{-g} @ C_d @ G^{-g}.T
-# G^{-g} = total_hess_inv @ G.T @ C_d_inv
-
-GT_Cd_inv_k = get_GT_Cd_inv(true_params_flat)
-G_g_inv_k = hess_inv @ GT_Cd_inv_k
-C_d_k = jnp.diag(acoeffs_sigma_HMI**2)
-C_m_k = jf.get_model_covariance(G_g_inv_k, C_d_k)
-carr_sigma = jnp.sqrt(jnp.diag(C_m_k))
-wsr_sigma = get_wsr(carr_sigma)
-
 #----------------------------------------------------------------------#
-
-
-
 data_acoeffs_Q = GVARS_Q.acoeffs_true
 data_acoeffs_D = GVARS_D.acoeffs_true
 
