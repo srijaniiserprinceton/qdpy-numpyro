@@ -4,6 +4,7 @@ import argparse
 from datetime import date
 from datetime import datetime
 from scipy import integrate
+from tqdm import tqdm
 #------------------------------------------------------------------------# 
 parser = argparse.ArgumentParser()
 parser.add_argument("--mu", help="regularization",
