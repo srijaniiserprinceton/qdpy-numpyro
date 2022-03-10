@@ -170,6 +170,7 @@ except FileNotFoundError:
     print('Not using optimal mu.')
 
 print(f"knee_mu = {knee_mu}")
+wsr_sigma = np.load(f"{PARGS.mu_batchdir}/wsr_sigma.npy")
 #-----------------------------------------------------------------------# 
 nmults_Q = len(GVARS_Q.ell0_arr)
 num_j_Q = len(GVARS_Q.s_arr)
@@ -371,7 +372,7 @@ np.testing.assert_array_almost_equal(pred_acoeffs_D, data_acoeffs_D)
 print(f"[TESTING] pred_acoeffs_D = data_acoeffs_D: PASSED -- " +
       f"maxdiff = {abs(pred_acoeffs_D - data_acoeffs_D).max():.5e}; " + 
       f"misfit = {data_misfit_fn_D(true_params_flat, dac_D, 1):.5e}")
-#----------------------------------------------------------------------# 
+#----------------------------------------------------------------------#
 # the QDPT model function that returns a-coefficients 
 def model_Q(c_arr, fullfac):
     pred_acoeffs = jnp.zeros(num_j * nmults_Q)
@@ -503,7 +504,22 @@ plot_acoeffs.plot_acoeffs_dm_scaled(init_acoeffs_Q, data_acoeffs_Q,
                                     data_acoeffs_out_HMI_Q,
                                     acoeffs_sigma_HMI_Q, 'init_Q',
                                     plotdir=plotdir)
+#----------------- finding sigma for carr iterative ------------------#
+# can be shown that the model covariance matrix has the following form
+# C_m = G^{-g} @ C_d @ G^{-g}.T
+# G^{-g} = total_hess_inv @ G.T @ C_d_inv
+
+GT_Cd_inv_k = get_GT_Cd_inv(true_params_flat)
+G_g_inv_k = hess_inv @ GT_Cd_inv_k
+C_d_k = jnp.diag(acoeffs_sigma_HMI**2)
+C_m_k = jf.get_model_covariance(G_g_inv_k, C_d_k)
+carr_sigma = jnp.sqrt(jnp.diag(C_m_k))
+wsr_sigma = get_wsr(carr_sigma)
+
 #----------------------------------------------------------------------#
+
+
+
 data_acoeffs_Q = GVARS_Q.acoeffs_true
 data_acoeffs_D = GVARS_D.acoeffs_true
 

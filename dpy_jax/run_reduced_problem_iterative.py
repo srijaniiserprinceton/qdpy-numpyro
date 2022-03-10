@@ -463,6 +463,7 @@ C_d_k = jnp.diag(acoeffs_sigma_HMI**2)
 C_m_k = jf.get_model_covariance(G_g_inv_k, C_d_k)
 carr_sigma = jnp.sqrt(jnp.diag(C_m_k))
 wsr_sigma = get_wsr(carr_sigma)
+jf.save_npy(f"{outdir}/wsr_sigma.npy", wsr_sigma)
 
 #----------------------------------------------------------------------#
 tdiff = 0
