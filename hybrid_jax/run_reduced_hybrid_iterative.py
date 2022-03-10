@@ -530,6 +530,7 @@ carr_total = 0.0
 carr_total += true_params_flat * 0.0
 c_arr_allk = [carr_total]
 int_k = []
+kiter = 0
 
 t1s = time.time()
 # while ((abs(loss_diff) > loss_threshold) and
