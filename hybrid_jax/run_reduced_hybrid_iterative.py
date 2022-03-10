@@ -526,9 +526,18 @@ while ((abs(loss_diff) > loss_threshold) and
 
     loss_arr.append(loss)
 
+    #------------------plotting the post fitting profiles-------------------#
+    _citer_full = jf.c4fit_2_c4plot(GVARS_D, carr_total, sind_arr_D, cind_arr_D)
+    fit_plot = postplotter.postplotter(GVARS_D,
+                                       _citer_full,
+                                       ctrl_zero_err,
+                                       f'fit-hyb-iter-{itercount}',
+                                       plotdir=plotdir)
+
+    #------------------------------------------------------------------------
     itercount += 1
     t2 = time.time()
-    
+
     print(f'[{itercount:3d} | {(t2-t1):6.1f} sec ] ' +
           f'data_misfit = {data_misfit:12.5e} loss-diff = {loss_diff:12.5e}; ' +
           f'max-grads = {abs(grads).max():12.5e} model_misfit={model_misfit:12.5e}')
@@ -545,8 +554,8 @@ print(f"chisq = {chisq:.5f}")
 
 #----------------------------------------------------------------------#
 # plotting acoeffs from initial data and HMI data
-final_acoeffs_D = model_D(c_arr+true_params_flat, 1)
-final_acoeffs_Q = model_Q(c_arr+true_params_flat, 1)
+final_acoeffs_D = model_D(carr_total, 1)
+final_acoeffs_Q = model_Q(carr_total, 1)
 
 plot_acoeffs.plot_acoeffs_datavsmodel(final_acoeffs_D, data_acoeffs_D,
                                       data_acoeffs_out_HMI_D,
@@ -559,7 +568,7 @@ plot_acoeffs.plot_acoeffs_datavsmodel(final_acoeffs_Q, data_acoeffs_Q,
                                       plotdir=plotdir)
 #----------------------------------------------------------------------# 
 # reconverting back to model_params in units of true_params_flat
-c_arr_fit = c_arr/true_params_flat + 1.0
+c_arr_fit = carr_total/true_params_flat
 print(c_arr_fit)
 
 #------------------plotting the post fitting profiles-------------------#
