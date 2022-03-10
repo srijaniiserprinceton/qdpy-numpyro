@@ -508,7 +508,7 @@ t1s = time.time()
 while ((abs(loss_diff) > loss_threshold) and
        (itercount < maxiter)):
     t1 = time.time()
-    c_arr *= 0.0
+    c_arr = np.ones_like(c_arr) * 1e-14 
     loss_prev = loss
     grads = _grad_fn(c_arr, dac_D, dac_Q, 0)
     c_arr = _update_H(c_arr, grads, hess_inv)
