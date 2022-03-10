@@ -3,6 +3,7 @@ import time
 import argparse
 from datetime import date
 from datetime import datetime
+from scipy import integrate
 #------------------------------------------------------------------------# 
 parser = argparse.ArgumentParser()
 parser.add_argument("--mu", help="regularization",
@@ -161,7 +162,7 @@ try:
     knee_mu = np.hstack((np.load(f"{PARGS.mu_batchdir}/muval.s1.npy"),
                          np.load(f"{PARGS.mu_batchdir}/muval.s3.npy"),
                          np.load(f"{PARGS.mu_batchdir}/muval.s5.npy")))
-    knee_mu *= 1.
+    knee_mu *= 100.
     print('Using optimal mu.')
 except FileNotFoundError:
     knee_mu = np.array([1.e-4, 1.e-4, 5.e-4])
@@ -312,6 +313,34 @@ def loss_fn(c_arr, dac_D, dac_Q, fullfac):
 def update_H(c_arr, grads, hess_inv):
     return jax.tree_multimap(lambda c, g, h: c - g @ h, c_arr, grads, hess_inv)
 
+
+def get_wsr(carr):
+    carr1 = GVARS_D.ctrl_arr_dpt_full * 1.0
+    for i in range(len_s):
+        carr1[sind_arr[i], GVARS_D.knot_ind_th:] = carr[i]
+    wsr_full = carr1 @ GVARS_D.bsp_basis_full
+    wsr = [wsr_full[sind_arr[i]] for i in range(len_s)]
+    return np.array(wsr)
+
+
+def compute_misfit_wsr(arr1, arr2, sig):
+    wsr1 = get_wsr(arr1)
+    wsr2 = get_wsr(arr2)
+    absdiff_by_sig = abs(wsr1 - wsr2)/sig
+    diffsig_s = [absdiff_by_sig[i] for i in range(len_s)]
+    return [max(diffsig_s[i]) for i in range(len_s)]
+
+def compute_misfit_wsr_2(arr1, arr2, sig):
+    wsr1 = get_wsr(arr1)
+    wsr2 = get_wsr(arr2)
+    diff_by_sig = (wsr1 - wsr2)/sig
+
+    integrand = diff_by_sig**2
+    integral = integrate.trapz(integrand, GVARS.r, axis=1)
+
+    sum_integral_alls = np.sum(integral)
+    sum_integral_alls_scaled = sum_integral_alls / (GVARS.r.max() - GVARS.rth)
+    return sum_integral_alls_scaled
 #----------------------------------------------------------------------# 
 # the DPT model function that returns a-coefficients
 def model_D(c_arr, fullfac):
@@ -428,13 +457,6 @@ plot_acoeffs.plot_acoeffs_datavsmodel(pred_acoeffs_Q, data_acoeffs_Q,
                                       plotdir=plotdir)
 
 #---------------------- jitting the functions --------------------------#
-# data_hess_fn_D = hessin_D(data_misfit_fn_D)
-# data_hess_fn_Q = hessian_Q(data_misfit_fn_Q)
-# model_hess_fn =  hessian_D(model_misfit_fn)
-# _data_hess_fn_D = jit(data_hess_fn_D)
-# _data_hess_fn_Q = jit(data_hess_fn_Q)
-# _model_hess_fn = jit(model_hess_fn)
-
 grad_fn = jax.grad(loss_fn)
 _grad_fn = jit(grad_fn)
 _update_H = jit(update_H)
@@ -488,6 +510,8 @@ loss = 1e25
 loss_diff = loss - 1.
 loss_arr = []
 loss_threshold = 1e-1
+kmax = 6
+N0 = 1
 maxiter = 50
 itercount = 0
 
@@ -500,57 +524,73 @@ print(f'[{itercount:3d} | {tinit:6.1f} sec ] ' +
       f'data_misfit = {data_misfit:12.5e} loss-diff = {loss_diff:12.5e}; ' +
       f'max-grads = {abs(grads).max():12.5e} model_misfit={model_misfit:12.5e}')
 
-dac_Q = data_acoeffs_Q - pred_acoeffs_Q
-dac_D = data_acoeffs_D - pred_acoeffs_D
+dac_Q = data_acoeffs_Q - pred_acoeffs_Q * 0.0
+dac_D = data_acoeffs_D - pred_acoeffs_D * 0.0
 carr_total = 0.0
-carr_total += true_params_flat
+carr_total += true_params_flat * 0.0
+c_arr_allk = [carr_total]
+int_k = []
 
 t1s = time.time()
-while ((abs(loss_diff) > loss_threshold) and
-       (itercount < maxiter)):
-    t1 = time.time()
-    c_arr = np.ones_like(c_arr) * 1e-15 
-    loss_prev = loss
-    grads = _grad_fn(c_arr, dac_D, dac_Q, 0)
-    c_arr = _update_H(c_arr, grads, hess_inv)
-    loss = _loss_fn(c_arr, dac_D, dac_Q, 0)
-    carr_total += c_arr
+# while ((abs(loss_diff) > loss_threshold) and
+#        (itercount < maxiter)):
+while(kiter < kmax):
+    for ii in tqdm(range(2**kiter * N0), desc=f"k={kiter}"):
+        t1 = time.time()
+        c_arr = np.ones_like(c_arr) * 1e-15 
+        loss_prev = loss
+        grads = _grad_fn(c_arr, dac_D, dac_Q, 0)
+        c_arr = _update_H(c_arr, grads, hess_inv)
+        loss = _loss_fn(c_arr, dac_D, dac_Q, 0)
+        carr_total += c_arr
 
-    model_misfit = model_misfit_fn(carr_total, 1)
-    data_misfit = loss - mu*model_misfit
-    loss_diff = loss_prev - loss
-    pac_Q = model_Q_(carr_total, 1)
-    pac_D = model_D_(carr_total, 1)
-    dac_Q = data_acoeffs_Q - pac_Q
-    dac_D = data_acoeffs_D - pac_D
+        model_misfit = model_misfit_fn(carr_total, 1)
+        data_misfit = loss - mu*model_misfit
+        loss_diff = loss_prev - loss
+        pac_Q = model_Q_(carr_total, 1)
+        pac_D = model_D_(carr_total, 1)
+        dac_Q = data_acoeffs_Q - pac_Q
+        dac_D = data_acoeffs_D - pac_D
 
-    loss_arr.append(loss)
+        loss_arr.append(loss)
 
+        itercount += 1
+        t2 = time.time()
+
+        print(f'[ k={kiter}-{itercount:3d} | {(t2-t1):6.1f} sec ] ' +
+              f'data_misfit = {data_misfit:12.5e} loss-diff = {loss_diff:12.5e}; ' +
+              f'max-grads = {abs(grads).max():12.5e} ' +
+              f'model_misfit={model_misfit:12.5e}')
+
+    c_arr_allk.append(c_arr_total)
+    int_k.append(compute_misfit_wsr_2(c_arr_allk[-1], c_arr_allk[-2], wsr_sigma))
+    if kiter > 1:
+        if int_k[-1] > int_k[-2]:
+            c_arr_total = c_arr_allk[-2]
+            break
     #------------------plotting the post fitting profiles-------------------#
     _citer_full = jf.c4fit_2_c4plot(GVARS_D, carr_total, sind_arr_D, cind_arr_D)
     fit_plot = postplotter.postplotter(GVARS_D,
-                                       _citer_full,
-                                       ctrl_zero_err,
-                                       f'fit-hyb-iter-{itercount}',
-                                       plotdir=plotdir)
+                                    _citer_full,
+                                    ctrl_zero_err,
+                                    f'fit-hyb-kiter-{kiter}',
+                                    plotdir=plotdir)
 
     #------------------------------------------------------------------------
-    itercount += 1
-    t2 = time.time()
-
-    print(f'[{itercount:3d} | {(t2-t1):6.1f} sec ] ' +
-          f'data_misfit = {data_misfit:12.5e} loss-diff = {loss_diff:12.5e}; ' +
-          f'max-grads = {abs(grads).max():12.5e} model_misfit={model_misfit:12.5e}')
+    kiter += 1
+    print(f"-----------------------------------------------------")
 
 t2s = time.time()
-print(f"Total time taken = {(t2s-t1s):12.3f} seconds")
+t21s_min = (t2s - t1s)/60.
+print(f"Total time taken = {t21s_min:7.2f} minutes")
 
 data_misfit_val_D = data_misfit_fn_D(c_arr, dac_D, 0)
 data_misfit_val_Q = data_misfit_fn_Q(c_arr, dac_Q, 0)
 total_misfit = data_misfit_val_D + data_misfit_val_Q
 num_data = len(pred_acoeffs_D) + len(pred_acoeffs_Q)
-chisq = total_misfit/num_data
-print(f"chisq = {chisq:.5f}")
+rms = total_misfit/num_data
+print(f"chisq = {total_misfit:.5f}")
+print(f"rms = {rms:.5f}")
 
 #----------------------------------------------------------------------#
 # plotting acoeffs from initial data and HMI data
@@ -569,7 +609,9 @@ plot_acoeffs.plot_acoeffs_datavsmodel(final_acoeffs_Q, data_acoeffs_Q,
 #----------------------------------------------------------------------# 
 # reconverting back to model_params in units of true_params_flat
 c_arr_fit = carr_total/true_params_flat
-print(c_arr_fit)
+for i in range(len_s):
+    print(f"------------- s = {GVARS_D.sarr[sind_arr_D[i]]} -----------------------")
+    print(c_arr_fit[i::len_s])
 
 #------------------plotting the post fitting profiles-------------------#
 c_arr_fit_full = jf.c4fit_2_c4plot(GVARS_D, c_arr_fit*true_params_flat,
@@ -599,37 +641,11 @@ soln_summary['model_hess'] = model_hess_dpy
 soln_summary['loss_arr'] = loss_arr
 soln_summary['mu'] = mu
 soln_summary['knee_mu'] = knee_mu
-soln_summary['chisq'] = chisq
+soln_summary['chisq'] = total_misfit
+soln_summary['rms'] = rms
 
 todays_date = date.today()
 timeprefix = datetime.now().strftime("%H.%M")
 dateprefix = f"{todays_date.day:02d}.{todays_date.month:02d}.{todays_date.year:04d}"
 fsuffix = f"{dateprefix}-{timeprefix}-{suffix}"
 jf.save_obj(soln_summary, f"{summdir}/summary-{fsuffix}")
-
-"""
-# plotting the hessians for analysis
-fig, ax = plt.subplots(1, 3, figsize=(15, 5))
-
-im0 = ax[0].pcolormesh(hess_Q)
-ax[0].set_title('QDPT Hessian')
-divider = make_axes_locatable(ax[0])
-cax = divider.append_axes('right', size='5%', pad=0.05)
-fig.colorbar(im0, cax=cax, orientation='vertical')
-
-im1 = ax[1].pcolormesh(hess_D)
-ax[1].set_title('DPT Hessian')
-divider = make_axes_locatable(ax[1])
-cax = divider.append_axes('right', size='5%', pad=0.05)
-fig.colorbar(im1, cax=cax, orientation='vertical')
-
-im2 = ax[2].pcolormesh(hess)
-ax[2].set_title('Total Hessian')
-divider = make_axes_locatable(ax[2])
-cax = divider.append_axes('right', size='5%', pad=0.05)
-fig.colorbar(im2, cax=cax, orientation='vertical')
-
-plt.tight_layout()
-plt.savefig(f'{qdpy_dir}/hessians.png')
-plt.close()
-"""

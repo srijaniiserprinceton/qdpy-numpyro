@@ -324,18 +324,17 @@ def compute_misfit_wsr(arr1, arr2, sig):
     diffsig_s = [absdiff_by_sig[i] for i in range(len_s)]
     return [max(diffsig_s[i]) for i in range(len_s)]
 
+
 def compute_misfit_wsr_2(arr1, arr2, sig):
     wsr1 = get_wsr(arr1)
     wsr2 = get_wsr(arr2)
     diff_by_sig = (wsr1 - wsr2)/sig
     
     integrand = diff_by_sig**2
-    
     integral = integrate.trapz(integrand, GVARS.r, axis=1)
-    sum_integral_alls = np.sum(integral)
-    
-    sum_integral_alls_scaled = sum_integral_alls / (GVARS.r.max() - GVARS.rth)
 
+    sum_integral_alls = np.sum(integral)
+    sum_integral_alls_scaled = sum_integral_alls / (GVARS.r.max() - GVARS.rth)
     return sum_integral_alls_scaled
 
 #----------------------------------------------------------------------# 
@@ -527,20 +526,19 @@ while(kiter < kmax):
     c_arr_allk.append(c_arr_total)
     ctot_local *= 0.0
 
+    """
     diffval = c_arr_allk[-1] - c_arr_allk[-2]
     diff_ratio = diffval/true_params_flat
     diff_by_sigma = diffval/carr_sigma
-    # diffsig_s = [diff_by_sigma[i::len_s] for i in range(len_s)]
-    # diffsig_s = compute_misfit_wsr(c_arr_allk[-1], c_arr_allk[-2], wsr_sigma)
-    # diffsig_k = [max(diffsig_s[i]) for i in range(len_s)]
-    diffsig_k = compute_misfit_wsr(c_arr_allk[-1], c_arr_allk[-2], wsr_sigma)
-    int_k.append(compute_misfit_wsr_2(c_arr_allk[-1], c_arr_allk[-2], wsr_sigma))
     print(f"[{kiter}] --- delta_k_old = {max(abs(diffval))}")
-    print(f"[{kiter}] --- diff/sigma = {diffsig_k}")
-    print(f"[{kiter}] --- int diff = {int_k[-1]}")
     diff_ratio_s = [diff_ratio[i::len_s] for i in range(len_s)]
     delta_k = [umax(diff_ratio_s[i]) for i in range(len_s)]
     print(f"[{kiter}] --- delta_k_new = {delta_k}")
+    """
+    diffsig_k = compute_misfit_wsr(c_arr_allk[-1], c_arr_allk[-2], wsr_sigma)
+    print(f"  [{kiter}] --- diff/sigma = {diffsig_k}")
+    int_k.append(compute_misfit_wsr_2(c_arr_allk[-1], c_arr_allk[-2], wsr_sigma))
+    print(f"  [{kiter}] --- int diff = {int_k[-1]}")
     if kiter > 1:
         if int_k[-1] > int_k[-2]:
             c_arr_total = c_arr_allk[-2]
@@ -556,18 +554,6 @@ while(kiter < kmax):
                                        plotdir=plotdir)
     #------------------------------------------------------------------------# 
     kiter += 1
-
-    '''
-    convg = [di<0.65 for di in diffsig_k]
-    sum_convg = sum(convg)
-    print(f"k={kiter}; convg = {convg}")
-    if sum_convg != num_convg:
-        # kiter -= 2
-        num_convg = sum_convg * 1
-
-    if sum_convg == len_s:
-        break
-    '''
     print(f"-----------------------------------------------------")
 
 #----------------------------------------------------------------------#
@@ -646,4 +632,3 @@ timeprefix = datetime.now().strftime("%H.%M")
 dateprefix = f"{todays_date.day:02d}.{todays_date.month:02d}.{todays_date.year:04d}"
 fsuffix = f"{dateprefix}-{timeprefix}-{hsuffix}-{PARGS.s}"
 jf.save_obj(soln_summary, f"{summdir}/summary.dpt.iterative-{fsuffix}")
-

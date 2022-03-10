@@ -188,8 +188,9 @@ def get_pc_pjl(c_arr):
         def loop_in_mults2(mult_ind, pred_acoeff):
             pred_omega = jdc(pred[cind], (mult_ind*dim_hyper,), (dim_hyper,))
             pred_acoeff = jdc_update(pred_acoeff,
-                                    (Pjl[mult_ind] @ pred_omega)/aconv_denom[mult_ind],
-                                    (mult_ind * num_j,))
+                                     ((Pjl[mult_ind] @ pred_omega)/
+                                      aconv_denom[mult_ind]),
+                                     (mult_ind * num_j,))
             return pred_acoeff
 
         pcpjl = foril(0, nmults, loop_in_mults2, pc[cind])

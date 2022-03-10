@@ -12,12 +12,19 @@ import numpy as np
 def save_obj(obj, name):
     with open(name + '.pkl', 'wb') as f:
         pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+    print(f"Writing to {name}.pkl")
     return None
 
 
 def load_obj(name):
     with open(name + '.pkl', 'rb') as f:
         return pickle.load(f)
+    return None
+
+
+def save_npy(name, data):
+    np.save(name, data)
+    print(f"Writing to {name}")
     return None
 
 
@@ -113,6 +120,7 @@ def model_denorm(model_params, model_params_ref, sigma):
 def model_renorm_log(model_params, model_params_ref, sigma):
     model_renorm_arr = jnp.log(model_params / model_params_ref) / sigma
     return model_renorm_arr
+
 
 def model_denorm_log(model_params, model_params_ref, sigma):
     model_denorm_arr = jnp.exp(model_params * sigma) * model_params_ref
