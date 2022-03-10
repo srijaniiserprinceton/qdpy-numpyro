@@ -157,12 +157,17 @@ nc_D = len(cind_arr_D)
 # slicing the Pjl correctly in angular degree s
 Pjl_D = RL_poly_D[:, smin_D:smax_D+1:2, :]
 
-'''
-knee_mu = np.hstack((np.load(f"{PARGS.mu_batchdir}/muval.s1.npy"),
-                     np.load(f"{PARGS.mu_batchdir}/muval.s3.npy"),
-                     np.load(f"{PARGS.mu_batchdir}/muval.s5.npy")))
-'''
-knee_mu = np.array([1e-4, 1e-5, 1e-4])
+try:
+    knee_mu = np.hstack((np.load(f"{PARGS.mu_batchdir}/muval.s1.npy"),
+                         np.load(f"{PARGS.mu_batchdir}/muval.s3.npy"),
+                         np.load(f"{PARGS.mu_batchdir}/muval.s5.npy")))
+    knee_mu *= 100.
+    print('Using optimal mu.')
+except FileNotFoundError:
+    knee_mu = np.array([1.e-4, 1.e-4, 5.e-4])
+    print('Not using optimal mu.')
+
+print(f"knee_mu = {knee_mu}")
 #-----------------------------------------------------------------------# 
 nmults_Q = len(GVARS_Q.ell0_arr)
 num_j_Q = len(GVARS_Q.s_arr)
@@ -476,8 +481,8 @@ plot_acoeffs.plot_acoeffs_dm_scaled(init_acoeffs_Q, data_acoeffs_Q,
                                     acoeffs_sigma_HMI_Q, 'init_Q',
                                     plotdir=plotdir)
 #----------------------------------------------------------------------#
-data_acoeffs_Q = GVARS_Q.acoeffs_out_HMI
-data_acoeffs_D = GVARS_D.acoeffs_out_HMI
+data_acoeffs_Q = GVARS_Q.acoeffs_true
+data_acoeffs_D = GVARS_D.acoeffs_true
 
 loss = 1e25
 loss_diff = loss - 1.

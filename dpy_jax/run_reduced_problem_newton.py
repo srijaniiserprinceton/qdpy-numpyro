@@ -73,7 +73,7 @@ else:
         knee_mu = np.hstack((np.load(f"{PARGS.mu_batchdir}/muval.s1.npy"),
                              np.load(f"{PARGS.mu_batchdir}/muval.s3.npy"),
                              np.load(f"{PARGS.mu_batchdir}/muval.s5.npy")))
-        knee_mu *= 1.
+        knee_mu *= 100.
     except FileNotFoundError:
         knee_mu = np.array([1., 1., 1.])
         found_optimal = False
