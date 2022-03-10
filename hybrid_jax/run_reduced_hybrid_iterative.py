@@ -564,12 +564,12 @@ while(kiter < kmax):
               f'max-grads = {abs(grads).max():12.5e} ' +
               f'model_misfit={model_misfit:12.5e}')
 
-    c_arr_allk.append(c_arr_total)
+    c_arr_allk.append(carr_total)
     int_k.append(compute_misfit_wsr_2(c_arr_allk[-1], c_arr_allk[-2], wsr_sigma))
     print(f"  [{kiter}] --- int diff = {int_k[-1]}")
     if kiter > 1:
         if int_k[-1] > int_k[-2]:
-            c_arr_total = c_arr_allk[-2]
+            carr_total = c_arr_allk[-2]
             break
     #------------------plotting the post fitting profiles-------------------#
     _citer_full = jf.c4fit_2_c4plot(GVARS_D, carr_total, sind_arr_D, cind_arr_D)
