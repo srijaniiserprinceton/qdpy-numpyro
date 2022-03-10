@@ -564,6 +564,7 @@ while(kiter < kmax):
 
     c_arr_allk.append(c_arr_total)
     int_k.append(compute_misfit_wsr_2(c_arr_allk[-1], c_arr_allk[-2], wsr_sigma))
+    print(f"  [{kiter}] --- int diff = {int_k[-1]}")
     if kiter > 1:
         if int_k[-1] > int_k[-2]:
             c_arr_total = c_arr_allk[-2]
