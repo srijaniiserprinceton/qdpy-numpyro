@@ -502,11 +502,13 @@ print(f'[{itercount:3d} | {tinit:6.1f} sec ] ' +
 
 dac_Q = data_acoeffs_Q - pred_acoeffs_Q
 dac_D = data_acoeffs_D - pred_acoeffs_D
+carr_total = 0.0
 
 t1s = time.time()
 while ((abs(loss_diff) > loss_threshold) and
        (itercount < maxiter)):
     t1 = time.time()
+    c_arr *= 0.0
     loss_prev = loss
     grads = _grad_fn(c_arr, dac_D, dac_Q, 0)
     c_arr = _update_H(c_arr, grads, hess_inv)
@@ -516,8 +518,10 @@ while ((abs(loss_diff) > loss_threshold) and
     loss_diff = loss_prev - loss
     loss_arr.append(loss)
 
-    pac_Q = model_Q_(c_arr + true_params_flat, 1)
-    pac_D = model_D_(c_arr + true_params_flat, 1)
+    carr_total += c_arr
+
+    pac_Q = model_Q_(carr_total + true_params_flat, 1)
+    pac_D = model_D_(carr_total + true_params_flat, 1)
     dac_Q = data_acoeffs_Q - pac_Q
     dac_D = data_acoeffs_D - pac_D
 
