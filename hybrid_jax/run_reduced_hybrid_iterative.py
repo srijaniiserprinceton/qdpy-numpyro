@@ -342,7 +342,7 @@ def compute_misfit_wsr_2(arr1, arr2, sig):
     integral = integrate.trapz(integrand, GVARS_D.r, axis=1)
 
     sum_integral_alls = np.sum(integral)
-    sum_integral_alls_scaled = sum_integral_alls / (GVARS_D.r.max() - GVARS.rth)
+    sum_integral_alls_scaled = sum_integral_alls / (GVARS_D.r.max() - GVARS_D.rth)
     return sum_integral_alls_scaled
 #----------------------------------------------------------------------# 
 # the DPT model function that returns a-coefficients
