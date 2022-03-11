@@ -202,6 +202,7 @@ mu = PARGS.mu
 suffix = f"{int(ARGS_Q[4])}s.{GVARS_Q.eigtype}.{sfxQ}"
 data_hess_dpy = np.load(f"{dpyfull_dir}/dhess.{suffix}.npy")
 model_hess_dpy = np.load(f"{dpyfull_dir}/mhess.{suffix}.npy")
+true_params_iter = np.load(f"{dpyfull_dir}/carr_iterative.npy")
 hess_inv = jnp.linalg.inv(data_hess_dpy + mu * model_hess_dpy)
 #------------------------------------------------------------------------#
 # calculating the denominator of DPT a-coefficient converion apriori
@@ -517,19 +518,19 @@ N0 = 1
 maxiter = 50
 itercount = 0
 
-model_misfit = model_misfit_fn(true_params_flat, 1)
-loss = _loss_fn(true_params_flat, data_acoeffs_D, data_acoeffs_Q, 1)
-grads = _grad_fn(true_params_flat, data_acoeffs_D, data_acoeffs_Q, 1)
+model_misfit = model_misfit_fn(true_params_iter, 1)
+loss = _loss_fn(true_params_iter, data_acoeffs_D, data_acoeffs_Q, 1)
+grads = _grad_fn(true_params_iter, data_acoeffs_D, data_acoeffs_Q, 1)
 data_misfit = loss - mu * model_misfit
 tinit = 0
 print(f'[{itercount:3d} | {tinit:6.1f} sec ] ' +
       f'data_misfit = {data_misfit:12.5e} loss-diff = {loss_diff:12.5e}; ' +
       f'max-grads = {abs(grads).max():12.5e} model_misfit={model_misfit:12.5e}')
 
-dac_Q = data_acoeffs_Q - pred_acoeffs_Q * 0.0
-dac_D = data_acoeffs_D - pred_acoeffs_D * 0.0
-carr_total = 0.0
-carr_total += true_params_flat * 0.0
+dac_Q = data_acoeffs_Q - pred_acoeffs_Q
+dac_D = data_acoeffs_D - pred_acoeffs_D
+carr_total = 0.
+carr_total += true_params_iter
 c_arr_allk = [carr_total]
 int_k = []
 kiter = 0
@@ -614,7 +615,7 @@ plot_acoeffs.plot_acoeffs_datavsmodel(final_acoeffs_Q, data_acoeffs_Q,
 # reconverting back to model_params in units of true_params_flat
 c_arr_fit = carr_total/true_params_flat
 for i in range(len_s):
-    print(f"------------- s = {GVARS_D.sarr[sind_arr_D[i]]} -----------------------")
+    print(f"------------- s = {GVARS_D.s_arr[sind_arr_D[i]]} -----------------------")
     print(c_arr_fit[i::len_s])
 
 #------------------plotting the post fitting profiles-------------------#

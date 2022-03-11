@@ -57,7 +57,7 @@ with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
 
-if(not PARGS.batch_run):
+if (not PARGS.batch_run):
     n0lminlmax_dir = f"{package_dir}/dpy_jax"
     outdir = f"{scratch_dir}/dpy_jax"
     summdir = f"{scratch_dir}/summaryfiles"
@@ -481,7 +481,7 @@ t1s = time.time()
 data_acoeffs_iter = data_acoeffs*1.0
 c_arr_allk = [c_init]
 kiter = 0
-kmax = 5
+kmax = 6
 delta_k = 100000
 
 print(f"-----------------BEFORE FITTING ---------------------")
@@ -573,6 +573,7 @@ plot_acoeffs.plot_acoeffs_dm_scaled(final_acoeffs, data_acoeffs,
                                     plotdir=plotdir)
 #----------------------------------------------------------------------# 
 np.save(f"{outdir}/carr_iterative_{mu:.1e}_{kmax}k.npy", c_arr_total)
+jf.save_npy(f"{outdir}/carr_iterative.npy", c_arr_total)
 c_arr_fit = c_arr_total/true_params_flat
 
 # finding chisq
