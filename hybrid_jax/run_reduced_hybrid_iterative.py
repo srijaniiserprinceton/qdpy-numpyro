@@ -319,9 +319,9 @@ def update_H(c_arr, grads, hess_inv):
 def get_wsr(carr):
     carr1 = GVARS_D.ctrl_arr_dpt_full * 1.0
     for i in range(len_s):
-        carr1[sind_arr[i], GVARS_D.knot_ind_th:] = carr[i]
+        carr1[sind_arr_D[i], GVARS_D.knot_ind_th:] = carr[i]
     wsr_full = carr1 @ GVARS_D.bsp_basis_full
-    wsr = [wsr_full[sind_arr[i]] for i in range(len_s)]
+    wsr = [wsr_full[sind_arr_D[i]] for i in range(len_s)]
     return np.array(wsr)
 
 
