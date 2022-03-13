@@ -43,7 +43,7 @@ for i in range(num_jobs):
         job_args.append(_job_args)
         jobdpy_args.append(_jobdpy_args)
 
-    jobname = f"hybrid.{bn_start}.{bname}"
+    jobname = f"hybrid.{i}"
     gnup_str = \
         f"""#!/bin/bash
 #PBS -N {jobname}
@@ -53,6 +53,8 @@ for i in range(num_jobs):
 #PBS -l walltime=06:00:00
 #PBS -q small
 echo \"Starting at \"`date`
+echo \"First dataset = {bn_start}\"
+echo \"Last dataset = {bname}\"
 """
     slurm_str = \
     f"""#!/bin/bash
