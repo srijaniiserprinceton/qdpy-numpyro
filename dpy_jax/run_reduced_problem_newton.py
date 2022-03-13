@@ -29,7 +29,6 @@ import numpy as np
 from collections import namedtuple
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-# import arviz as az
 import sys
 #------------------------------------------------------------------------# 
 import jax
@@ -127,7 +126,6 @@ smin = min(GVARS.s_arr)
 smax = max(GVARS.s_arr)
 len_s = len(sind_arr) # number of s to fit
 nc = len(cind_arr) # number of c to fit
-
 #------------------------------------------------------------------------#
 # slicing the Pjl correctly in angular degree s and computing normalization
 # calculating the denominator of a-coefficient converion apriori
@@ -136,7 +134,6 @@ Pjl = RL_poly[:, smin:smax+1:2, :]
 aconv_denom = np.zeros((nmults, Pjl.shape[1]))
 for mult_ind in range(nmults):
     aconv_denom[mult_ind] = np.diag(Pjl[mult_ind] @ Pjl[mult_ind].T)
-
 #-------------------------converting to device array---------------------# 
 Pjl = jnp.asarray(Pjl)
 data = jnp.asarray(data)
@@ -208,6 +205,7 @@ def get_dhess_exact(c_arr):
     gtg = pc_pjl @ (np.diag(1/acoeffs_sigma_HMI**2) @ pc_pjl.T)
     return 2*gtg
 
+
 def get_GT_Cd_inv(c_arr):
     '''Function to compute G.T @ Cd_inv
     for obtaining the G^{-g} later.'
@@ -278,7 +276,6 @@ np.testing.assert_array_almost_equal(pred, data)
 print(f"[TESTING] pred = data: PASSED")
 np.testing.assert_array_almost_equal(pred_acoeffs, data_acoeffs)
 print(f"[TESTING] pred_acoeffs = data_acoeffs: PASSED")
-
 #---------------------- setting data-acoeffs ---------------------------#
 # changing to the HMI acoeffs if doing this for real data 
 data_acoeffs = GVARS.acoeffs_true

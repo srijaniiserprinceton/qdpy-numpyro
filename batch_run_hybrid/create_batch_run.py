@@ -37,6 +37,10 @@ for bname in batchnames:
         f.write(f"{pythonpath} {precompute_py} " +
                 f"--rundir {batch_dir}/{bname} " +
                 f"--full_qdpy_dpy dpy\n")
+
+        # copying optimal mu files from dpy batch directory
+        f.write(f"cp {batch_dir_mu}/{bname}/muval*.npy " +
+                f"{batch_dir}/{bname}/dpy_full_hess}/")
         
         f.write(f"{pythonpath} {run_newton_py} --batch_run 1 " +
                 f"--batch_rundir {batch_dir}/{bname}/dpy_full_hess --mu {some_mu} " +

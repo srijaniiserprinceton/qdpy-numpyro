@@ -47,9 +47,18 @@ for i in range(len(data_daynum_list)):
     # making sub directories needed
     os.mkdir(f"{batch_subdirpath}/plots")
     os.mkdir(f"{batch_subdirpath}/summaryfiles")
+
     os.mkdir(f"{batch_subdirpath}/dpy_files")
+    os.mkdir(f"{batch_subdirpath}/dpy_files/plots")
+    os.mkdir(f"{batch_subdirpath}/dpy_files/summaryfiles")
+
     os.mkdir(f"{batch_subdirpath}/qdpy_files")
+    os.mkdir(f"{batch_subdirpath}/qdpy_files/plots")
+    os.mkdir(f"{batch_subdirpath}/qdpy_files/summaryfiles")
+
     os.mkdir(f"{batch_subdirpath}/dpy_full_hess")
+    os.mkdir(f"{batch_subdirpath}/dpy_full_hess/plots")
+    os.mkdir(f"{batch_subdirpath}/dpy_full_hess/summaryfiles")
 
 
 def write_paramsfile(dirname, fname, run_params):
