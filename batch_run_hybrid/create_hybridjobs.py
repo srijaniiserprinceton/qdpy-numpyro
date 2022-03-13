@@ -17,17 +17,26 @@ batchnames = [filename for filename in os.listdir(f"{scratch_dir}/batch_runs_hyb
               (os.path.isdir(f"{scratch_dir}/batch_runs_hybrid/{filename}") and filename[0]!='.')]
 print(batchnames)
 
-for bname in batchnames:
-    print(f"Creating job for {bname}")
-    batch_hybrid_dir = f"{scratch_dir}/batch_runs_hybrid/{bname}"
-    mu_batchdir = f"{scratch_dir}/batch_runs_dpy/{bname}"
-    instr = bname.split('_')[0]
-    job_str = f"{pythonpath} {execpath} "
-    job_args = (f"--mu 1.0 --instrument {instr} --mu_batchdir {mu_batchdir} " +
-                f"--rundir {batch_hybrid_dir}")
-    jobname = f"hybrid-{bname}"
+count = 0
+num_batches = len(batchnames)
+num_jobs = 3
+for i in range(num_jobs):
+    job_args = []
+    bn_start = batchnames[num_jobs*i]
+    for j in range(num_batches//num_jobs):
+        bname = batchnames[num_jobs*i + j]
+        print(f"Creating job for {bname}")
+        batch_hybrid_dir = f"{scratch_dir}/batch_runs_hybrid/{bname}"
+        mu_batchdir = f"{scratch_dir}/batch_runs_dpy/{bname}"
+        instr = bname.split('_')[0]
+        job_str = f"{pythonpath} {execpath} "
+        _job_args = (f"--mu 1.0 --instrument {instr} --mu_batchdir {mu_batchdir} " +
+                     f"--rundir {batch_hybrid_dir}")
+        job_args.append(_job_args)
+
+    jobname = f"hybrid.{bn_start}.{bname}"
     gnup_str = \
-    f"""#!/bin/bash
+        f"""#!/bin/bash
 #PBS -N {jobname}
 #PBS -o out-{jobname}.log
 #PBS -e err-{jobname}.log
@@ -35,11 +44,7 @@ for bname in batchnames:
 #PBS -l walltime=06:00:00
 #PBS -q small
 echo \"Starting at \"`date`
-    
-{job_str} {job_args}
-echo \"Finished at \"`date`
 """
-
     slurm_str = \
     f"""#!/bin/bash
 #SBATCH --job-name={jobname}
@@ -49,9 +54,13 @@ echo \"Finished at \"`date`
 #SBATCH --time=00:30:00
 echo \"Starting at \"`date`
     
-{job_str} {job_args}
-echo \"Finished at \"`date`
 """
+    for j in range(num_batches//num_jobs):
+        gnup_str += f"{job_str} {job_args[j]}\n"
+        slurm_str += f"{job_str} {job_args[j]}\n"
+    
+    gnup_str = gnup_str + f"""echo \"Finished at \"`date`"""
+    slurm_str = gnup_str + f"""echo \"Finished at \"`date`"""
 
     with open(f"{package_dir}/jobscripts/gnup_hybrid_{bname}.pbs", "w") as f:
         f.write(gnup_str)
