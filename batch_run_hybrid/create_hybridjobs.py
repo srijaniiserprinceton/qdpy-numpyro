@@ -12,27 +12,36 @@ _pythonpath = subprocess.check_output("which python",
                                         shell=True)
 pythonpath = _pythonpath.decode("utf-8").split("\n")[0]
 execpath = f"{package_dir}/hybrid_jax/run_reduced_hybrid_batch.py"
+dpy_iterpath = f"{package_dir}/dpy_jax/run_reduced_problem_iterative.py"
 
-batchnames = [filename for filename in os.listdir(f"{scratch_dir}/batch_runs_hybrid") if 
-              (os.path.isdir(f"{scratch_dir}/batch_runs_hybrid/{filename}") and filename[0]!='.')]
+batchnames = [filename for
+              filename in os.listdir(f"{scratch_dir}/batch_runs_hybrid")
+              if (os.path.isdir(f"{scratch_dir}/batch_runs_hybrid/{filename}")
+                  and filename[0]!='.')]
 print(batchnames)
 
 count = 0
 num_batches = len(batchnames)
-num_jobs = 3
+num_jobs = 1
 for i in range(num_jobs):
     job_args = []
+    jobdpy_args = []
     bn_start = batchnames[num_jobs*i]
     for j in range(num_batches//num_jobs):
         bname = batchnames[num_jobs*i + j]
         print(f"Creating job for {bname}")
         batch_hybrid_dir = f"{scratch_dir}/batch_runs_hybrid/{bname}"
         mu_batchdir = f"{scratch_dir}/batch_runs_dpy/{bname}"
+        batch_rundir = f"{batch_hybrid_dir}/dpy_full_hess"
         instr = bname.split('_')[0]
         job_str = f"{pythonpath} {execpath} "
+        jobdpy_str = f"{pythonpath} {dpy_iterpath} "
+        _jobdpy_args = (f"--mu 1.0 --batch_run 1 --store_hess 1 " +
+                        f"--instrument {instr} --batch_rundir {batch_rundir}")
         _job_args = (f"--mu 1.0 --instrument {instr} --mu_batchdir {mu_batchdir} " +
                      f"--rundir {batch_hybrid_dir}")
         job_args.append(_job_args)
+        jobdpy_args.append(_jobdpy_args)
 
     jobname = f"hybrid.{bn_start}.{bname}"
     gnup_str = \
@@ -56,7 +65,9 @@ echo \"Starting at \"`date`
     
 """
     for j in range(num_batches//num_jobs):
+        gnup_str += f"{jobdpy_str} {jobdpy_args[j]}\n"
         gnup_str += f"{job_str} {job_args[j]}\n"
+        slurm_str += f"{jobdpy_str} {jobdpy_args[j]}\n"
         slurm_str += f"{job_str} {job_args[j]}\n"
     
     gnup_str = gnup_str + f"""echo \"Finished at \"`date`"""
