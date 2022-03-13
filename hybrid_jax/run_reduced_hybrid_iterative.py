@@ -465,10 +465,7 @@ _grad_fn = jit(grad_fn)
 _update_H = jit(update_H)
 _loss_fn = jit(loss_fn)
 #-----------------------initialization of params------------------#
-# c_init = np.random.uniform(5.0, 20.0, size=len(true_params_flat))
 c_init = np.ones_like(true_params_flat) * 1e-10
-#          0.0*np.random.uniform(0.0, 1.0, size=len(true_params_flat)))
-
 #------------------plotting the initial profiles-------------------#
 c_arr_init_full = jf.c4fit_2_c4plot(GVARS_D, c_init*true_params_flat,
                                     sind_arr_D, cind_arr_D)
@@ -478,7 +475,15 @@ ctrl_zero_err = np.zeros_like(c_arr_init_full)
 init_plot = postplotter.postplotter(GVARS_D, c_arr_init_full,
                                     ctrl_zero_err, 'init',
                                     plotdir=plotdir)
-#------------------------------------------------------------------------# 
+
+#------------------plotting the DPT iterative profiles-------------------#
+_tpiter_full = jf.c4fit_2_c4plot(GVARS_D, true_params_iter, sind_arr_D, cind_arr_D)
+fit_plot = postplotter.postplotter(GVARS_D,
+                                   _tpiter_full,
+                                   ctrl_zero_err,
+                                   f'fit-dpyiter',
+                                   plotdir=plotdir)
++#------------------------------------------------------------------------
 # getting the renormalized model parameters
 c_arr = c_init * true_params_flat
 #----------------------------------------------------------------------#
@@ -576,10 +581,10 @@ while(kiter < kmax):
     #------------------plotting the post fitting profiles-------------------#
     _citer_full = jf.c4fit_2_c4plot(GVARS_D, carr_total, sind_arr_D, cind_arr_D)
     fit_plot = postplotter.postplotter(GVARS_D,
-                                    _citer_full,
-                                    ctrl_zero_err,
-                                    f'fit-hyb-kiter-{kiter}',
-                                    plotdir=plotdir)
+                                       _citer_full,
+                                       ctrl_zero_err,
+                                       f'fit-hyb-kiter-{kiter}',
+                                       plotdir=plotdir)
 
     #------------------------------------------------------------------------
     kiter += 1
@@ -630,6 +635,7 @@ fit_plot = postplotter.postplotter(GVARS_D, c_arr_fit_full,
 #------------------------------------------------------------------------
 soln_summary['c_arr_fit'] = c_arr_fit
 soln_summary['true_params_flat'] = true_params_flat
+soln_summary['true_params_iter'] = true_params_iter
 soln_summary['cind_arr'] = cind_arr_D
 soln_summary['sind_arr'] = sind_arr_D
 
