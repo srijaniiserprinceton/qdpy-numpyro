@@ -15,7 +15,6 @@ scratch_dir = dirnames[1]
 
 dpy_dir = f"{scratch_dir}/dpy_jax"
 qdpy_dir = f"{scratch_dir}/qdpy_jax"
-plotdir = f"{scratch_dir}/plots"
 #------------------------------------------------------------------------# 
 parser = argparse.ArgumentParser()
 parser.add_argument("--outdir", help="output directory",
@@ -29,7 +28,8 @@ numdir = len(dirnames)
 for i in range(numdir):
     print(f"[ {i:2d} ] {dirnames[i]}")
 idx = int(input(f"Select dataset to be plotted: "))
-outdir = f"{PARGS.outdir}/{dirnames[idx]}"
+outdir = f"{PARGS.outdir}/{dirnames[idx]}/summaryfiles"
+outdir = f"{PARGS.outdir}/{dirnames[idx]}/plots"
 print(f"outdir = {outdir}")
 
 def select_and_load():

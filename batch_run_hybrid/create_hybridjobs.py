@@ -26,6 +26,8 @@ num_jobs = 1
 for i in range(num_jobs):
     job_args = []
     jobdpy_args = []
+    oe_files = []
+    oedpy_files = []
     bn_start = batchnames[num_jobs*i]
     for j in range(num_batches//num_jobs):
         bname = batchnames[num_jobs*i + j]
@@ -40,8 +42,12 @@ for i in range(num_jobs):
                         f"--instrument {instr} --batch_rundir {batch_rundir}")
         _job_args = (f"--mu 1.0 --instrument {instr} --mu_batchdir {mu_batchdir} " +
                      f"--rundir {batch_hybrid_dir}")
+        _oedpy_file = f"logs/dpy-{bname}.oe"
+        _oe_file = f"logs/hybrid-{bname}.oe"
         job_args.append(_job_args)
         jobdpy_args.append(_jobdpy_args)
+        oe_files.append(_oe_file)
+        oedpy_files.append(_oedpy_file)
 
     jobname = f"hybrid.{i}"
     gnup_str = \
@@ -67,10 +73,10 @@ echo \"Starting at \"`date`
     
 """
     for j in range(num_batches//num_jobs):
-        gnup_str += f"{jobdpy_str} {jobdpy_args[j]}\n"
-        gnup_str += f"{job_str} {job_args[j]}\n"
-        slurm_str += f"{jobdpy_str} {jobdpy_args[j]}\n"
-        slurm_str += f"{job_str} {job_args[j]}\n"
+        gnup_str += f"{jobdpy_str} {jobdpy_args[j]} &>{oedpy_files[j]}\n"
+        gnup_str += f"{job_str} {job_args[j]} &>{oe_files[j]}\n"
+        slurm_str += f"{jobdpy_str} {jobdpy_args[j]} &>{oedpy_files[j]}\n"
+        slurm_str += f"{job_str} {job_args[j]} &>{oe_files[j]}\n"
     
     gnup_str = gnup_str + f"""echo \"Finished at \"`date`"""
     slurm_str = gnup_str + f"""echo \"Finished at \"`date`"""
