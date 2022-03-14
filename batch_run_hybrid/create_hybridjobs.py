@@ -42,8 +42,8 @@ for i in range(num_jobs):
                         f"--instrument {instr} --batch_rundir {batch_rundir}")
         _job_args = (f"--mu 1.0 --instrument {instr} --mu_batchdir {mu_batchdir} " +
                      f"--rundir {batch_hybrid_dir}")
-        _oedpy_file = f"logs/dpy-{bname}.oe"
-        _oe_file = f"logs/hybrid-{bname}.oe"
+        _oedpy_file = f"{package_dir}/jobscripts/logs/dpy-{bname}.oe"
+        _oe_file = f"{package_dir}/jobscripts/logs/hybrid-{bname}.oe"
         job_args.append(_job_args)
         jobdpy_args.append(_jobdpy_args)
         oe_files.append(_oe_file)
@@ -55,9 +55,9 @@ for i in range(num_jobs):
 #PBS -N {jobname}
 #PBS -o out-{jobname}.log
 #PBS -e err-{jobname}.log
-#PBS -l select=1:ncpus=32:mem=70gb
-#PBS -l walltime=06:00:00
-#PBS -q small
+#PBS -l select=1:ncpus=112:mem=700gb
+#PBS -l walltime=60:00:00
+#PBS -q clx
 echo \"Starting at \"`date`
 echo \"First dataset = {bn_start}\"
 echo \"Last dataset = {bname}\"
@@ -81,8 +81,8 @@ echo \"Starting at \"`date`
     gnup_str = gnup_str + f"""echo \"Finished at \"`date`"""
     slurm_str = gnup_str + f"""echo \"Finished at \"`date`"""
 
-    with open(f"{package_dir}/jobscripts/gnup_hybrid_{bname}.pbs", "w") as f:
+    with open(f"{package_dir}/jobscripts/gnup_hybrid_{i}.pbs", "w") as f:
         f.write(gnup_str)
 
-    with open(f"{package_dir}/jobscripts/gnup_hybrid_{bname}.slurm", "w") as f:
+    with open(f"{package_dir}/jobscripts/gnup_hybrid_{i}.slurm", "w") as f:
         f.write(slurm_str)
