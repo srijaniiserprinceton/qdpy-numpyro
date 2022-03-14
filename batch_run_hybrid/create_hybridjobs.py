@@ -30,7 +30,7 @@ for i in range(num_jobs):
     oedpy_files = []
     bn_start = batchnames[num_jobs*i]
     for j in range(num_batches//num_jobs):
-        bname = batchnames[num_jobs*i + j]
+        bname = batchnames[num_jobs*j + i]
         print(f"Creating job for {bname}")
         batch_hybrid_dir = f"{scratch_dir}/batch_runs_hybrid/{bname}"
         mu_batchdir = f"{scratch_dir}/batch_runs_dpy/{bname}"
