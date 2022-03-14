@@ -4,6 +4,8 @@ from datetime import date
 from datetime import datetime
 from qdpy import jax_functions as jf
 from plotter import postplotter
+import subprocess
+import argparse
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
@@ -13,8 +15,22 @@ scratch_dir = dirnames[1]
 
 dpy_dir = f"{scratch_dir}/dpy_jax"
 qdpy_dir = f"{scratch_dir}/qdpy_jax"
-outdir = f"{scratch_dir}/summaryfiles"
 plotdir = f"{scratch_dir}/plots"
+#------------------------------------------------------------------------# 
+parser = argparse.ArgumentParser()
+parser.add_argument("--outdir", help="output directory",
+                    type=str, default=f"{scratch_dir}/summaryfiles")
+PARGS = parser.parse_args()
+#------------------------------------------------------------------------#
+
+dirnames = subprocess.check_output(["ls", f"{PARGS.outdir}"])
+dirnames = dirnames.decode().split('\n')
+numdir = len(dirnames)
+for i in range(numdir):
+    print(f"[ {i:2d} ] {dirnames[i]}")
+idx = int(input(f"Select dataset to be plotted: "))
+outdir = f"{PARGS.outdir}/{dirnames[idx]}"
+print(f"outdir = {outdir}")
 
 def select_and_load():
     os.system(f"ls {outdir}/summary* > {outdir}/fnames.txt")
