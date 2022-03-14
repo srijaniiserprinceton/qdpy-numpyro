@@ -10,6 +10,7 @@ package_dir = os.path.dirname(current_dir)
 with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
+
 dpy_dir = f"{scratch_dir}/dpy_jax"
 qdpy_dir = f"{scratch_dir}/qdpy_jax"
 outdir = f"{scratch_dir}/summaryfiles"
