@@ -540,6 +540,11 @@ c_arr_allk = [carr_total]
 int_k = []
 kiter = 0
 
+dm_list = []
+mm_list = []
+dm_list.append(data_misfit)
+mm_list.append(model_misfit)
+
 t1s = time.time()
 # while ((abs(loss_diff) > loss_threshold) and
 #        (itercount < maxiter)):
@@ -560,6 +565,9 @@ while(kiter < kmax):
         pac_D = model_D_(carr_total, 1)
         dac_Q = data_acoeffs_Q - pac_Q
         dac_D = data_acoeffs_D - pac_D
+
+        dm_list.append(data_misfit)
+        mm_list.append(model_misfit)
 
         loss_arr.append(loss)
 
@@ -638,6 +646,8 @@ soln_summary['true_params_flat'] = true_params_flat
 soln_summary['true_params_iter'] = true_params_iter
 soln_summary['cind_arr'] = cind_arr_D
 soln_summary['sind_arr'] = sind_arr_D
+soln_summary['data-misfit'] = dm_list
+soln_summary['model-misfit'] = mm_list
 
 soln_summary['acoeff'] = {}
 soln_summary['acoeff']['fit_D'] = final_acoeffs_D

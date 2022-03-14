@@ -483,6 +483,10 @@ c_arr_allk = [c_init]
 kiter = 0
 kmax = 6
 delta_k = 100000
+dm_list = []
+mm_list = []
+dm_list.append(data_misfit)
+mm_list.append(model_misfit)
 
 print(f"-----------------BEFORE FITTING ---------------------")
 for i in range(len_s):
@@ -517,6 +521,14 @@ while(kiter < kmax):
         ctot_local += c_arr
         data_acoeffs_iter = data_misfit_arr_fn(c_arr, fixed_part*0.0,
                                                data_acoeffs_iter)*acoeffs_sigma_HMI
+
+
+
+    loss = _loss_fn(c_arr_total, GVARS.ctrl_arr_dpt_full, fixed_part, data_acoeffs)
+    model_misfit = model_misfit_fn(c_arr_total, GVARS.ctrl_arr_dpt_full)
+    data_misfit = loss - mu*model_misfit
+    dm_list.append(data_misfit)
+    mm_list.append(model_misfit)
 
     prntarr = c_arr_total/true_params_flat
     for i in range(len_s):
@@ -616,6 +628,9 @@ soln_summary['c_arr_fit'] = c_arr_fit
 soln_summary['true_params_flat'] = true_params_flat
 soln_summary['cind_arr'] = cind_arr
 soln_summary['sind_arr'] = sind_arr
+soln_summary['data-misfit'] = dm_list
+soln_summary['model-misfit'] = mm_list
+
 
 soln_summary['acoeff'] = {}
 soln_summary['acoeff']['fit'] = final_acoeffs
