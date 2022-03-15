@@ -11,7 +11,7 @@ scratch_dir = dirnames[1]
 _pythonpath = subprocess.check_output("which python",
                                         shell=True)
 pythonpath = _pythonpath.decode("utf-8").split("\n")[0]
-execpath = f"{package_dir}/hybrid_jax/run_reduced_hybrid_batch.py"
+execpath = f"{package_dir}/hybrid_jax/run_reduced_hybrid_iterative.py"
 dpy_iterpath = f"{package_dir}/dpy_jax/run_reduced_problem_iterative.py"
 
 batchnames = [filename for

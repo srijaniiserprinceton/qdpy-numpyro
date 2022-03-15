@@ -116,7 +116,8 @@ len_s = len(sind_arr)
 # number of c's to fit
 nc = len(cind_arr)
 
-knee_mu = np.array([2.15443e-5, 1.59381e-7, 1.29155e-7])
+knee_mu = 200 * np.array([2.15443e-5, 1.59381e-7, 1.29155e-7])
+print(f"knee_mu = {knee_mu}")
 
 # slicing the Pjl correctly in angular degree s
 Pjl = RL_poly[:, smin:smax+1:2, :]
@@ -383,7 +384,7 @@ t1s = time.time()
 data_acoeffs_iter = data_acoeffs*1.0
 c_arr_allk = [c_init]
 kiter = 0
-kmax = 5
+kmax = 4
 delta_k = 100000
 
 print(f"a5 = {data_acoeffs_iter[0::len_s][:6]}")
