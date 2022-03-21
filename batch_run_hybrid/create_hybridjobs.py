@@ -68,18 +68,20 @@ echo \"Last dataset = {bname}\"
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=40
 #SBATCH --mem=150G
-#SBATCH --time=00:30:00
+#SBATCH --time=05:00:00
 echo \"Starting at \"`date`
-    
+module purge
+module load anaconda3
+conda activate jax-gpu    
 """
     for j in range(num_batches//num_jobs):
-        gnup_str += f"{jobdpy_str} {jobdpy_args[j]} &>{oedpy_files[j]}\n"
+        # gnup_str += f"{jobdpy_str} {jobdpy_args[j]} &>{oedpy_files[j]}\n"
         gnup_str += f"{job_str} {job_args[j]} &>{oe_files[j]}\n"
-        slurm_str += f"{jobdpy_str} {jobdpy_args[j]} &>{oedpy_files[j]}\n"
+        # slurm_str += f"{jobdpy_str} {jobdpy_args[j]} &>{oedpy_files[j]}\n"
         slurm_str += f"{job_str} {job_args[j]} &>{oe_files[j]}\n"
     
     gnup_str = gnup_str + f"""echo \"Finished at \"`date`"""
-    slurm_str = gnup_str + f"""echo \"Finished at \"`date`"""
+    slurm_str = slurm_str + f"""echo \"Finished at \"`date`"""
 
     with open(f"{package_dir}/jobscripts/gnup_hybrid_{i}.pbs", "w") as f:
         f.write(gnup_str)

@@ -123,10 +123,11 @@ try:
     knee_mu = np.hstack((np.load(f"{PARGS.batch_rundir}/muval.s1.npy"),
                          np.load(f"{PARGS.batch_rundir}/muval.s3.npy"),
                          np.load(f"{PARGS.batch_rundir}/muval.s5.npy")))
-    knee_mu *= 100.
+    knee_mu *= 10.
     print('Using optimal mu.')
 except FileNotFoundError:
-    knee_mu = np.array([1.e-4, 1.e-4, 5.e-4])
+    # knee_mu = np.array([1.e-4, 1.e-4, 5.e-4])
+    knee_mu = np.array([1., 1., 1.])
     print('Not using optimal mu.')
 
 
@@ -282,8 +283,9 @@ def model_misfit_fn(c_arr, carr_fixed, mu_scale=knee_mu):
     for i in range(len_s):
         carr_padding = carr_fixed[sind_arr[i], sidx:eidx]
         cd = jnp.append(carr_padding, c_arr[i::len_s])
-        lambda_factor = jnp.trace(data_hess_dpy[i::len_s, i::len_s])
-        lambda_factor /= len_data * len_s
+        lambda_factor = jnp.trace(data_hess_dpy[i::len_s, i::len_s])/\
+                        (2 * jnp.trace(Djk[-eidx:,-eidx:]))
+        lambda_factor *= len_data
         cDc += mu_scale[i] * cd @ Djk @ cd * lambda_factor
     return cDc
 
@@ -392,7 +394,6 @@ def iterative_RLS(c_arr, carr_fixed, fp, data_iter, iternum=0, lossthr=1e-3):
         t2 = time.time()
         # print_info(itercount, t2-t1,
         #            data_misfit, loss_diff, abs(grads).max(), model_misfit)
-        t2 = time.time()
     t2s = time.time()
     # print(f"-------------------------------------------------------------------------")
     return c_arr
@@ -481,7 +482,7 @@ t1s = time.time()
 data_acoeffs_iter = data_acoeffs*1.0
 c_arr_allk = [c_init]
 kiter = 0
-kmax = 6
+kmax = 10
 delta_k = 100000
 dm_list = []
 mm_list = []
@@ -496,9 +497,16 @@ print(f"-----------------------------------------------------")
 c_arr = iterative_RLS(c_init, GVARS.ctrl_arr_dpt_full, fixed_part, data_acoeffs_iter)
 data_acoeffs_iter = data_misfit_arr_fn(c_arr, fixed_part,
                                        data_acoeffs_iter)*acoeffs_sigma_HMI
-prntarr = c_arr[0::len_s]/true_params_flat[0::len_s]
 
+# plotting the first fit
+_ctot_full = jf.c4fit_2_c4plot(GVARS, c_arr, sind_arr, cind_arr)
+postplotter.postplotter(GVARS, _ctot_full, ctrl_zero_error, f'fit-kiter={kiter}',
+                        plotdir=plotdir)
+kiter += 1
 c_arr_allk.append(c_arr)
+
+
+prntarr = c_arr[0::len_s]/true_params_flat[0::len_s]
 
 for i in range(len_s):
     s = 2*sind_arr[i] + 1
@@ -552,11 +560,12 @@ while(kiter < kmax):
     print(f"  [{kiter}] --- diff/sigma = {diffsig_k}")
     int_k.append(compute_misfit_wsr_2(c_arr_allk[-1], c_arr_allk[-2], wsr_sigma))
     print(f"  [{kiter}] --- int diff = {int_k[-1]}")
+    '''
     if kiter > 1:
         if int_k[-1] > int_k[-2]:
             c_arr_total = c_arr_allk[-2]
             break
-    
+    '''
     #------------------plotting the post fitting profiles-------------------#
     _ctot_full = jf.c4fit_2_c4plot(GVARS, c_arr_total,
                                     sind_arr, cind_arr)

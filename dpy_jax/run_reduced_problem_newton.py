@@ -72,10 +72,12 @@ else:
         knee_mu = np.hstack((np.load(f"{PARGS.mu_batchdir}/muval.s1.npy"),
                              np.load(f"{PARGS.mu_batchdir}/muval.s3.npy"),
                              np.load(f"{PARGS.mu_batchdir}/muval.s5.npy")))
-        knee_mu *= 100.
+        knee_mu *= 1.
+        print('Using optimal knee_mu.')
     except FileNotFoundError:
         knee_mu = np.array([1., 1., 1.])
         found_optimal = False
+        print('Not using optimal knee_mu.')
 
 print(f"outdir = {outdir}")
 print(f"knee_mu = {knee_mu}")
@@ -224,8 +226,9 @@ def model_misfit_fn(c_arr, mu_scale=knee_mu):
     for i in range(len_s):
         carr_padding = GVARS.ctrl_arr_dpt_full[sind_arr[i], sidx:eidx]
         cd = jnp.append(carr_padding, c_arr[i::len_s])
-        lambda_factor = jnp.trace(data_hess_dpy[i::len_s, i::len_s])
-        lambda_factor /= len_data * len_s
+        lambda_factor = jnp.trace(data_hess_dpy[i::len_s, i::len_s])/\
+                        (2 * jnp.trace(Djk[-eidx:,-eidx:]))
+        lambda_factor *= len_data
         cDc += mu_scale[i] * cd @ Djk @ cd * lambda_factor
     return cDc
 
@@ -251,6 +254,13 @@ def update_H(c_arr, grads, hess_inv):
     return jax.tree_multimap(lambda c, g, h: c - g @ h,
                              c_arr, grads, hess_inv)
 
+def get_wsr(carr):
+    carr1 = GVARS.ctrl_arr_dpt_full * 1.0
+    for i in range(len_s):
+        carr1[sind_arr[i], GVARS.knot_ind_th:] = carr[i]
+    wsr_full = carr1 @ GVARS.bsp_basis_full
+    wsr = [wsr_full[sind_arr[i]] for i in range(len_s)]
+    return np.array(wsr)
 
 #---------------------- jitting the functions --------------------------#
 data_hess_fn = hessian(data_misfit_fn)
@@ -288,13 +298,13 @@ print(f"data_acoeffs = {data_acoeffs[:15]}")
 if PARGS.plot:
     # plotting acoeffs pred and data to see if we should expect got fit
     plot_acoeffs.plot_acoeffs_datavsmodel(pred_acoeffs, data_acoeffs,
-                          data_acoeffs_out_HMI,
-                          acoeffs_sigma_HMI, 'ref',
-                          plotdir=plotdir)
+                                          data_acoeffs_out_HMI,
+                                          acoeffs_sigma_HMI, 'ref',
+                                          plotdir=plotdir)
     plot_acoeffs.plot_acoeffs_dm_scaled(pred_acoeffs, data_acoeffs,
-                        data_acoeffs_out_HMI,
-                        acoeffs_sigma_HMI, 'ref',
-                        plotdir=plotdir)
+                                        data_acoeffs_out_HMI,
+                                        acoeffs_sigma_HMI, 'ref',
+                                        plotdir=plotdir)
 #----------------------------------------------------------------------# 
 len_data = len(data_acoeffs) # length of data
 mu = PARGS.mu # regularization parameter
@@ -406,7 +416,7 @@ print(f"chisq = {chisq:.5f}")
 
 #----------------------------------------------------------------------#
 # plotting acoeffs from initial data and HMI data
-final_acoeffs = data_misfit_arr_fn(c_arr)*acoeffs_sigma_HMI + data_acoeffs
+final_acoeffs = data_acoeffs - data_misfit_arr_fn(c_arr)*acoeffs_sigma_HMI
 
 if PARGS.plot:
     plot_acoeffs.plot_acoeffs_datavsmodel(final_acoeffs, data_acoeffs,
@@ -442,7 +452,8 @@ G_g_inv = hess_inv @ GT_Cd_inv
 C_d = jnp.diag(acoeffs_sigma_HMI**2)
 C_m = jf.get_model_covariance(G_g_inv, C_d)
 ctrl_arr_err = jnp.sqrt(jnp.diag(C_m))
-
+wsr_sigma = get_wsr(ctrl_arr_err)
+jf.save_npy(f"{outdir}/wsr_sigma.npy", wsr_sigma)
 #------------------plotting the post fitting profiles-------------------#
 if PARGS.plot:
     c_arr_fit_full = jf.c4fit_2_c4plot(GVARS, c_arr_fit*true_params_flat,
@@ -455,27 +466,9 @@ if PARGS.plot:
     c_arr_err_full = jnp.reshape(ctrl_arr_err_full, (len_s, -1), 'F')
 
     # converting ctrl points to wsr and plotting
-    fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full, ctrl_arr_err_full, 'fit',
+    fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full, ctrl_arr_err_full,
+                                       f'fit_{mu:.5e}',
                                        plotdir=plotdir)
-
-'''
-# plotting the hessians for analysis
-fig, ax = plt.subplots(1, 2, figsize=(10,5))
-
-im1 = ax[0].pcolormesh(total_hess)
-divider = make_axes_locatable(ax[0])
-cax = divider.append_axes('right', size='5%', pad=0.05)
-fig.colorbar(im1, cax=cax, orientation='vertical')
-
-im2 = ax[1].pcolormesh(data_hess_dpy)
-divider = make_axes_locatable(ax[1])
-cax = divider.append_axes('right', size='5%', pad=0.05)
-fig.colorbar(im2, cax=cax, orientation='vertical')
-
-plt.tight_layout()
-plt.savefig(f'{plotdir}/hessians.png')
-plt.close()
-'''
 
 soln_summary['c_arr_fit'] = c_arr_fit
 soln_summary['true_params_flat'] = true_params_flat

@@ -38,10 +38,20 @@ for bname in batchnames:
                 f"--rundir {batch_dir}/{bname} " +
                 f"--full_qdpy_dpy dpy\n")
 
+        
         # copying optimal mu files from dpy batch directory
         f.write(f"cp {batch_dir_mu}/{bname}/muval*.npy " +
-                f"{batch_dir}/{bname}/dpy_full_hess}/")
-        
+                f"{batch_dir}/{bname}/dpy_full_hess/.\n")
+
+        # copying mhess and dhess for the three s from batch_run_dpy
+        f.write(f"cp {batch_dir_mu}/{bname}/s*_dhess.npy " +
+                f"{batch_dir}/{bname}/dpy_full_hess/.\n")
+        f.write(f"cp {batch_dir_mu}/{bname}/s*_mhess.npy " +
+                f"{batch_dir}/{bname}/dpy_full_hess/.\n")
+                
         f.write(f"{pythonpath} {run_newton_py} --batch_run 1 " +
                 f"--batch_rundir {batch_dir}/{bname}/dpy_full_hess --mu {some_mu} " +
-                f"--store_hess 1 --instrument {instr}\n")
+                f"--store_hess 1 --instrument {instr} --plot 1 " +  
+                f"--mu_batchdir {batch_dir}/{bname}/dpy_full_hess\n")
+        
+    os.system(f"chmod u+x {bashscr_dir}/{bname}-hybrid.sh")

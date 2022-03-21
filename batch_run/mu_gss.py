@@ -11,6 +11,8 @@ from scipy.integrate import simps
 parser = argparse.ArgumentParser()
 parser.add_argument("--rundir", help="local directory for batch run",
                     type=str, default=".")
+parser.add_argument("--instr", help="instrument hmi or mdi",
+                    type=str, default="hmi")
 parser.add_argument("--s", help="s", type=int, default=1)
 PARGS = parser.parse_args()
 #-----------------------------------------------------------------------#
@@ -22,18 +24,17 @@ scratch_dir = dirnames[1]
 
 # reading the instrument from the rundir                                                      
 local_rundir = re.split('[/]+', PARGS.rundir, flags=re.IGNORECASE)[-1]
-instr = re.split('[_]+', local_rundir, flags=re.IGNORECASE)[0]
+instr = PARGS.instr
 
 run_newton_py = f"{package_dir}/dpy_jax/run_reduced_problem_newton.py"
 tempout = f"{PARGS.rundir}/temp.out"
 temperr = f"{PARGS.rundir}/temp.err"
-outdir = f"{PARGS.rundir}"
 #-----------------------------------------------------------------------# 
 GVARS = gvar_jax.GlobalVars(rth=0.9, knot_num=15, relpath=PARGS.rundir)
 
-
+# storing the hessian for the particular s
 os.system(f"python {run_newton_py} --store_hess 1 --instrument {instr} " +
-      f"--mu {1.0} --batch_run 1 --batch_rundir {PARGS.rundir} " +
+      f"--mu 1.0 --batch_run 1 --batch_rundir {PARGS.rundir} --plot 1 " +
       f">{tempout} 2>{temperr}")
 
 def compute_misfit(arr1, arr2):
@@ -80,12 +81,12 @@ def compute_misfit_wsr_slope(arr1, arr2, slope=True):
 
 def f(mu1):
     os.system(f"python {run_newton_py} --read_hess 1 --instrument {instr} " +
-    # os.system(f"python {run_newton_py} --instrument {instr} " +
-              f"--mu {mu1} --batch_run 1 --batch_rundir {PARGS.rundir} " +
+              f"--mu {mu1} --batch_run 1 --batch_rundir {PARGS.rundir} --plot 1 " +
               f"--s {PARGS.s} >{tempout} 2>{temperr}")
     
-    val1 = np.load(f'{outdir}/carr_fit_{mu1:.5e}.npy')
-    mf = compute_misfit_wsr_slope(val0, val1)
+    val1 = np.load(f'{PARGS.rundir}/carr_fit_{mu1:.5e}.npy')
+    # mf = compute_misfit_wsr_slope(val0, val1)
+    mf = compute_misfit_wsr(val0, val1, maxdiff=False)
     print(f" mu = {mu1:.5e}, misfit = {mf:.5e}")
     return mf
 
@@ -130,6 +131,6 @@ def gssrec(f, a, b, tol=1.0, h=None, hp=None, c=None, d=None, fc=None, fd=None):
 fname = fnmatch.filter(os.listdir(PARGS.rundir), 'true_params_flat*.npy')[0]
 val0 = np.load(f'{PARGS.rundir}/{fname}')
 
-mu_limits = [1e-15, 1e-3]
+mu_limits = [1e-6, 1e1]
 muvals = gssrec(f, np.log10(mu_limits[0]), np.log10(mu_limits[1]))
-np.save(f"{outdir}/muval.s{PARGS.s}.npy", 10**muvals[0])
+np.save(f"{PARGS.rundir}/muval.s{PARGS.s}.npy", 10**muvals[1])

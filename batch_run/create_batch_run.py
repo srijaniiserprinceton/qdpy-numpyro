@@ -40,32 +40,46 @@ for bname in batchnames:
                 f"--rundir {batch_dir}/{bname} --s 1\n")
         f.write(f"{pythonpath} {current_dir}/mu_gss.py "
                 f"--rundir {batch_dir}/{bname} --s 1\n")
+        f.write(f"cp {batch_dir}/{bname}/dhess*.npy " +
+                f"{batch_dir}/{bname}/s1_dhess.npy\n")
+        f.write(f"cp {batch_dir}/{bname}/mhess*.npy " +
+                f"{batch_dir}/{bname}/s1_mhess.npy\n")
 
         # s = 3
         f.write(f"{pythonpath} {current_dir}/batch_precompute.py " +
                 f"--rundir {batch_dir}/{bname} --s 3\n")
         f.write(f"{pythonpath} {current_dir}/mu_gss.py " +
                 f"--rundir {batch_dir}/{bname} --s 3\n")
-        
+        f.write(f"cp {batch_dir}/{bname}/dhess*.npy " +
+                f"{batch_dir}/{bname}/s3_dhess.npy\n")
+        f.write(f"cp {batch_dir}/{bname}/mhess*.npy " +
+                f"{batch_dir}/{bname}/s3_mhess.npy\n")
+
         # s = 5
         f.write(f"{pythonpath} {current_dir}/batch_precompute.py " +
                 f"--rundir {batch_dir}/{bname} --s 5\n")
         f.write(f"{pythonpath} {current_dir}/mu_gss.py " +
                 f"--rundir {batch_dir}/{bname} --s 5\n")
+        f.write(f"cp {batch_dir}/{bname}/dhess*.npy " +
+                f"{batch_dir}/{bname}/s5_dhess.npy\n")
+        f.write(f"cp {batch_dir}/{bname}/mhess*.npy " +
+                f"{batch_dir}/{bname}/s5_mhess.npy\n")
         
         # all s fitting with the optimal mu
+        mu = 1.0
         f.write(f"{pythonpath} {current_dir}/batch_precompute.py "
                 f"--rundir {batch_dir}/{bname} --s 0\n")
         f.write(f"{pythonpath} {run_newton_py} "
-                f"--mu 1.0 --store_hess 1 --s 0 --instrument {instr} " +
+                f"--mu {mu} --s 0 --instrument {instr} --plot 1 " +
                 f"--batch_run 1 --batch_rundir {batch_dir}/{bname} " +
                 f"--mu_batchdir {batch_dir}/{bname}\n")
-        f.write(f"cp {batch_dir}/{bname}/plots/fit_wsr.pdf " +
+        f.write(f"cp {batch_dir}/{bname}/plots/fit_{mu:.5e}_wsr.pdf " +
                 f"{batch_dir}/{bname}/plots/fit_wsr_sall_optimal_mu.pdf\n")
+        '''
         f.write(f"{pythonpath} {run_iterative_py} " +
                 f"--mu 1.0 --s 0 --instrument {instr} " +
                 f"--batch_run 1 --batch_rundir {batch_dir}/{bname}\n") #--read_hess 1 
-        f.write(f"cp {batch_dir}/{bname}/plots/fit_wsr.pdf " +
+        f.write(f"cp {batch_dir}/{bname}/plots/fit-iter_wsr.pdf " +
                 f"{batch_dir}/{bname}/plots/fit_wsr_sall_iter.pdf\n")
-        
+        '''
     os.system(f"chmod u+x {bashscr_dir}/{bname}.sh")

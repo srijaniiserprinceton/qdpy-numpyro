@@ -443,30 +443,32 @@ else:
     data_acoeffs_Q = GVARS_Q.acoeffs_true
 
 # making the pred_data corresponding to the true_params_iter 
+# true_params_flat = jnp.asarray(true_params_iter) * 1.0
 '''
-true_params_flat = jnp.asarray(true_params_iter) * 1.0
 pred_acoeffs_D = model_D_(true_params_flat, 1)
 pred_acoeffs_Q = model_Q_(true_params_flat, 1)
 '''
 
 print(f"data_acoeffs_D_flat = {data_acoeffs_D[:15]}")
 print(f"data_acoeffs_Q_flat = {data_acoeffs_Q[:15]}")
-pred_acoeffs_D = model_D_(true_params_iter, 1)                                                
-pred_acoeffs_Q = model_Q_(true_params_iter, 1)
-print(f"data_acoeffs_D_iter = {pred_acoeffs_D[:15]}")
-print(f"data_acoeffs_Q_iter = {pred_acoeffs_Q[:15]}")
+# pred_acoeffs_D = model_D_(true_params_iter, 1)                                              
+# pred_acoeffs_Q = model_Q_(true_params_iter, 1)
+# print(f"data_acoeffs_D_iter = {pred_acoeffs_D[:15]}")
+# print(f"data_acoeffs_Q_iter = {pred_acoeffs_Q[:15]}")
 
 
 data_acoeffs_out_HMI_D = GVARS_D.acoeffs_out_HMI
 data_acoeffs_out_HMI_Q = GVARS_Q.acoeffs_out_HMI
 
-'''
+
+# using real data
 data_acoeffs_Q = GVARS_Q.acoeffs_true
 data_acoeffs_D = GVARS_D.acoeffs_true
 '''
 # using synthetic data without noise from the true_params_iter model
 data_acoeffs_Q = pred_acoeffs_Q
 data_acoeffs_D = pred_acoeffs_D
+'''
 
 '''
 #----------------------------------------------------------------------# 
@@ -551,8 +553,6 @@ print(f'[{itercount:3d} | {tinit:6.1f} sec ] ' +
       f'data_misfit = {data_misfit:12.5e} loss-diff = {loss_diff:12.5e}; ' +
       f'max-grads = {abs(grads).max():12.5e} model_misfit={model_misfit:12.5e}')
 
-dac_Q = data_acoeffs_Q - pred_acoeffs_Q
-dac_D = data_acoeffs_D - pred_acoeffs_D
 carr_total = 0.
 carr_total += true_params_flat
 c_arr_allk = [carr_total]
@@ -570,20 +570,14 @@ t1s = time.time()
 while(kiter < kmax):
     # for ii in tqdm(range(2**kiter * N0), desc=f"k={kiter}"):
     t1 = time.time()
-    c_arr = np.zeros_like(c_arr)
     loss_prev = loss
-    grads = _grad_fn(c_arr, dac_D, dac_Q, 0)
-    c_arr = _update_H(c_arr, grads, hess_inv)
-    carr_total += c_arr
+    grads = _grad_fn(carr_total, data_acoeffs_D, data_acoeffs_Q, 1)
+    carr_total = _update_H(carr_total, grads, hess_inv)
     loss = _loss_fn(carr_total, data_acoeffs_D, data_acoeffs_Q, 1)
     
     model_misfit = model_misfit_fn(carr_total, 1)
     data_misfit = loss - mu*model_misfit
     loss_diff = loss_prev - loss
-    pac_Q = model_Q_(carr_total, 1)
-    pac_D = model_D_(carr_total, 1)
-    dac_Q = data_acoeffs_Q - pac_Q
-    dac_D = data_acoeffs_D - pac_D
     
     dm_list.append(data_misfit)
     mm_list.append(model_misfit)
@@ -623,10 +617,10 @@ t2s = time.time()
 t21s_min = (t2s - t1s)/60.
 print(f"Total time taken = {t21s_min:7.2f} minutes")
 
-data_misfit_val_D = data_misfit_fn_D(c_arr, dac_D, 0)
-data_misfit_val_Q = data_misfit_fn_Q(c_arr, dac_Q, 0)
+data_misfit_val_D = data_misfit_fn_D(c_arr, data_acoeffs_D, 0)
+data_misfit_val_Q = data_misfit_fn_Q(c_arr, data_acoeffs_Q, 0)
 total_misfit = data_misfit_val_D + data_misfit_val_Q
-num_data = len(pred_acoeffs_D) + len(pred_acoeffs_Q)
+num_data = len(data_acoeffs_D) + len(data_acoeffs_Q)
 rms = total_misfit/num_data
 print(f"chisq = {total_misfit:.5f}")
 print(f"rms = {rms:.5f}")

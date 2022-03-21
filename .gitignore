@@ -21,3 +21,5 @@ hmi*
 mdi*
 *.pkl
 jobscripts/bashbatch
+*.oe
+jobscripts/logs
