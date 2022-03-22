@@ -58,10 +58,11 @@ class get_splines:
                                             [self.knot_locs[self.knot_ind_th], rmax],
                                             1, types= ['TOP','BOTTOM'])
         vercof4, dvercof4 = eval_vbspl(self.r, knot_locs_uniq[self.knot_ind_th:])
-
+        
         idx = np.where(vercof3[:, -1] > 0)[0][0]
         vercof3[idx, -1] = 0.0
 
+        '''
         # arranging the basis from left to right with st lines
         bsp_basis = np.column_stack((vercof1[:, -1],
                                      vercof2[:, 1:-1],
@@ -76,7 +77,17 @@ class get_splines:
                                        dvercof3[:, -1],
                                        dvercof4[:, 1:-1],
                                        dvercof3[:, 0]))
+        '''
+        idx = np.where(vercof4[:, 0] > 0)[0][0]
+        vercof4[idx, 0] = 0.0
 
+        # arranging the basis from left to right with st lines                                
+        bsp_basis = np.column_stack((vercof2[:, :],                                        
+                                     vercof4[:, :]))                                          
+
+        d_bsp_basis = np.column_stack((dvercof2[:, :],
+                                       dvercof4[:, :]))
+        
         self.knot_ind_th = self.knot_ind_th + 4
 
         knot_locs = np.hstack((knot_locs_uniq[:self.knot_ind_th+1],

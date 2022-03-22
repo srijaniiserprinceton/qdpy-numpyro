@@ -617,11 +617,11 @@ t2s = time.time()
 t21s_min = (t2s - t1s)/60.
 print(f"Total time taken = {t21s_min:7.2f} minutes")
 
-data_misfit_val_D = data_misfit_fn_D(c_arr, data_acoeffs_D, 0)
-data_misfit_val_Q = data_misfit_fn_Q(c_arr, data_acoeffs_Q, 0)
+data_misfit_val_D = data_misfit_fn_D(carr_total, data_acoeffs_D, 1)
+data_misfit_val_Q = data_misfit_fn_Q(carr_total, data_acoeffs_Q, 1)
 total_misfit = data_misfit_val_D + data_misfit_val_Q
 num_data = len(data_acoeffs_D) + len(data_acoeffs_Q)
-rms = total_misfit/num_data
+rms = np.sqrt(total_misfit/num_data)
 print(f"chisq = {total_misfit:.5f}")
 print(f"rms = {rms:.5f}")
 
