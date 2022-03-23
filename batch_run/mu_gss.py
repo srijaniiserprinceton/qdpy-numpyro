@@ -30,7 +30,18 @@ run_newton_py = f"{package_dir}/dpy_jax/run_reduced_problem_newton.py"
 tempout = f"{PARGS.rundir}/temp.out"
 temperr = f"{PARGS.rundir}/temp.err"
 #-----------------------------------------------------------------------# 
-GVARS = gvar_jax.GlobalVars(rth=0.9, knot_num=15, relpath=PARGS.rundir)
+ARGS = np.loadtxt(f"{PARGS.rundir}/.n0-lmin-lmax.dat")
+GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
+                            lmin=int(ARGS[1]),
+                            lmax=int(ARGS[2]),
+                            rth=ARGS[3],
+                            knot_num=int(ARGS[4]),
+                            load_from_file=int(ARGS[5]),
+                            relpath=PARGS.rundir,
+                            instrument=PARGS.instr,
+                            tslen=int(ARGS[6]),
+                            daynum=int(ARGS[7]),
+                            numsplits=int(ARGS[8]))
 
 # storing the hessian for the particular s
 os.system(f"python {run_newton_py} --store_hess 1 --instrument {instr} " +

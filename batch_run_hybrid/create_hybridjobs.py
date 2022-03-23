@@ -11,7 +11,7 @@ scratch_dir = dirnames[1]
 _pythonpath = subprocess.check_output("which python",
                                         shell=True)
 pythonpath = _pythonpath.decode("utf-8").split("\n")[0]
-execpath = f"{package_dir}/hybrid_jax/run_reduced_hybrid_iterative.py"
+execpath = f"{package_dir}/hybrid_jax/run_reduced_hybrid_iterative_fulldata.py"
 dpy_iterpath = f"{package_dir}/dpy_jax/run_reduced_problem_iterative.py"
 
 batchnames = [filename for
@@ -22,7 +22,7 @@ print(batchnames)
 
 count = 0
 num_batches = len(batchnames)
-num_jobs = 1
+num_jobs = 4
 for i in range(num_jobs):
     job_args = []
     jobdpy_args = []
@@ -68,7 +68,7 @@ echo \"Last dataset = {bname}\"
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=40
 #SBATCH --mem=150G
-#SBATCH --time=05:00:00
+#SBATCH --time=15:00:00
 echo \"Starting at \"`date`
 module purge
 module load anaconda3

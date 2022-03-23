@@ -7,7 +7,7 @@ current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
 _pythonpath = subprocess.check_output("which python", shell=True)
 pythonpath = _pythonpath.decode("utf-8").split("\n")[0]
-jobname = f"sgk.hyb-init"
+jobname = f"sbd.hyb-init"
 execpath = f"{package_dir}/jobscripts/batchjobs.sh"
 
 gnup_str = \
@@ -25,8 +25,28 @@ parallel --jobs 12 < $PBS_O_WORKDIR/ipjobs_batch.sh
 echo \"Finished at \"`date`
 """
 
+slurm_str = f"""#!/bin/bash                                                                  
+#SBATCH --job-name={jobname}                                                              
+#SBATCH --output=out-{jobname}.log                                                            
+#SBATCH --error=err-{jobname}.log
+#SBATCH --nodes=1                                                                             
+#SBATCH --ntasks-per-node=40                                                                  
+#SBATCH --mem=180G                                                                            
+#SBATCH --time=15:00:00                                                                       
+echo \"Starting at \"`date`                                                                   
+module purge                                                                                  
+module load anaconda3                                                                         
+conda activate jax-gpu                                                                        
+echo \"Starting at \"`date`                                                                   
+parallel --jobs 3 < {package_dir}/jobscripts/ipjobs_batch.sh                                
+echo \"Finished at \"`date`
+"""
+
 with open(f"{package_dir}/jobscripts/gnup_batch.pbs", "w") as f:
     f.write(gnup_str)
+
+with open(f"{package_dir}/jobscripts/gnup_batch.slurm", "w") as f:
+    f.write(slurm_str)
 
 bashdir = f"{package_dir}/jobscripts/bashbatch"
 with open(f"{package_dir}/jobscripts/ipjobs_batch.sh", "w") as f:
