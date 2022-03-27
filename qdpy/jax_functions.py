@@ -22,6 +22,12 @@ def load_obj(name):
     return None
 
 
+def load_obj_with_pklext(name):
+    with open(name, 'rb') as f:
+        return pickle.load(f)
+    return None
+
+
 def save_npy(name, data):
     np.save(name, data)
     print(f"Writing to {name}")

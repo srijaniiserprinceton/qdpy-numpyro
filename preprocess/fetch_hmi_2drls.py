@@ -55,8 +55,8 @@ pt = pd.read_table(f'{ipdir}/daylist.txt', delim_whitespace=True,
 #----------------------------------------------------------------------#
 # day1 = pt['DATE'][0]  #[i+30]
 # day2 = pt['DATE'][1] #"2021-31-12"   #pt['DATE'][i+30]
-day1 = pt['DATE'][40]  #[i+30]
-day2 = pt['DATE'][59]  #[i+30]
+day1 = pt['DATE'][31]  #[i+30]
+day2 = pt['DATE'][39]  #[i+30]
 print(f"day1 = {day1}; day2 = {day2}")
 print(f"atime = {a.Time(f'{day1}T00:00:00', f'{day2}T00:00:00')}")
 #----------------------------------------------------------------------#
