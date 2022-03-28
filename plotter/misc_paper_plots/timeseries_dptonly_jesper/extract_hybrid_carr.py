@@ -28,7 +28,7 @@ summary = jf.load_obj_with_pklext(f'{daydir}/summaryfiles/{summary_fname}')
 bsp_basis_clipped = summary['params']['dpy']['GVARS'].bsp_basis
 
 # the set of files computed by Samarth
-dayind_min, dayind_max = 40, 59
+dayind_min, dayind_max = 31, 39
 
 baddays = np.array([10432, 9352, 10072, 9712, 10288])
 
@@ -40,11 +40,11 @@ for dayind in range(dayind_min, dayind_max+1):
         print(f'Bad day: {day}; skipping.')
         continue
     '''
-    daydir = f'{batchrun_dir_donejobs}/hmi_72d_{day}_18'
+    daydir = f'{batchrun_dir}/hmi_72d_{day}_18'
 
     # saving the wsr from dpy
     # carr_dpy_fit = np.load(f'{samarth_dpy_dir}/carr_dpt_{day}.npy')
-    carr_dpy_fit = np.load(f'{daydir}/dpy_full_hess/carr_fit_1.00000e+00.npy')
+    carr_dpy_fit = np.load(f'{daydir}/dpy_full_hess/true_params_flat.hmi.72d.{day}.18.npy')
     carr_dpy_fit = np.reshape(carr_dpy_fit, (3,-1), 'F')
     wsr_dpy_fit = carr_dpy_fit @ bsp_basis_clipped
 
