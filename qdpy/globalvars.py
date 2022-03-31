@@ -51,7 +51,7 @@ class qdParams():
 
         self.rmin, self.rth, self.rmax = 0.0, rth, 1.2
         self.fwindow =  150.0 
-        self.smax = 5
+        self.smax = 19
         self.preplot = True
 
 
@@ -110,7 +110,6 @@ class GlobalVars():
         self.relpath = relpath
         self.eigtype = eigtype
 
-        self.sfactor = np.array([1., 1., 1.])
         qdPars = qdParams(lmin=lmin, lmax=lmax, n0=n0, rth=rth)
 
         # Frequency unit conversion factor (in Hz (cgs))
@@ -137,6 +136,7 @@ class GlobalVars():
 
         self.smax = qdPars.smax
         self.s_arr = np.arange(1, self.smax+1, 2)
+        self.sfactor = np.ones_like(self.s_arr)
 
         self.fwindow = qdPars.fwindow
         self.wsr = -1.0*np.loadtxt(f'{self.ipdir}/{self.instrument}/' +
@@ -187,8 +187,10 @@ class GlobalVars():
 
         # the factor to be multiplied to make the upper and lower 
         # bounds of the model space to be explored
-        self.fac_arr = np.array([[1.03, 1.03, 1.03],
-                                 [0.97, 0.97, 0.97]])
+        # fac_arr = np.ones((2, len(self.s_arr))
+        # fac_arr[0, :] = fac_arr[0, :]*1.03
+        # fac_arr[1, :] = fac_arr[1, :]*0.97
+        self.fac_arr = np.ones((2, 10))
 
         # finding the spline params for wsr
         self.spl_deg = 3
@@ -354,7 +356,7 @@ class GlobalVars():
     # }}} findfreq(data, l, n, m)
 
     # {{{ def find_acoeffs(data, l, n):
-    def find_acoeffs(self, data, l, n, odd=True, smax=5):
+    def find_acoeffs(self, data, l, n, odd=True, smax=19):
         '''Find the splitting coefficients for a given (l, n) 
         in nHz
 
