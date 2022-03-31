@@ -19,6 +19,8 @@ PARSER.add_argument("--instrument", help="hmi or mdi",
                     type=str, default="hmi")
 PARSER.add_argument("--tslen", help="72d or 360d",
                     type=str, default="72d")
+PARSER.add_argument("--smax", help="max value of s",
+                    type=int, default=5)
 ARGS = PARSER.parse_args()
 del PARSER
 #-----------------------------------------------------------------------#
@@ -157,7 +159,7 @@ if __name__=="__main__":
     fnames_rot2d = get_fnames("rot")
     fnames_err2d = get_fnames("err")
     fnames_rmesh = get_fnames("rmesh")
-    smax = 5
+    smax = ARGS.smax
 
     for i in range(len(fnames_rot2d)):
         fname_re = [fnames_rot2d[i],
