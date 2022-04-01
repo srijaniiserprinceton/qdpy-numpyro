@@ -81,12 +81,24 @@ r_antia = summary_antia['params']['dpy']['GVARS'].r
 r_modelS = summary_modelS['params']['dpy']['GVARS'].r
 r_gyre = summary_gyre['params']['dpy']['GVARS'].r
 
+# wsr sigma for Jesper's
+wsr_sigma = np.load('wsr_sigma.npy')
+
+# making the part not fitted for proper sigma
+wsr_sigma[0, :-1018] = wsr_sigma[0, -1018]
+wsr_sigma[1, :-1018] = wsr_sigma[1, -1018]
+wsr_sigma[2, :-1018] = wsr_sigma[2, -1018]
+
 fig, ax = plt.subplots(3, 1, figsize=(4,9))
 
 for i in range(3):
     ax[i].plot(r_antia, wsr_antia[i] - wsr_jesper[i], 'k', lw = 1, label='EFN I')
     ax[i].plot(r_modelS, wsr_modelS[i] - wsr_jesper[i], '--k', lw = 1, label='EFN II')
     ax[i].plot(r_gyre, wsr_gyre[i] - wsr_jesper[i], '-.k', lw = 1, label='EFN III')
+    # ax[i].plot(r_gyre, wsr_sigma[i], '--r', lw = 1)
+    # ax[i].plot(r_gyre, -wsr_sigma[i], '--r', lw = 1)
+    ax[i].fill_between(r_gyre, wsr_sigma[i], -wsr_sigma[i], color='red',
+                       alpha=0.4)
     
     ax[i].grid(True)
     ax[i].set_xlim([0.88, 1])

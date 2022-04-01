@@ -54,7 +54,7 @@ def get_Omega_r_theta(wsr):
 # https://www.weather.gov/news/201509-solar-cycle says it happened in Dec, 2019
 dayind_solmin = 3
 day_solmin = pt['MDI'][dayind_solmin]
-wsr_dpt_solmin = np.load(f'wsr_dpy_fit_{day_solmin}.npy')
+wsr_dpt_solmin = np.load(f'../timeseries_dptonly/wsr_dpy_fit_{day_solmin}.npy')
 
 # array to store the wsr_dpt timeseries at rplot
 Omega_r_theta_dpt_solmin = get_Omega_r_theta(wsr_dpt_solmin)
