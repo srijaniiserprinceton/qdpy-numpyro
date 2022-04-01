@@ -4,7 +4,7 @@ NMAX_DEFAULT=30
 LMIN_DEFAULT=5
 LMAX_DEFAULT=295
 SMIN_DEFAULT=1
-SMAX_DEFAULT=5
+SMAX_DEFAULT=19
 KNOTNUM_DEFAULT=15
 RTH_DEFAULT=0.9
 EXCLUDE_QDPY_MODES_DEFAULT=0
@@ -78,7 +78,6 @@ else
 		   --outdir "dpy_jax" >.mlist.out 2>.mlist.err
 fi
 echo "       -- `tail -1 .mlist.out`"
-
 echo "[ 2. ] Generating synthetic eigenvalues ..."
 python generate_synthetic_eigvals.py --lmin $LMIN --lmax $LMAX \
 	   --load_mults 1 --knot_num $KNOTNUM --rth $RTH \
