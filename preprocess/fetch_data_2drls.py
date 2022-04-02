@@ -40,13 +40,22 @@ dldir = f"{instrdir}/dlfiles"
 if not os.path.isdir(instrdir): os.mkdir(instrdir)
 if not os.path.isdir(dldir): os.mkdir(dldir)
 #----------------------------------------------------------------------#
-series_name = "hmi.V_sht_2drls"
+if INSTR=="hmi":
+    series_name = "hmi.V_sht_2drls"
+    daylist_fname = "daylist.hmi"
+    LMAX = "200"
+    NDT = "138240"
+elif INSTR=="mdi":
+    series_name = "mdi.vw_V_sht_2drls"
+    daylist_fname = "daylist.mdi"
+    LMAX = "300"
+    NDT = "103680"
 
 drms_client = drms.Client()
 segment_info = drms_client.info(series_name)
 segments = segment_info.segments.index.values
 
-pt = pd.read_table(f'{ipdir}/daylist.txt', delim_whitespace=True,
+pt = pd.read_table(f'{ipdir}/{daylist_fname}', delim_whitespace=True,
                    names=('SN', 'MDI', 'DATE'),
                    dtype={'SN': np.int64,
                           'MDI': np.int64,
@@ -68,8 +77,8 @@ response = client.search(a.Time(f'{day1}T00:00:00', f'{day2}T00:00:00'),
                          a.jsoc.Segment(segments[2]),
                          a.jsoc.Segment(segments[3]),
                          a.jsoc.PrimeKey('LMIN', '0') &
-                         a.jsoc.PrimeKey('LMAX', '200') &
-                         a.jsoc.PrimeKey('NDT', '138240') &
+                         a.jsoc.PrimeKey('LMAX', LMAX) &
+                         a.jsoc.PrimeKey('NDT', NDT) &
                          a.jsoc.PrimeKey('NACOEFF', '6') &
                          a.jsoc.PrimeKey('RADEXP', '-6') &
                          a.jsoc.PrimeKey('LATEXP', '-2'),
@@ -89,5 +98,5 @@ while requests.status > 0:
 print(f" status = {requests.status}: Ready for download")
 res = client.get_request(requests, path=dldir)
 #os.system(f"cd {dldir}; rm $(ls | egrep -v '138240.6')")
-os.system(f"cd {dldir}; rm $(ls | egrep -v '138240.36')")
+os.system(f"cd {dldir}; rm $(ls | egrep -v '{NDT}.36')")
 #----------------------------------------------------------------------#
