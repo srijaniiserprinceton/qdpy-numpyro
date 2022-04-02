@@ -148,7 +148,7 @@ def load_data(fname_re):
     return (rmesh, theta), (rot2d, err2d)
 
 def get_fnames(suffix="rot"):
-    os.system(f"ls {dldir}/hmi* | grep {suffix} > {dldir}/fnames_{suffix}.txt")
+    os.system(f"ls {dldir}/{INSTR}* | grep {suffix} > {dldir}/fnames_{suffix}.txt")
     with open(f"{dldir}/fnames_{suffix}.txt", "r") as f:
         fnames = f.read().splitlines()
     return fnames

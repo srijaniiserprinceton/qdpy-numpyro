@@ -61,7 +61,7 @@ if (not PARGS.batch_run):
     outdir = f"{scratch_dir}/dpy_jax"
     summdir = f"{scratch_dir}/summaryfiles"
     plotdir = f"{scratch_dir}/plots"
-    knee_mu = np.array([1., 1., 1.])
+    knee_mu = np.ones(10) #np.array([1., 1., 1.])
 
 else:
     n0lminlmax_dir = f"{PARGS.batch_rundir}"
@@ -75,7 +75,7 @@ else:
         knee_mu *= 1.
         print('Using optimal knee_mu.')
     except FileNotFoundError:
-        knee_mu = np.array([1., 1., 1.])
+        knee_mu = np.ones(10) #np.array([1., 1., 1.])
         found_optimal = False
         print('Not using optimal knee_mu.')
 
@@ -365,7 +365,10 @@ else:
     data_hess_dpy = jnp.asarray(data_hess_fn(c_init))
     model_hess_dpy = jnp.asarray(model_hess_fn(c_init))
 
+print(f"data hess sum = {sum(data_hess_dpy)}")
+print(f"model hess sum = {sum(model_hess_dpy)}")
 total_hess = data_hess_dpy + mu*model_hess_dpy
+print(f"total hess sum = {sum(total_hess)}")
 hess_inv = jnp.linalg.inv(total_hess)
 
 

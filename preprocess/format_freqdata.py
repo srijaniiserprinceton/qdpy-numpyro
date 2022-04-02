@@ -40,6 +40,8 @@ def reformat_splitdata(ell, n, mu, sind, ac_ois):
             idxs = np.where((ell1 == ell)*
                             (n1 == n))[0]
             # print(f"{n1:3d}, {ell1:4d},", idxs)
+            data_splits[count, 49:49+36] = 1.0
+            data_splits_out[count, 49:49+36] = 1.0
             for idx in idxs:
                 data_splits[count, 0] = ell[idx]
                 data_splits[count, 1] = n[idx]
@@ -55,7 +57,7 @@ def reformat_splitdata(ell, n, mu, sind, ac_ois):
 
 
 def get_fnames(suffix="split"):
-    os.system(f"ls {dldir}/dlfiles/hmi* | grep {suffix} > " +
+    os.system(f"ls {dldir}/dlfiles/{INSTR}* | grep {suffix} > " +
               f"{dldir}/dlfiles/fnames_{suffix}.txt")
     with open(f"{dldir}/dlfiles/fnames_{suffix}.txt", "r") as f:
         fnames = f.read().splitlines()
@@ -164,7 +166,7 @@ def store_output(fname, splitdata):
 if __name__ == "__main__":
     fnames_split = get_fnames()
     for fname in fnames_split:
-        newname = RN.get_newname(fname)
+        newname = RN.get_newname(fname, instrument=INSTR)
         print(newname)
         dsplits, dsplits_out = setup_reformatting(fname)
         fname_splits = newname.split('.')

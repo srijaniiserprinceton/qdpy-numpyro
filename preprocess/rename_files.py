@@ -11,13 +11,13 @@ scratch_dir = dirnames[1]
 ipdir = f"{scratch_dir}/input_files"
 outdir = f"{ipdir}/hmi"
 #----------------------------------------------------------------------#
-mdi_daylist = pd.read_table(f'{ipdir}/daylist.txt', delim_whitespace=True,
-                            names=('SN', 'MDI', 'DATE'),
-                            dtype={'SN': np.int64,
-                                   'MDI': np.int64,
-                                   'DATE': str})
-#----------------------------------------------------------------------#
-def get_newname(fname, suffix="split"):
+def get_newname(fname, suffix="split", instrument="hmi"):
+
+    mdi_daylist = pd.read_table(f'{ipdir}/daylist.{instrument}', delim_whitespace=True,
+                                names=('SN', 'MDI', 'DATE'),
+                                dtype={'SN': np.int64,
+                                       'MDI': np.int64,
+                                       'DATE': str})
     date = fname.split('.')[2].split('_')[0]
     year = date[:4]
     month = date[4:6]
@@ -39,8 +39,8 @@ def get_newname(fname, suffix="split"):
 
 
 
-def rename_file(fname, suffix="split"):
-    newname = get_newname(fname, suffix=suffix)
+def rename_file(fname, suffix="split", instrument="hmi"):
+    newname = get_newname(fname, suffix=suffix, instrument=instrument)
     if newname == None:
         found = 0
     else:
