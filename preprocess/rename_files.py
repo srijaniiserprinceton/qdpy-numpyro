@@ -30,7 +30,7 @@ def get_newname(fname, suffix="split", instrument="hmi"):
               f"{mdi_daylist['MDI'][idx]}")
         mdi_day = mdi_daylist['MDI'][idx]
         found = 1
-        newname = f"hmi.{suffix}.{mdi_day}.18"
+        newname = f"{instrument}.{suffix}.{mdi_day}.18"
     except IndexError:
         print(f"{date_str} -- NOT FOUND")
         found = 0
