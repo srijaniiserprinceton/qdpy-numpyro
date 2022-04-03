@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from datetime import datetime, timedelta
 import os
 
 #------------------------ directory structure --------------------------#
@@ -13,7 +14,7 @@ outdir = f"{ipdir}/hmi"
 #----------------------------------------------------------------------#
 def get_newname(fname, suffix="split", instrument="hmi"):
 
-    mdi_daylist = pd.read_table(f'{ipdir}/daylist.{instrument}', delim_whitespace=True,
+    mdi_daylist = pd.read_table(f'daylist.{instrument}', delim_whitespace=True,
                                 names=('SN', 'MDI', 'DATE'),
                                 dtype={'SN': np.int64,
                                        'MDI': np.int64,
@@ -23,6 +24,7 @@ def get_newname(fname, suffix="split", instrument="hmi"):
     month = date[4:6]
     day = date[6:]
     date_str = f"{year}-{month}-{day}"
+    thisdate = datetime(int(year), int(month), int(day))
     newname = None
     try:
         idx = np.where(date_str == mdi_daylist['DATE'].values)[0][0]
@@ -32,8 +34,15 @@ def get_newname(fname, suffix="split", instrument="hmi"):
         found = 1
         newname = f"{instrument}.{suffix}.{mdi_day}.18"
     except IndexError:
-        print(f"{date_str} -- NOT FOUND")
+        mdidatestr = mdi_daylist['DATE'].values[0]
+        strsplit = mdidatestr.split('-')
+        mdidate = datetime(int(strsplit[0]), int(strsplit[1]), int(strsplit[2]))
+        mdiday = mdi_daylist['MDI'].values[0]
+        thisday = mdiday + (thisdate - mdidate).days
+        newname = f"{instrument}.{suffix}.{thisday}.18"
+        print(f"{date_str} -- NOT FOUND -- mdi_day = {thisday}")
         found = 0
+        pass
 
     return newname
 

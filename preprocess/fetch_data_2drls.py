@@ -55,7 +55,7 @@ drms_client = drms.Client()
 segment_info = drms_client.info(series_name)
 segments = segment_info.segments.index.values
 
-pt = pd.read_table(f'{ipdir}/{daylist_fname}', delim_whitespace=True,
+pt = pd.read_table(f'{daylist_fname}', delim_whitespace=True,
                    names=('SN', 'MDI', 'DATE'),
                    dtype={'SN': np.int64,
                           'MDI': np.int64,
@@ -65,7 +65,7 @@ pt = pd.read_table(f'{ipdir}/{daylist_fname}', delim_whitespace=True,
 # day1 = pt['DATE'][0]  #[i+30]
 # day2 = pt['DATE'][1] #"2021-31-12"   #pt['DATE'][i+30]
 day1 = pt['DATE'][0]  #[i+30]
-day2 = pt['DATE'][1]  #[i+30]
+day2 = pt['DATE'][20]  #[i+30]
 print(f"day1 = {day1}; day2 = {day2}")
 print(f"atime = {a.Time(f'{day1}T00:00:00', f'{day2}T00:00:00')}")
 #----------------------------------------------------------------------#
