@@ -344,7 +344,7 @@ class GlobalVars():
         mask0 = m == 0
         maskl = abs(m) >= l
         splits = np.append([0.0], data[modeindex, 12:48])
-        split_sigmas = np.append([0.0], data[modeindex, 49:85])
+        split_sigmas = np.append([0.0], data[modeindex, 48:84])
         totsigma = compute_totsigma(split_sigmas, m, L)
         totsplit = legval(1.0*m/L, splits)*L*0.001
         totsplit[mask0] = 0
@@ -378,7 +378,7 @@ class GlobalVars():
             modeindex = 0
 
         splits = np.append([0.0], data[modeindex, 12:48])
-        split_sigmas = np.append([0.0], data[modeindex, 49:85])
+        split_sigmas = np.append([0.0], data[modeindex, 48:84])
 
         assert smax < len(splits), "smax > number of splitting coefficients"
 
