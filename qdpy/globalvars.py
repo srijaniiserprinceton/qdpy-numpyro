@@ -13,6 +13,7 @@ from plotter import preplotter as preplotter
 #----------------------------------------------------------------------
 import jax.numpy as jnp
 NAX = np.newaxis
+SMAX_GLOBAL = 7
 
 #----------------------------------------------------------------------
 current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -42,7 +43,7 @@ class qdParams():
     # (2) a1 = \omega_0 ( 1 - 1/ell ) scaling
     # (Since we are using lmax = 300, 0.45*300 \approx 150)
 
-    def __init__(self, lmin=200, lmax=200, n0=0, rth=0.9):
+    def __init__(self, lmin=200, lmax=200, n0=0, rth=0.9, smax=SMAX_GLOBAL):
         # the radial orders present
         self.radial_orders = np.array([n0])
         # the bounds on angular degree for each radial order
@@ -51,7 +52,7 @@ class qdParams():
 
         self.rmin, self.rth, self.rmax = 0.0, rth, 1.2
         self.fwindow =  150.0 
-        self.smax = 19
+        self.smax = smax 
         self.preplot = True
 
 
@@ -83,7 +84,7 @@ class GlobalVars():
 
     def __init__(self, lmin=200, lmax=200, n0=0, rth=0.9, knot_num=15,
                  load_from_file=0, relpath='.', instrument='hmi',
-                 tslen=72, daynum=6328, numsplits=18):
+                 tslen=72, daynum=6328, numsplits=18, smax=SMAX_GLOBAL):
 
         # storing the parameters required for inversion
         self.tslen = tslen
@@ -110,7 +111,7 @@ class GlobalVars():
         self.relpath = relpath
         self.eigtype = eigtype
 
-        qdPars = qdParams(lmin=lmin, lmax=lmax, n0=n0, rth=rth)
+        qdPars = qdParams(lmin=lmin, lmax=lmax, n0=n0, rth=rth, smax=smax)
 
         # Frequency unit conversion factor (in Hz (cgs))
         #all quantities in cgs
@@ -190,7 +191,7 @@ class GlobalVars():
         # fac_arr = np.ones((2, len(self.s_arr))
         # fac_arr[0, :] = fac_arr[0, :]*1.03
         # fac_arr[1, :] = fac_arr[1, :]*0.97
-        self.fac_arr = np.ones((2, 10))
+        self.fac_arr = np.ones((2, len(self.s_arr)))
 
         # finding the spline params for wsr
         self.spl_deg = 3
@@ -356,7 +357,7 @@ class GlobalVars():
     # }}} findfreq(data, l, n, m)
 
     # {{{ def find_acoeffs(data, l, n):
-    def find_acoeffs(self, data, l, n, odd=True, smax=19):
+    def find_acoeffs(self, data, l, n, odd=True, smax=SMAX_GLOBAL):
         '''Find the splitting coefficients for a given (l, n) 
         in nHz
 
