@@ -24,3 +24,7 @@ jobscripts/bashbatch
 *.oe
 jobscripts/logs
 daylist.*
+mdi.*
+hmi.*
+wsr.mdi.*
+wsr.hmi.*
