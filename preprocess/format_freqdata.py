@@ -41,16 +41,16 @@ def reformat_splitdata(ell, n, mu, sind, ac_ois):
             idxs = np.where((ell1 == ell)*
                             (n1 == n))[0]
             # print(f"{n1:3d}, {ell1:4d},", idxs)
-            data_splits[count, 49:49+36] = 1.0
-            data_splits_out[count, 49:49+36] = 1.0
+            data_splits[count, 48:48+36] = 1.0
+            data_splits_out[count, 48:48+36] = 1.0
             for idx in idxs:
                 data_splits[count, 0] = ell[idx]
                 data_splits[count, 1] = n[idx]
                 data_splits[count, 2] = mu[idx]
                 data_splits[count, 11+2*sind[idx]-1] = ac_obs[idx]
-                data_splits[count, 48+2*sind[idx]-1] = asig[idx]
+                data_splits[count, 47+2*sind[idx]-1] = asig[idx]
                 data_splits_out[count, 11+2*sind[idx]-1] = ac_inv[idx]
-                data_splits_out[count, 48+2*sind[idx]-1] = asig[idx]
+                data_splits_out[count, 47+2*sind[idx]-1] = asig[idx]
             count += 1
 
     data_splits_out[:, :11] = data_splits[:, :11]

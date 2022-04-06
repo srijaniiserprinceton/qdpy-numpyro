@@ -79,8 +79,6 @@ else:
         found_optimal = False
         print('Not using optimal knee_mu.')
 
-print(f"outdir = {outdir}")
-print(f"knee_mu = {knee_mu}")
 #----------------------------------------------------------------------#
 ARGS = np.loadtxt(f"{n0lminlmax_dir}/.n0-lmin-lmax.dat")
 GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
@@ -94,7 +92,9 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             tslen=int(ARGS[6]),
                             daynum=int(ARGS[7]),
                             numsplits=int(ARGS[8]))
-
+knee_mu = np.ones(len(GVARS.s_arr))
+print(f"outdir = {outdir}")
+print(f"knee_mu = {knee_mu}")
 soln_summary = {}
 soln_summary['params'] = {}
 soln_summary['params']['dpy'] = {}
@@ -127,6 +127,7 @@ dim_hyper = 2 * np.max(GVARS.ell0_arr) + 1
 smin = min(GVARS.s_arr)
 smax = max(GVARS.s_arr)
 len_s = len(sind_arr) # number of s to fit
+print(f"len_s = {len_s}")
 nc = len(cind_arr) # number of c to fit
 #------------------------------------------------------------------------#
 # slicing the Pjl correctly in angular degree s and computing normalization
@@ -300,11 +301,11 @@ if PARGS.plot:
     plot_acoeffs.plot_acoeffs_datavsmodel(pred_acoeffs, data_acoeffs,
                                           data_acoeffs_out_HMI,
                                           acoeffs_sigma_HMI, 'ref',
-                                          plotdir=plotdir)
+                                          plotdir=plotdir, len_s=len_s)
     plot_acoeffs.plot_acoeffs_dm_scaled(pred_acoeffs, data_acoeffs,
                                         data_acoeffs_out_HMI,
                                         acoeffs_sigma_HMI, 'ref',
-                                        plotdir=plotdir)
+                                        plotdir=plotdir, len_s=len_s)
 #----------------------------------------------------------------------# 
 len_data = len(data_acoeffs) # length of data
 mu = PARGS.mu # regularization parameter
@@ -340,11 +341,11 @@ if PARGS.plot:
     plot_acoeffs.plot_acoeffs_datavsmodel(init_acoeffs, data_acoeffs,
                                           data_acoeffs_out_HMI,
                                           acoeffs_sigma_HMI, 'init',
-                                          plotdir=plotdir)
+                                          plotdir=plotdir, len_s=len_s)
     plot_acoeffs.plot_acoeffs_dm_scaled(init_acoeffs, data_acoeffs,
                                         data_acoeffs_out_HMI,
                                         acoeffs_sigma_HMI, 'init',
-                                        plotdir=plotdir)
+                                        plotdir=plotdir, len_s=len_s)
 #----------------------------------------------------------------------#
 # print(f"mu depth shape = {mu_depth.shape}")
 print(f"ctrl full shape = {GVARS.ctrl_arr_dpt_full.shape}")
@@ -425,11 +426,11 @@ if PARGS.plot:
     plot_acoeffs.plot_acoeffs_datavsmodel(final_acoeffs, data_acoeffs,
                                           data_acoeffs_out_HMI,
                                           acoeffs_sigma_HMI, 'final',
-                                          plotdir=plotdir)
+                                          plotdir=plotdir, len_s=len_s)
     plot_acoeffs.plot_acoeffs_dm_scaled(final_acoeffs, data_acoeffs,
                                         data_acoeffs_out_HMI,
                                         acoeffs_sigma_HMI, 'final',
-                                        plotdir=plotdir)
+                                        plotdir=plotdir, len_s=len_s)
 #----------------------------------------------------------------------# 
 # reconverting back to model_params in units of true_params_flat
 c_arr_fit = c_arr/true_params_flat
