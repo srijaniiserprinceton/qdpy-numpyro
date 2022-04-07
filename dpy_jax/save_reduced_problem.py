@@ -69,9 +69,8 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             instrument=PARGS.instrument,
                             tslen=int(ARGS[6]),
                             daynum=int(ARGS[7]),
-                            numsplits=int(ARGS[8]))
-
-GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
+                            numsplits=int(ARGS[8]),
+                            smax_global=int(ARGS[9]))
 
 #-------------------parameters to be inverted for--------------------#
 # the indices of ctrl points that we want to invert for

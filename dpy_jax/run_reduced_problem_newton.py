@@ -58,29 +58,33 @@ scratch_dir = dirnames[1]
 
 if (not PARGS.batch_run):
     n0lminlmax_dir = f"{package_dir}/dpy_jax"
+    ARGS = np.loadtxt(f"{n0lminlmax_dir}/.n0-lmin-lmax.dat")
     outdir = f"{scratch_dir}/dpy_jax"
     summdir = f"{scratch_dir}/summaryfiles"
     plotdir = f"{scratch_dir}/plots"
-    knee_mu = np.ones(10) #np.array([1., 1., 1.])
+    smax_global = int(ARGS[9])
+    # knee_mu = np.ones(smax_global//2 + 1) #np.array([1., 1., 1.])
+    knee_mu = np.array([0.10020888, 1.61559062, 5.31731352])
 
 else:
     n0lminlmax_dir = f"{PARGS.batch_rundir}"
+    ARGS = np.loadtxt(f"{n0lminlmax_dir}/.n0-lmin-lmax.dat")
+    smax_global = int(ARGS[9])
     outdir = f"{PARGS.batch_rundir}"
     summdir = f"{PARGS.batch_rundir}/summaryfiles"
     plotdir = f"{PARGS.batch_rundir}/plots"
     try:
-        knee_mu = np.hstack((np.load(f"{PARGS.mu_batchdir}/muval.s1.npy"),
-                             np.load(f"{PARGS.mu_batchdir}/muval.s3.npy"),
-                             np.load(f"{PARGS.mu_batchdir}/muval.s5.npy")))
+        knee_mu = []
+        for s in range(1, smax_global+1, 2):
+            knee_mu.append(np.load(f"{PARGS.mu_batchdir}/muval.s{s}.npy"))
         knee_mu *= 1.
         print('Using optimal knee_mu.')
     except FileNotFoundError:
-        knee_mu = np.ones(10) #np.array([1., 1., 1.])
+        knee_mu = np.ones(smax_global//2 + 1) #np.array([1., 1., 1.])
         found_optimal = False
         print('Not using optimal knee_mu.')
 
 #----------------------------------------------------------------------#
-ARGS = np.loadtxt(f"{n0lminlmax_dir}/.n0-lmin-lmax.dat")
 GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             lmin=int(ARGS[1]),
                             lmax=int(ARGS[2]),
@@ -91,8 +95,9 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             instrument=PARGS.instrument,
                             tslen=int(ARGS[6]),
                             daynum=int(ARGS[7]),
-                            numsplits=int(ARGS[8]))
-knee_mu = np.ones(len(GVARS.s_arr))
+                            numsplits=int(ARGS[8]),
+                            smax_global=int(ARGS[9]))
+
 print(f"outdir = {outdir}")
 print(f"knee_mu = {knee_mu}")
 soln_summary = {}

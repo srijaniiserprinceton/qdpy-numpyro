@@ -51,9 +51,10 @@ if __name__ == '__main__':
                                 instrument=PARGS.instrument,
                                 tslen=int(ARGS[6]),
                                 daynum=int(ARGS[7]),
-                                numsplits=int(ARGS[8]))
+                                numsplits=int(ARGS[8]),
+                                smax_global=int(ARGS[9]))
 
-    jmax = GVARS.smax
+    jmax = GVARS.smax_global
     RL_poly = gen_RL_poly()
     print(f"Shape = {RL_poly.shape}")
     sfx = GVARS.filename_suffix

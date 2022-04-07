@@ -15,6 +15,7 @@ parser.add_argument("--nmin", help="min radial order", type=int)
 parser.add_argument("--nmax", help="max radial order", type=int)
 parser.add_argument("--lmin", help="min angular degree", type=int)
 parser.add_argument("--lmax", help="max angular degree", type=int)
+parser.add_argument("--smax_global", help="smax to use in wsr", type=int)
 parser.add_argument("--exclude_qdpy", help="choose modes not in qdpy",
                     type=int, default=0)
 parser.add_argument("--outdir", help="dpy or qdpy",
@@ -34,7 +35,8 @@ ARGS = parser.parse_args()
 GVARS = gvar_jax.GlobalVars(instrument=ARGS.instrument,
                             tslen=ARGS.tslen,
                             daynum=ARGS.daynum,
-                            numsplits=ARGS.numsplits)
+                            numsplits=ARGS.numsplits,
+                            smax_global=ARGS.smax_global)
 sfx = GVARS.filename_suffix
 
 if(not ARGS.batch_run):

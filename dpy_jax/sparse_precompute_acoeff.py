@@ -39,9 +39,9 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             relpath=current_dir,
                             tslen=int(ARGS[6]),
                             daynum=int(ARGS[7]),
-                            numsplits=int(ARGS[8]))
+                            numsplits=int(ARGS[8]),
+                            smax_global=int(ARGS[9]))
 
-GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx =\
                     prune_multiplets.get_pruned_attributes(GVARS)
 

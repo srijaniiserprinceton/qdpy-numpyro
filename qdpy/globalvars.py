@@ -13,7 +13,7 @@ from plotter import preplotter as preplotter
 #----------------------------------------------------------------------
 import jax.numpy as jnp
 NAX = np.newaxis
-SMAX_GLOBAL = 7
+# SMAX_GLOBAL = 7
 
 #----------------------------------------------------------------------
 current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -43,7 +43,7 @@ class qdParams():
     # (2) a1 = \omega_0 ( 1 - 1/ell ) scaling
     # (Since we are using lmax = 300, 0.45*300 \approx 150)
 
-    def __init__(self, lmin=200, lmax=200, n0=0, rth=0.9, smax=SMAX_GLOBAL):
+    def __init__(self, lmin=200, lmax=200, n0=0, rth=0.9, smax_global=19):
         # the radial orders present
         self.radial_orders = np.array([n0])
         # the bounds on angular degree for each radial order
@@ -52,7 +52,7 @@ class qdParams():
 
         self.rmin, self.rth, self.rmax = 0.0, rth, 1.2
         self.fwindow =  150.0 
-        self.smax = smax 
+        self.smax_global = smax_global 
         self.preplot = True
 
 
@@ -70,21 +70,17 @@ class GlobalVars():
                       "rmin", "rmax", "rmin_ind",
                       "nl_all", 
                       "omega_list", "fwindow",
-                      "smax", "s_arr", "wsr",
+                      "smax_global", "s_arr", "wsr",
                       "pruned_multiplets",
                       "INT",
                       "FLOAT"]
 
-    __methods__ = ["get_all_GVAR",
-                   "get_mult_arrays",
-                   "get_namedtuple_gvar_paths",
-                   "get_namedtuple_gvar_static",
-                   "get_namedtuple_gvar_traced",
+    __methods__ = ["get_mult_arrays",
                    "get_ind", "mask_minmax"]
 
     def __init__(self, lmin=200, lmax=200, n0=0, rth=0.9, knot_num=15,
                  load_from_file=0, relpath='.', instrument='hmi',
-                 tslen=72, daynum=6328, numsplits=18, smax=SMAX_GLOBAL):
+                 tslen=72, daynum=6328, numsplits=18, smax_global=19):
 
         # storing the parameters required for inversion
         self.tslen = tslen
@@ -111,7 +107,7 @@ class GlobalVars():
         self.relpath = relpath
         self.eigtype = eigtype
 
-        qdPars = qdParams(lmin=lmin, lmax=lmax, n0=n0, rth=rth, smax=smax)
+        qdPars = qdParams(lmin=lmin, lmax=lmax, n0=n0, rth=rth, smax_global=smax_global)
 
         # Frequency unit conversion factor (in Hz (cgs))
         #all quantities in cgs
@@ -135,16 +131,16 @@ class GlobalVars():
         self.rmin_ind = self.get_ind(self.r, self.rmin) + 1
         self.rmax_ind = self.get_ind(self.r, self.rmax)
 
-        self.smax = qdPars.smax
-        self.s_arr = np.arange(1, self.smax+1, 2)
+        self.smax_global = qdPars.smax_global
+        self.s_arr = np.arange(1, self.smax_global+1, 2)
         self.sfactor = np.ones_like(self.s_arr)
 
         self.fwindow = qdPars.fwindow
         self.wsr = -1.0*np.loadtxt(f'{self.ipdir}/{self.instrument}/' +
-                                   f'wsr.{self.instrument}.{fsuffix}')
-        self.err1d = np.loadtxt(f'{self.ipdir}/err1d-{self.instrument}.dat')
+                                   f'wsr.{self.instrument}.{fsuffix}')[:self.smax_global//2+1]
+        # self.err1d = np.loadtxt(f'{self.ipdir}/err1d-{self.instrument}.dat')
         self.wsr_err = np.loadtxt(f'{self.ipdir}/{self.instrument}/' +
-                                  f'err.{self.instrument}.{fsuffix}')
+                                  f'err.{self.instrument}.{fsuffix}')[:self.smax_global//2+1]
 
         self.wsr = self.sfactor[:, NAX]*self.wsr
         self.wsr_err = self.sfactor[:, NAX]*self.wsr_err
@@ -187,10 +183,6 @@ class GlobalVars():
                                             self.get_acoeffs_out_HMI()
 
         # the factor to be multiplied to make the upper and lower 
-        # bounds of the model space to be explored
-        # fac_arr = np.ones((2, len(self.s_arr))
-        # fac_arr[0, :] = fac_arr[0, :]*1.03
-        # fac_arr[1, :] = fac_arr[1, :]*0.97
         self.fac_arr = np.ones((2, len(self.s_arr)))
 
         # finding the spline params for wsr
@@ -357,7 +349,7 @@ class GlobalVars():
     # }}} findfreq(data, l, n, m)
 
     # {{{ def find_acoeffs(data, l, n):
-    def find_acoeffs(self, data, l, n, odd=True, smax=SMAX_GLOBAL):
+    def find_acoeffs(self, data, l, n, odd=True):
         '''Find the splitting coefficients for a given (l, n) 
         in nHz
 
@@ -381,10 +373,10 @@ class GlobalVars():
         splits = np.append([0.0], data[modeindex, 12:48])
         split_sigmas = np.append([0.0], data[modeindex, 48:84])
 
-        assert smax < len(splits), "smax > number of splitting coefficients"
+        assert self.smax_global < len(splits), "smax > number of splitting coefficients"
 
-        splits = splits[:smax+1]
-        split_sigmas = split_sigmas[:smax+1]
+        splits = splits[:self.smax_global+1]
+        split_sigmas = split_sigmas[:self.smax_global+1]
 
         if odd:
             splits = splits[1::2]*self.sfactor
@@ -409,18 +401,6 @@ class GlobalVars():
         return r[rltp_idx]/self.rsun
     # }}} get_lower_tp(self, n, ell)
 
-
-    def get_all_GVAR(self):
-        '''Builds and returns the relevant dictionaries.
-        At the location of this function call, the GVARS
-        class instance containing all the other miscellaneous 
-        arrays like nl_all and omega_list should be deleted.
-        '''
-        # getting the global traced (TR) and static (ST) variables
-        GVAR_PATHS = self.get_namedtuple_gvar_paths()
-        GVAR_TR = self.get_namedtuple_gvar_traced()
-        GVAR_ST = self.get_namedtuple_gvar_static()
-        return GVAR_PATHS, GVAR_TR, GVAR_ST 
 
     def get_mult_arrays(self, load_from_file, radial_orders, ell_bounds):
         '''Creates the n array and ell array. If discontonuous ell then load from a 
@@ -460,79 +440,6 @@ class GlobalVars():
 
         return n_arr, ell_arr, np.array(omega0_arr)
 
-    def get_namedtuple_gvar_paths(self):
-        """Function to create the namedtuple containing the 
-        various global paths for reading and writing files.
-        """
-        GVAR_PATHS = jf.create_namedtuple('GVAR_PATHS',
-                                          ['local_dir',
-                                           'scratch_dir',
-                                           'snrnmais_dir',
-                                           'outdir',
-                                           'eigdir',
-                                           'progdir',
-                                           'hmidata'],
-                                          (self.local_dir,
-                                           self.scratch_dir,
-                                           self.snrnmais_dir,
-                                           self.outdir,
-                                           self.eigdir,
-                                           self.progdir,
-                                           self.hmidata_in))
-        return GVAR_PATHS
-
-    def get_namedtuple_gvar_traced(self):
-        """Function to create the namedtuple containing the 
-        various global attributes that can be traced by JAX.
-        """
-        GVAR_TRACED = jf.create_namedtuple('GVAR_TRACED',
-                                           ['r',
-                                            'r_spline',
-                                            'rth',
-                                            'rmin_ind',
-                                            'rmax_ind',
-                                            'wsr',
-                                            'ctrl_arr_up',
-                                            'ctrl_arr_lo',
-                                            'ctrl_arr_dpt_clipped',
-                                            'knot_arr',
-                                            'eigvals_true',
-                                            'eigvals_sigma'],
-                                           (self.r,
-                                            self.r_spline,
-                                            self.rth,
-                                            self.rmin_ind,
-                                            self.rmax_ind,
-                                            self.wsr,
-                                            self.ctrl_arr_up,
-                                            self.ctrl_arr_lo,
-                                            self.ctrl_arr_dpt_clipped,
-                                            self.t_internal,
-                                            self.eigvals_true,
-                                            self.eigvals_sigma))
-        return GVAR_TRACED
-
-    def get_namedtuple_gvar_static(self):
-        """Function to created the namedtuple containing the 
-        various global attributes that are static arguments.
-        """
-        GVAR_STATIC = jf.create_namedtuple('GVAR_STATIC',
-                                           ['s_arr',
-                                            'nl_all',
-                                            'omega_list',
-                                            'fwindow',
-                                            'OM',
-                                            'rth_ind',
-                                            'spl_deg'],
-                                           (self.s_arr,
-                                            self.nl_all,
-                                            self.omega_list,
-                                            self.fwindow,
-                                            self.OM,
-                                            self.rth_ind,
-                                            self.spl_deg))
-
-        return GVAR_STATIC
 
     def get_ind(self, arr, val):
         return abs(arr - val).argmin()
@@ -543,107 +450,3 @@ class GlobalVars():
             return arr[:, self.rmin_ind:self.rmax_ind]
         else:
             return arr[self.rmin_ind:self.rmax_ind]
-
-    def get_wsr_spline_params(self, which_ex='upex'):
-        # parameterizing in terms of cubic splines
-        lenr = len(self.r_spline)
-        r_spacing = int(lenr//self.knot_num)
-        r_filtered = self.r_spline[::r_spacing]
-
-        # removing end points because of requirement of splrep
-        # endpoints are automatically padded up
-        t_set = r_filtered[1:-1]
-        self.spl_deg = 3
-
-        t, c, k = splrep(self.r_spline, self.wsr[0, self.rth_ind:],
-                         s=0, t=t_set, k=self.spl_deg)
-        self.spl_deg = k
-
-        # adjusting the zero-padding in c from splrep
-        c = c[:-(k+1)]
-
-        len_s = len(self.s_arr)
-        c_arr = np.zeros((len_s, len(c)))
-
-        for i in range(len_s):
-            wsr_i_tapered = self.create_nearsurface_profile(i, which_ex=which_ex)
-            t, c, __ = splrep(self.r_spline, wsr_i_tapered[self.rth_ind:],
-                              s=0, t=t_set, k=self.spl_deg)
-            # adjusting the zero-padding in c from splrep
-            c = c[:-(k+1)]
-            c_arr[i] = c
-
-        return t, c_arr
-
-    def get_spline_full_r(self, which_ex='upex'):
-        # parameterizing in terms of cubic splines
-        lenr = len(self.r)
-        r_spacing = int(lenr//self.knot_num)
-        r_filtered = self.r[::r_spacing]
-
-        # removing end points because of requirement of splrep
-        # endpoints are automatically padded up
-        t_set = r_filtered[1:-1]
-        self.spl_deg = 3
-
-        t, c, k = splrep(self.r, self.wsr[0],
-                         s=0, t=t_set, k=self.spl_deg)
-        self.spl_deg = k
-
-        # adjusting the zero-padding in c from splrep
-        c = c[:-(k+1)]
-
-        len_s = len(self.s_arr)
-        c_arr = np.zeros((len_s, len(c)))
-
-        for i in range(len_s):
-            wsr_i_tapered = self.create_nearsurface_profile(i, which_ex=which_ex)
-            t, c, __ = splrep(self.r, wsr_i_tapered,
-                              s=0, t=t_set, k=self.spl_deg)
-            # adjusting the zero-padding in c from splrep                                     
-            c = c[:-(k+1)]
-            c_arr[i] = c
-
-        return t, c_arr
-
-    def get_matching_function(self):
-        return (np.tanh((self.r - self.rth - 0.07)/0.02) + 1)/2.0
-
-    def create_nearsurface_profile(self, idx, which_ex='upex'):
-        w_dpt = self.wsr[idx, :]
-        w_new = np.zeros_like(w_dpt)
-        matching_function = self.get_matching_function()
-
-        if which_ex == 'upex':
-            scale_factor = self.fac_up[idx]
-        elif which_ex == 'loex':
-            scale_factor = self.fac_lo[idx]
-        else:
-            return w_dpt
-
-        # near surface enhanced or suppressed profile
-        # & adding the complementary part below the rth
-        w_new = matching_function * scale_factor\
-                * w_dpt[np.argmax(np.abs(w_dpt))]\
-                * np.ones_like(w_dpt)
-        w_new += (1 - matching_function) * w_dpt
-        return w_new
-
-    def wsr_extend(self):
-        r1ind = np.argmin(abs(self.r - 1))
-        # x = self.r[r1ind-300:r1ind]
-        for i in range(len(self.wsr)):
-            # y = self.wsr[i, r1ind-300:r1ind]
-            # f = interp1d(x, y, fill_value='extrapolate')
-            # self.wsr[i, r1ind:] = f(self.r[r1ind:])
-            self.wsr[i, r1ind:] = self.wsr[i, r1ind-1]
-
-    def gen_wsr_from_c(self, x, bsp_params):
-        t, c_arr, k = bsp_params
-        wsr = np.zeros((len(self.s_arr), len(x)))
-        
-        for s_ind in range(len(self.s_arr)):
-            c = c_arr[s_ind]
-            wsr[s_ind] = splev(x, (t, c, k))
-
-        return wsr

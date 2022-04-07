@@ -26,6 +26,8 @@ parser.add_argument("--lmax", help="max angular degree",
                     type=int, default=200)
 parser.add_argument("--rth", help="threshold radius",
                     type=float, default=0.97)
+parser.add_argument("--smax_global", help="smax of the wsr to read",
+                    type=int, default=19)
 parser.add_argument("--knot_num", help="number of knots beyond rth",
                     type=int, default=5)
 parser.add_argument("--load_mults", help="load mults from file",
@@ -60,7 +62,8 @@ with open(f"{n0lminlmax_dir}/.n0-lmin-lmax.dat", "w") as f:
             f"{ARGS.load_mults}" + "\n" + 
             f"{ARGS.tslen}" + "\n" + 
             f"{ARGS.daynum}" + "\n" +
-            f"{ARGS.numsplits}")
+            f"{ARGS.numsplits}" + "\n" +
+            f"{ARGS.smax_global}")
     
 #-----------------------------------------------------------------#
 # importing local package 
@@ -70,6 +73,7 @@ from qdpy import build_hypermatrix_sparse as build_hm_sparse
 GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
                             lmin=ARGS.lmin,
                             lmax=ARGS.lmax,
+                            smax_global=ARGS.smax_global,
                             rth=ARGS.rth,
                             knot_num=ARGS.knot_num,
                             load_from_file=ARGS.load_mults,
@@ -78,8 +82,6 @@ GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
                             tslen=ARGS.tslen,
                             daynum=ARGS.daynum,
                             numsplits=ARGS.numsplits)
-
-__, GVARS_TR, __ = GVARS.get_all_GVAR()
 
 # the only import which needs .n0-lmin-lmax.dat to be created beforehand
 if(not ARGS.batch_run):
@@ -143,7 +145,7 @@ if __name__ == "__main__":
         end_ind_gvar = start_ind_gvar + 2 * ell + 1
         
         eigvals_sigma[start_ind:end_ind] *=\
-                        GVARS_TR.eigvals_sigma[start_ind_gvar:end_ind_gvar]
+                        GVARS.eigvals_sigma[start_ind_gvar:end_ind_gvar]
         
         start_ind +=  2 * ellmax + 1
         start_ind_gvar += 2 * ell + 1

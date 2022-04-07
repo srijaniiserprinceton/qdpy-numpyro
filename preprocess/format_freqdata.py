@@ -166,7 +166,6 @@ def store_output(fname, splitdata):
 
 if __name__ == "__main__":
     fnames_split = get_fnames()
-    sys.exit()
     for fname in fnames_split:
         newname = RN.get_newname(fname, instrument=INSTR)
         print(newname)
