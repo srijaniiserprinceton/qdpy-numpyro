@@ -30,6 +30,8 @@ parser.add_argument("--lmin", help="min angular degree",
                     type=int, default=200)
 parser.add_argument("--lmax", help="max angular degree",
                     type=int, default=200)
+parser.add_argument("--smax_global", help="smax to be used for wsr",
+                    type=int, default=19)
 parser.add_argument("--rth", help="threshold radius",
                     type=float, default=0.97)
 parser.add_argument("--knot_num", help="number of knots beyond rth",
@@ -52,7 +54,8 @@ with open(".n0-lmin-lmax.dat", "w") as f:
             f"{ARGS.lmax}"+ "\n" +
             f"{ARGS.rth}" + "\n" +
             f"{ARGS.knot_num}" + "\n" +
-            f"{ARGS.load_mults}")
+            f"{ARGS.load_mults}" + "\n" + 
+            f"{ARGS.smax_global}")
 #-----------------------------------------------------------------#
 # importing local package 
 from qdpy import globalvars as gvar_jax
@@ -70,9 +73,9 @@ GVARS = gvar_jax.GlobalVars(n0=ARGS.n0,
                             instrument=ARGS.instrument,
                             tslen=ARGS.tslen,
                             daynum=ARGS.daynum,
-                            numsplits=ARGS.numsplits)
+                            numsplits=ARGS.numsplits,
+                            smax_global=ARGS.smax_global)
 
-__, GVARS_TR, __ = GVARS.get_all_GVAR()
 #-----------------------------------------------------------------#
 # precomputing the perform tests and checks and generate true synthetic eigvals
 noc_hypmat_all_sparse, fixed_hypmat_all_sparse, ell0_arr, omega0_arr, sp_indices_all =\
@@ -154,7 +157,7 @@ if __name__ == "__main__":
         end_ind_gvar = start_ind_gvar + 2 * ell + 1
 
         eigvals_sigma[start_ind:end_ind] *=\
-                        GVARS_TR.eigvals_sigma[start_ind_gvar:end_ind_gvar]
+                        GVARS.eigvals_sigma[start_ind_gvar:end_ind_gvar]
 
         start_ind +=  2 * ellmax + 1
         start_ind_gvar += 2 * ell + 1

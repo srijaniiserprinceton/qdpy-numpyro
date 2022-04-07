@@ -222,7 +222,7 @@ class GlobalVars():
         np.testing.assert_array_equal([np.sum(self.ctrl_arr_lo>self.ctrl_arr_up)],[0])
         
         # converting necessary arrays to tuples
-        self.s_arr = tuple(self.s_arr)
+        self.s_arr = self.s_arr
         self.omega_list= tuple(self.omega_list)
 
         _GVARS = self

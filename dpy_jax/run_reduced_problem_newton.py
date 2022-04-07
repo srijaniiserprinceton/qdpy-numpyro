@@ -127,18 +127,21 @@ sigma2scale = np.load(f'{outdir}/sigma2scale.{sfx}.npy')
 D_bsp_j_D_bsp_k = np.load(f'{outdir}/D_bsp_j_D_bsp_k.{sfx}.npy')
 #------------------------------------------------------------------------# 
 nmults = len(GVARS.ell0_arr)
-num_j = len(GVARS.s_arr)
 dim_hyper = 2 * np.max(GVARS.ell0_arr) + 1
+num_j = len(GVARS.s_arr)
 smin = min(GVARS.s_arr)
 smax = max(GVARS.s_arr)
+
 len_s = len(sind_arr) # number of s to fit
-print(f"len_s = {len_s}")
 nc = len(cind_arr) # number of c to fit
 #------------------------------------------------------------------------#
 # slicing the Pjl correctly in angular degree s and computing normalization
 # calculating the denominator of a-coefficient converion apriori
 # shape (nmults, num_j)
 Pjl = RL_poly[:, smin:smax+1:2, :]
+
+print(RL_poly.shape, Pjl.shape)
+
 aconv_denom = np.zeros((nmults, Pjl.shape[1]))
 for mult_ind in range(nmults):
     aconv_denom[mult_ind] = np.diag(Pjl[mult_ind] @ Pjl[mult_ind].T)
@@ -176,6 +179,7 @@ def data_misfit_arr_fn(c_arr):
     pred = fixed_part + c_arr @ param_coeff_flat
     pred_acoeffs = jnp.zeros(num_j * nmults)
     __, pred_acoeffs = foril(0, nmults, loop_in_mults, (pred, pred_acoeffs))
+    print(data_acoeffs.shape, pred_acoeffs.shape)
     data_misfit_arr = (data_acoeffs - pred_acoeffs)/acoeffs_sigma_HMI
     return data_misfit_arr
 

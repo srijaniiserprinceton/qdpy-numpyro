@@ -81,6 +81,10 @@ if __name__ == "__main__":
                         type=int, default=200)
     parser.add_argument("--lmax", help="max angular degree",
                         type=int, default=200)
+    parser.add_argument("--smax", help="max value of s to be fitted for",
+                        type=int, default=5)
+    parser.add_argument("--smax_global", help="smax to be used in wsr",
+                        type=int, default=19)
     parser.add_argument("--rth", help="threshold radius",
                         type=float, default=0.97)
     parser.add_argument("--knot_num", help="number of knots beyond rth",
@@ -117,7 +121,8 @@ if __name__ == "__main__":
                 f"{ARGS.load_mults}" + "\n" +
                 f"{ARGS.tslen}" + "\n" +
                 f"{ARGS.daynum}" + "\n" +
-                f"{ARGS.numsplits}")
+                f"{ARGS.numsplits}" + "\n" +
+                f"{ARGS.smax_global}")
 
 
     if(not ARGS.batch_run):
@@ -137,16 +142,16 @@ if __name__ == "__main__":
                                 instrument=ARGS.instrument,
                                 tslen=ARGS.tslen,
                                 daynum=ARGS.daynum,
-                                numsplits=ARGS.numsplits)
-
-    __, GVARS_TR, __ = GVARS.get_all_GVAR()
+                                numsplits=ARGS.numsplits,
+                                smax_global=ARGS.smax_global)
+    
     #-------------------parameters to be inverted for--------------------#
     # the indices of ctrl points that we want to invert for
     ind_min, ind_max = 0, GVARS.ctrl_arr_dpt_clipped.shape[1]-1
     cind_arr = np.arange(ind_min, ind_max+1)
 
     # the angular degrees we want to invert for
-    smin, smax = 1, 5
+    smin, smax = 1, ARGS.smax
     smin_ind, smax_ind = (smin-1)//2, (smax-1)//2
     sind_arr = np.arange(smin_ind, smax_ind+1)
     #---------------------------------------------------------------------#
