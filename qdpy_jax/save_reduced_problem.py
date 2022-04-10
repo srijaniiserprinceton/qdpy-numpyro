@@ -284,6 +284,8 @@ if __name__ == "__main__":
         np.testing.assert_array_almost_equal(qdpt_supmat,
                                             synth_hypmat[i][:dim_super,:dim_super])
 
+    print('200 AND 201 TESTING PASSED SUCCESSSFULLY')
+
     '''
     #-----------------------COMPARING AGAINST dpy_jax--------------------------#
     eigvals_from_dpy_jax = np.load(f'{outdir}/eigvals_model_dpy_jax.npy')
