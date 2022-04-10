@@ -15,7 +15,6 @@ def getnt4cenmult(n0, ell0, GVARS):
         The spherical harmonic degree of central multiplet
     GVARS - object
         Python object with the following attributes:
-        nl_neighbours - np.ndarray(ndim=2, dtype=int)
         nl_all - np.ndarray(ndim=2, dtype=int)
         omega_list - np.ndarray(ndim=1, dtype=float)
         s_arr - np.ndarray(ndim=1, dtype=int)

@@ -193,8 +193,8 @@ if __name__ == "__main__":
     # looping over multiplets to precompute modified fixed part
     for i in range(nmults):
         _fixmat = build_hm_sparse.build_hypmat_w_c(noc_hypmat_all_sparse[i],
-                                                fixed_hypmat_all_sparse[i],
-                                                c_fixed, nc, len_s)
+                                                   fixed_hypmat_all_sparse[i],
+                                                   c_fixed, nc, len_s)
 
         fixed_hypmat_sparse[i, :] = _fixmat
     #---------storing the true parameters which are allowed to vary-------# 

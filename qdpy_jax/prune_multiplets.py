@@ -29,7 +29,7 @@ def get_pruned_multiplets(nl, omega, nl_all):
     return nl_pruned, nl_idx_pruned, omega_pruned
 
 
-def get_pruned_attributes(GVARS, GVARS_ST):
+def get_pruned_attributes(GVARS):
     wig_list = []
     wig_idx = []
     
@@ -37,7 +37,7 @@ def get_pruned_attributes(GVARS, GVARS_ST):
         n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
         
         # building the namedtuple for the central multiplet and its neighbours
-        CENMULT_AND_NBS = getnt4cenmult_(n0, ell0, GVARS_ST)
+        CENMULT_AND_NBS = getnt4cenmult_(n0, ell0, GVARS)
         
         if i == 0:
             nl_pruned = CENMULT_AND_NBS.nl_nbs
@@ -50,7 +50,7 @@ def get_pruned_attributes(GVARS, GVARS_ST):
                                                     GVARS.s_arr, wig_list, wig_idx)
         
 
-    nl_arr = np.asarray(GVARS_ST.nl_all)
+    nl_arr = np.asarray(GVARS.nl_all)
     nl_pruned = np.asarray(nl_pruned)
 
     # extracting the unique multiplets in the nl_pruned

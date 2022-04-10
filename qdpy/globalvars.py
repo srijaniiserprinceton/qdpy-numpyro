@@ -13,7 +13,6 @@ from plotter import preplotter as preplotter
 #----------------------------------------------------------------------
 import jax.numpy as jnp
 NAX = np.newaxis
-# SMAX_GLOBAL = 7
 
 #----------------------------------------------------------------------
 current_dir = os.path.dirname(os.path.realpath(__file__))

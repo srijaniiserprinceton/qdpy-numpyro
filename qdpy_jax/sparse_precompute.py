@@ -37,12 +37,11 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             relpath=current_dir,
                             tslen=int(ARGS[6]),
                             daynum=int(ARGS[7]),
-                            numsplits=int(ARGS[8]))
+                            numsplits=int(ARGS[8]),
+                            smax_global=int(ARGS[9]))
 
-GVARS_PATHS, GVARS_TR, GVARS_ST = GVARS.get_all_GVAR()
 nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx =\
-                    prune_multiplets.get_pruned_attributes(GVARS,
-                                                           GVARS_ST)
+                    prune_multiplets.get_pruned_attributes(GVARS)
 
 lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
                                      nl_idx_pruned,
@@ -126,7 +125,7 @@ def get_dim_hyper():
 
     for i in range(nmults):
         n0, ell0 = GVARS.n0_arr[i], GVARS.ell0_arr[i]
-        CENMULT_AND_NBS = getnt4cenmult(n0, ell0, GVARS_ST)
+        CENMULT_AND_NBS = getnt4cenmult(n0, ell0, GVARS)
         dim_super_local = np.sum(2*CENMULT_AND_NBS.nl_nbs[:, 1] + 1)
         if (dim_super_local > dim_hyper): dim_hyper = dim_super_local
     return dim_hyper
@@ -357,11 +356,11 @@ def build_hypmat_all_cenmults():
 
 
     # getting the sparse-element size for largest ell cenmult
-    MAXMULT_AND_NBS = getnt4cenmult(GVARS.n0_arr[0], GVARS.ell0_arr[0], GVARS_ST)
+    MAXMULT_AND_NBS = getnt4cenmult(GVARS.n0_arr[0], GVARS.ell0_arr[0], GVARS)
     SUBMAT_DICT_MAX = build_SUBMAT_INDICES(MAXMULT_AND_NBS)
     __, __, maskmat_maxmult = build_hm_nonint_n_fxd_1cnm(MAXMULT_AND_NBS,
                                                          SUBMAT_DICT_MAX,
-                                                         dim_hyper, GVARS.smax)
+                                                         dim_hyper, GVARS.smax_global)
     
     # finding the sp_indices_maxmult
     maskmat_maxmult_sp = sparse.coo_matrix(maskmat_maxmult)
@@ -381,7 +380,7 @@ def build_hypmat_all_cenmults():
         ell0_nmults.append(ell0)
 
         # building the namedtuple for the central multiplet and its neighbours            
-        CENMULT_AND_NBS = getnt4cenmult(n0, ell0, GVARS_ST)
+        CENMULT_AND_NBS = getnt4cenmult(n0, ell0, GVARS)
         SUBMAT_DICT = build_SUBMAT_INDICES(CENMULT_AND_NBS)
         omegaref_nmults.append(CENMULT_AND_NBS.omega_nbs[0])
 
