@@ -83,7 +83,8 @@ GVARS_D = gvar_jax.GlobalVars(n0=int(ARGS_D[0]),
                               instrument=PARGS.instrument,
                               tslen=int(ARGS_D[6]),
                               daynum=int(ARGS_D[7]),
-                              numsplits=int(ARGS_D[8]))
+                              numsplits=int(ARGS_D[8]),
+                              smax_global=int(ARGS_D[9]))
 
 soln_summary['params']['dpy']['n0'] = int(ARGS_D[0])
 soln_summary['params']['dpy']['lmin'] = int(ARGS_D[1])
@@ -103,7 +104,8 @@ GVARS_Q = gvar_jax.GlobalVars(n0=int(ARGS_Q[0]),
                               instrument=PARGS.instrument,
                               tslen=int(ARGS_Q[6]),
                               daynum=int(ARGS_Q[7]),
-                              numsplits=int(ARGS_Q[8]))
+                              numsplits=int(ARGS_Q[8]),
+                              smax_global=int(ARGS_Q[9]))
 
 soln_summary['params']['qdpy']['n0'] = int(ARGS_Q[0])
 soln_summary['params']['qdpy']['lmin'] = int(ARGS_Q[1])
@@ -160,9 +162,16 @@ nc_D = len(cind_arr_D)
 Pjl_D = RL_poly_D[:, smin_D:smax_D+1:2, :]
 
 try:
-    knee_mu = np.hstack((np.load(f"{PARGS.mu_batchdir}/muval.s1.npy"),
-                         np.load(f"{PARGS.mu_batchdir}/muval.s3.npy"),
-                         np.load(f"{PARGS.mu_batchdir}/muval.s5.npy")))
+    knee_mu = []
+    if(int(ARGS_D[9]) == int(ARGS_Q[9])):
+        smax_global = int(ARGS_D[9])
+    else:
+        print("DPT and QDPT using different smax_global")
+        sys.exit()
+        
+    for s in range(1, smax_global+1, 2):
+        knee_mu.append(np.load(f"{PARGS.mu_batchdir}/muval.s{s}.npy"))
+    knee_mu = np.asarray(knee_mu)
     knee_mu *= 1.
     print('Using optimal mu.')
 except FileNotFoundError:

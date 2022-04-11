@@ -10,7 +10,7 @@ def params2vars(RP):
     '''
     return (int(RP[0]), int(RP[1]), int(RP[2]), int(RP[3]),
             int(RP[4]), int(RP[5]), int(RP[6]), float(RP[7]),
-            int(RP[8]), int(RP[9]), int(RP[10]))
+            int(RP[8]), int(RP[9]), int(RP[10]), int(RP[12]))
 
 #----------------------READING THE RUN DIRECTORY--------------------------#
 parser = argparse.ArgumentParser()
@@ -23,16 +23,20 @@ ARGS = parser.parse_args()
 #-----------------------------QDPY DIRECTORY------------------------------# 
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
+with open(f"{package_dir}/.config", "r") as f:
+    dirnames = f.read().splitlines()
 
 # reading the instrument from the rundir
 local_rundir = re.split('[/]+', ARGS.rundir, flags=re.IGNORECASE)[-1]
 instr = re.split('[_]+', local_rundir, flags=re.IGNORECASE)[0]
 
+SMAX_GLOBAL = int(dirnames[3])
+
 if(ARGS.s == 1):
     #-------------------------READING THE RUNPARAMS---------------------------#
     RPARAMS = np.loadtxt(f"{ARGS.rundir}/.params_smin_1_smax_1.dat")
 
-    nmin, nmax, lmin, lmax, smin, smax, knotnum, rth, tslen, daynum, numsplits =\
+    nmin, nmax, lmin, lmax, smin, smax, knotnum, rth, tslen, daynum, numsplits, smax_global =\
                                                                 params2vars(RPARAMS)
 
     #-------------------------------MODE LISTER-------------------------------#
@@ -45,7 +49,7 @@ if(ARGS.s == 1):
     os.system(f'python {mode_lister_py} --nmin {nmin} --nmax {nmax} --batch_run 1 \
                 --lmin {lmin} --lmax {lmax} --instrument {instr} --tslen {tslen} \
                 --daynum {daynum} --numsplits {numsplits} --outdir {outdir_wrt_scratchout} \
-                --exclude_qdpy 0 >{mlist_out} 2>{mlist_err}')
+                --exclude_qdpy 0 --smax_global {smax_global} >{mlist_out} 2>{mlist_err}')
 
     #-------------------------------GENERATE---------------------------------#
     generate_py = f"{package_dir}/dpy_jax/generate_synthetic_eigvals.py"
@@ -58,7 +62,7 @@ if(ARGS.s == 1):
     os.system(f"python {generate_py} --load_mults 1 \
                 --knot_num {knotnum} --rth {rth} --instrument {instr} \
                 --tslen {tslen} --daynum {daynum} --numsplits {numsplits} \
-                --batch_run 1 --batch_rundir {ARGS.rundir}")
+                --batch_run 1 --batch_rundir {ARGS.rundir} --smax_global {smax_global}")
     
     #------------------------RITZLAVELY POLYNOMIALS---------------------------#
     rlpoly_py = f"{package_dir}/qdpy/precompute_ritzlavely.py"
@@ -78,8 +82,8 @@ if(ARGS.s == 1):
 # to generate the precomptued files for the entire inversion (all s)
 elif(ARGS.s == 0):
     #-------------------------READING THE RUNPARAMS---------------------------#               
-    RPARAMS = np.loadtxt(f"{ARGS.rundir}/.params_smin_1_smax_5.dat")
-    nmin, nmax, lmin, lmax, smin, smax, knotnum, rth, tslen, daynum, numsplits =\
+    RPARAMS = np.loadtxt(f"{ARGS.rundir}/.params_smin_1_smax_{SMAX_GLOBAL}.dat")
+    nmin, nmax, lmin, lmax, smin, smax, knotnum, rth, tslen, daynum, numsplits, smax_global =\
                                                                 params2vars(RPARAMS)
 
     #-------------------------SAVE REDUCED PROBLEM-----------------------------#              
@@ -92,7 +96,7 @@ else:
     #-------------------------READING THE RUNPARAMS---------------------------#
     RPARAMS = np.loadtxt(f"{ARGS.rundir}/.params_smin_{ARGS.s}_smax_{ARGS.s}.dat")
 
-    nmin, nmax, lmin, lmax, smin, smax, knotnum, rth, tslen, daynum, numsplits =\
+    nmin, nmax, lmin, lmax, smin, smax, knotnum, rth, tslen, daynum, numsplits, smax_global =\
                                                                 params2vars(RPARAMS)
     
     #-------------------------SAVE REDUCED PROBLEM-----------------------------#             

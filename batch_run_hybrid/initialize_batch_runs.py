@@ -15,6 +15,8 @@ with open(f"{package_dir}/.config", "r") as f:
 scratch_dir = dirnames[1]
 datadir = f"{scratch_dir}/input_files/hmi"
 
+smax_global = int(dirnames[3])
+
 #------------------READING THE DATA FILE NAMES-----------------------#
 datafnames = fnmatch.filter(os.listdir(datadir), 'hmi.in.*')
 
@@ -73,17 +75,18 @@ def write_paramsfile(dirname, fname, run_params):
                 f"{run_params.rth}" + "\n" +
                 f"{run_params.tslen}" + "\n" +
                 f"{run_params.daynum}" + "\n" +
-                f"{run_params.numsplit}" + "\n"+
-                f"{run_params.exclude_qdpy}")
+                f"{run_params.numsplit}" + "\n" +
+                f"{run_params.exclude_qdpy}" + "\n" +
+                f"{run_params.smax_global}")
     return None
 
 
-# nmin, nmax, lmin, lmax = 0, 0, 200, 210
-# nmin_q, nmax_q, lmin_q, lmax_q = 0, 0, 200, 201
-nmin, nmax, lmin, lmax = 0, 30, 5, 295
-nmin_q, nmax_q, lmin_q, lmax_q = 0, 30, 161, 295
+nmin, nmax, lmin, lmax = 0, 0, 200, 210
+nmin_q, nmax_q, lmin_q, lmax_q = 0, 0, 200, 201
+# nmin, nmax, lmin, lmax = 0, 30, 5, 295
+# nmin_q, nmax_q, lmin_q, lmax_q = 0, 30, 161, 295
 
-smin, smax = 1, 5
+smin, smax = 1, smax_global
 
 # writing the parameters in each run directory for bookkeeping
 for i in range(len(data_daynum_list)):
@@ -99,18 +102,21 @@ for i in range(len(data_daynum_list)):
     # making dpy-full params file
     run_params = make_run_params.make_run_params(nmin=nmin, nmax=nmax,
                                                  lmin=lmin, lmax=lmax,
+                                                 smax_global=smax_global,
                                                  daynum=daynum)
     write_paramsfile(rundir_dpy_full_hess, fname, run_params)
     
     # making qdpy params file
     run_params = make_run_params.make_run_params(nmin=nmin_q, nmax=nmax_q,
                                                  lmin=lmin_q, lmax=lmax_q,
+                                                 smax_global=smax_global,
                                                  daynum=daynum)
     write_paramsfile(rundir_qdpy, fname, run_params)
     
     # making dpy params file
     run_params = make_run_params.make_run_params(nmin=nmin, nmax=nmax,
                                                  lmin=lmin, lmax=lmax,
+                                                 smax_global=smax_global,
                                                  daynum=daynum,
                                                  exclude_qdpy=1)
     write_paramsfile(rundir_dpy, fname, run_params)

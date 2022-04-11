@@ -22,6 +22,8 @@ with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
 
+smax_global = int(dirnames[3])
+
 # reading the instrument from the rundir                                                      
 local_rundir = re.split('[/]+', PARGS.rundir, flags=re.IGNORECASE)[-1]
 instr = PARGS.instr
@@ -41,7 +43,8 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             instrument=PARGS.instr,
                             tslen=int(ARGS[6]),
                             daynum=int(ARGS[7]),
-                            numsplits=int(ARGS[8]))
+                            numsplits=int(ARGS[8]),
+                            smax_global=int(ARGS[9]))
 
 # storing the hessian for the particular s
 os.system(f"python {run_newton_py} --store_hess 1 --instrument {instr} " +
@@ -53,9 +56,7 @@ def compute_misfit(arr1, arr2):
 
 
 def compute_misfit_wsr(arr1, arr2, maxdiff=True):
-    if PARGS.s == 1: sind = 0
-    if PARGS.s == 3: sind = 1
-    if PARGS.s == 5: sind = 2
+    sind = (PARGS.s - 1) // 2
     carr1 = GVARS.ctrl_arr_dpt_full * 1.0
     carr2 = GVARS.ctrl_arr_dpt_full * 1.0
     carr1[sind, GVARS.knot_ind_th:] = arr1
@@ -71,9 +72,7 @@ def compute_misfit_wsr(arr1, arr2, maxdiff=True):
 
 
 def compute_misfit_wsr_slope(arr1, arr2, slope=True):
-    if PARGS.s == 1: sind = 0
-    if PARGS.s == 3: sind = 1
-    if PARGS.s == 5: sind = 2
+    sind = (PARGS.s - 1) // 2
     carr1 = GVARS.ctrl_arr_dpt_full * 1.0
     carr2 = GVARS.ctrl_arr_dpt_full * 1.0
     carr1[sind, GVARS.knot_ind_th:] = arr1

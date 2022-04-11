@@ -20,7 +20,7 @@ package_dir = os.path.dirname(current_dir)
 data_dir = f"{package_dir}/qdpy_jax"
 with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
-eigtype =  dirnames[-1].split('/')[-2].split('_')[1]
+eigtype =  dirnames[2].split('/')[-2].split('_')[1]
 #----------------------------------------------------------------------
 #                       All qts in CGS
 #----------------------------------------------------------------------

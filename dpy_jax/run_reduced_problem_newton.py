@@ -63,8 +63,8 @@ if (not PARGS.batch_run):
     summdir = f"{scratch_dir}/summaryfiles"
     plotdir = f"{scratch_dir}/plots"
     smax_global = int(ARGS[9])
-    # knee_mu = np.ones(smax_global//2 + 1) #np.array([1., 1., 1.])
-    knee_mu = np.array([0.10020888, 1.61559062, 5.31731352])
+    knee_mu = np.ones(smax_global//2 + 1) #np.array([1., 1., 1.])
+    # knee_mu = np.array([0.10020888, 1.61559062, 5.31731352])
 
 else:
     n0lminlmax_dir = f"{PARGS.batch_rundir}"
@@ -77,6 +77,7 @@ else:
         knee_mu = []
         for s in range(1, smax_global+1, 2):
             knee_mu.append(np.load(f"{PARGS.mu_batchdir}/muval.s{s}.npy"))
+        knee_mu = np.asarray(knee_mu)
         knee_mu *= 1.
         print('Using optimal knee_mu.')
     except FileNotFoundError:
@@ -140,8 +141,6 @@ nc = len(cind_arr) # number of c to fit
 # shape (nmults, num_j)
 Pjl = RL_poly[:, smin:smax+1:2, :]
 
-print(RL_poly.shape, Pjl.shape)
-
 aconv_denom = np.zeros((nmults, Pjl.shape[1]))
 for mult_ind in range(nmults):
     aconv_denom[mult_ind] = np.diag(Pjl[mult_ind] @ Pjl[mult_ind].T)
@@ -179,7 +178,6 @@ def data_misfit_arr_fn(c_arr):
     pred = fixed_part + c_arr @ param_coeff_flat
     pred_acoeffs = jnp.zeros(num_j * nmults)
     __, pred_acoeffs = foril(0, nmults, loop_in_mults, (pred, pred_acoeffs))
-    print(data_acoeffs.shape, pred_acoeffs.shape)
     data_misfit_arr = (data_acoeffs - pred_acoeffs)/acoeffs_sigma_HMI
     return data_misfit_arr
 
@@ -375,10 +373,7 @@ else:
     data_hess_dpy = jnp.asarray(data_hess_fn(c_init))
     model_hess_dpy = jnp.asarray(model_hess_fn(c_init))
 
-print(f"data hess sum = {sum(data_hess_dpy)}")
-print(f"model hess sum = {sum(model_hess_dpy)}")
 total_hess = data_hess_dpy + mu*model_hess_dpy
-print(f"total hess sum = {sum(total_hess)}")
 hess_inv = jnp.linalg.inv(total_hess)
 
 

@@ -75,9 +75,7 @@ module load anaconda3
 conda activate jax-gpu    
 """
     for j in range(num_batches//num_jobs):
-        # gnup_str += f"{jobdpy_str} {jobdpy_args[j]} &>{oedpy_files[j]}\n"
         gnup_str += f"{job_str} {job_args[j]} &>{oe_files[j]}\n"
-        # slurm_str += f"{jobdpy_str} {jobdpy_args[j]} &>{oedpy_files[j]}\n"
         slurm_str += f"{job_str} {job_args[j]} &>{oe_files[j]}\n"
     
     gnup_str = gnup_str + f"""echo \"Finished at \"`date`"""

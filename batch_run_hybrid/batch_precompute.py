@@ -10,7 +10,7 @@ def params2vars(RP):
     '''
     return (int(RP[0]), int(RP[1]), int(RP[2]), int(RP[3]),
             int(RP[4]), int(RP[5]), int(RP[6]), float(RP[7]),
-            int(RP[8]), int(RP[9]), int(RP[10]), int(RP[11]))
+            int(RP[8]), int(RP[9]), int(RP[10]), int(RP[11]), int(RP[12]))
 
 #----------------------READING THE RUN DIRECTORY--------------------------#
 parser = argparse.ArgumentParser()
@@ -23,6 +23,10 @@ ARGS = parser.parse_args()
 #-----------------------------QDPY DIRECTORY------------------------------# 
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
+with open(f"{package_dir}/.config", "r") as f:
+    dirnames = f.read().splitlines()
+
+smax_global = int(dirnames[3])
 
 # reading the instrument from the rundir
 local_rundir = re.split('[/]+', ARGS.rundir, flags=re.IGNORECASE)[-1]
@@ -40,9 +44,9 @@ if(ARGS.full_qdpy_dpy == 'dpy'):
     outdir_wrt_scratchout = f"batch_runs_hybrid/{local_rundir}/dpy_files"
 
 #-------------------------READING THE RUNPARAMS---------------------------#
-RPARAMS = np.loadtxt(f"{rundir}/.params_smin_1_smax_5.dat")
+RPARAMS = np.loadtxt(f"{rundir}/.params_smin_1_smax_{smax_global}.dat")
 
-nmin, nmax, lmin, lmax, smin, smax, knotnum, rth, tslen, daynum, numsplits, exclude_qdpy =\
+nmin, nmax, lmin, lmax, smin, smax, knotnum, rth, tslen, daynum, numsplits, exclude_qdpy, __=\
                                                                         params2vars(RPARAMS)
 
 #-------------------------------MODE LISTER-------------------------------#
@@ -54,7 +58,8 @@ mlist_err = f"{rundir}/.mlist.err"
 os.system(f'python {mode_lister_py} --nmin {nmin} --nmax {nmax} --batch_run 1 \
             --lmin {lmin} --lmax {lmax} --instrument {instr} --tslen {tslen} \
             --daynum {daynum} --numsplits {numsplits} --outdir {outdir_wrt_scratchout} \
-            --exclude_qdpy {exclude_qdpy} >{mlist_out} 2>{mlist_err}')
+            --exclude_qdpy {exclude_qdpy} --smax_global {smax_global} \
+            >{mlist_out} 2>{mlist_err}')
 
 #-------------------------------GENERATE---------------------------------#
 if (not ARGS.full_qdpy_dpy == 'qdpy'):
@@ -67,7 +72,7 @@ if (not ARGS.full_qdpy_dpy == 'qdpy'):
     os.system(f"python {generate_py} --load_mults 1 \
                --knot_num {knotnum} --rth {rth} --instrument {instr} \
                --tslen {tslen} --daynum {daynum} --numsplits {numsplits} \
-               --batch_run 1 --batch_rundir {rundir}")
+               --batch_run 1 --batch_rundir {rundir} --smax_global {smax_global}")
 
 #-------------------------SAVE REDUCED PROBLEM-----------------------------#
 if (ARGS.full_qdpy_dpy == 'qdpy'):
@@ -78,7 +83,8 @@ if (ARGS.full_qdpy_dpy == 'qdpy'):
     
     os.system(f"python {save_reduced_py} --instrument {instr} --load_mults 1\
                --rth {rth} --knot_num {knotnum} --tslen {tslen} --daynum {daynum}\
-               --numsplits {numsplits} --batch_run 1 --batch_rundir {rundir}")
+               --numsplits {numsplits} --batch_run 1 --batch_rundir {rundir}\
+               --smax_global {smax_global}")
 
 else:
     save_reduced_py = f"{package_dir}/dpy_jax/save_reduced_problem.py"

@@ -25,6 +25,8 @@ run_newton_py = f"{package_dir}/dpy_jax/run_reduced_problem_newton.py"
 precompute_py = f"{current_dir}/batch_precompute.py"
 some_mu = 1.0
 
+smax_global = int(dirnames[3])
+
 for bname in batchnames:
     instr = bname.split('_')[0]
     with open(f"{bashscr_dir}/{bname}-hybrid.sh", "w") as f:
