@@ -84,7 +84,7 @@ if (ARGS.full_qdpy_dpy == 'qdpy'):
     os.system(f"python {save_reduced_py} --instrument {instr} --load_mults 1\
                --rth {rth} --knot_num {knotnum} --tslen {tslen} --daynum {daynum}\
                --numsplits {numsplits} --batch_run 1 --batch_rundir {rundir}\
-               --smax_global {smax_global}")
+               --smax_global {smax_global} --smax {smax_global}")
 
 else:
     save_reduced_py = f"{package_dir}/dpy_jax/save_reduced_problem.py"

@@ -107,6 +107,7 @@ GVARS_Q = gvar_jax.GlobalVars(n0=int(ARGS_Q[0]),
                               numsplits=int(ARGS_Q[8]),
                               smax_global=int(ARGS_Q[9]))
 
+
 soln_summary['params']['qdpy']['n0'] = int(ARGS_Q[0])
 soln_summary['params']['qdpy']['lmin'] = int(ARGS_Q[1])
 soln_summary['params']['qdpy']['lmax'] = int(ARGS_Q[2])
@@ -527,22 +528,22 @@ init_acoeffs_Q = model_Q(c_arr, 1)
 plot_acoeffs.plot_acoeffs_datavsmodel(init_acoeffs_D, data_acoeffs_D,
                                       data_acoeffs_out_HMI_D,
                                       acoeffs_sigma_HMI_D, 'init_D',
-                                      plotdir=plotdir)
+                                      plotdir=plotdir, len_s=len_s)
 
 plot_acoeffs.plot_acoeffs_datavsmodel(init_acoeffs_Q, data_acoeffs_Q,
                                       data_acoeffs_out_HMI_Q,
                                       acoeffs_sigma_HMI_Q, 'init_Q',
-                                      plotdir=plotdir)
+                                      plotdir=plotdir, len_s=len_s)
 
 plot_acoeffs.plot_acoeffs_dm_scaled(init_acoeffs_D, data_acoeffs_D,
                                     data_acoeffs_out_HMI_D,
                                     acoeffs_sigma_HMI_D, 'init_D',
-                                    plotdir=plotdir)
+                                    plotdir=plotdir, len_s=len_s)
 
 plot_acoeffs.plot_acoeffs_dm_scaled(init_acoeffs_Q, data_acoeffs_Q,
                                     data_acoeffs_out_HMI_Q,
                                     acoeffs_sigma_HMI_Q, 'init_Q',
-                                    plotdir=plotdir)
+                                    plotdir=plotdir, len_s=len_s)
 #----------------------------------------------------------------------#
 
 loss = 1e25
@@ -642,12 +643,12 @@ final_acoeffs_Q = model_Q(carr_total, 1)
 plot_acoeffs.plot_acoeffs_datavsmodel(final_acoeffs_D, data_acoeffs_D,
                                       data_acoeffs_out_HMI_D,
                                       acoeffs_sigma_HMI_D, 'final_D',
-                                      plotdir=plotdir)
+                                      plotdir=plotdir, len_s=len_s)
 
 plot_acoeffs.plot_acoeffs_datavsmodel(final_acoeffs_Q, data_acoeffs_Q,
                                       data_acoeffs_out_HMI_Q,
                                       acoeffs_sigma_HMI_Q, 'final_Q',
-                                      plotdir=plotdir)
+                                      plotdir=plotdir, len_s=len_s)
 #----------------------------------------------------------------------# 
 # reconverting back to model_params in units of true_params_flat
 c_arr_fit = carr_total/true_params_flat
