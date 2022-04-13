@@ -402,6 +402,8 @@ def build_hypmat_all_cenmults():
             for c_ind in range(GVARS.nc):
                 # the sparse data for the mask locations
                 noc_hypmat_sparse_c = non_c_hypmat[c_ind, maskmat_cenmult]
+                print(n0, ell0, s, noc_hypmat_sparse_c_maxshaped.shape,
+                      noc_hypmat_sparse_c.shape)
                 # enhancing the shape to maxmult
                 noc_hypmat_sparse_c_maxshaped[c_ind, :len(noc_hypmat_sparse_c)] =\
                                                                 noc_hypmat_sparse_c

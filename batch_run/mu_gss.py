@@ -44,7 +44,7 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             tslen=int(ARGS[6]),
                             daynum=int(ARGS[7]),
                             numsplits=int(ARGS[8]),
-                            smax_global=int(ARGS[9]))
+                            smax_global=smax_global)
 
 # storing the hessian for the particular s
 os.system(f"python {run_newton_py} --store_hess 1 --instrument {instr} " +
@@ -141,6 +141,6 @@ def gssrec(f, a, b, tol=1.0, h=None, hp=None, c=None, d=None, fc=None, fd=None):
 fname = fnmatch.filter(os.listdir(PARGS.rundir), 'true_params_flat*.npy')[0]
 val0 = np.load(f'{PARGS.rundir}/{fname}')
 
-mu_limits = [1e-6, 1e1]
+mu_limits = [1e-6, 5e1]
 muvals = gssrec(f, np.log10(mu_limits[0]), np.log10(mu_limits[1]))
 np.save(f"{PARGS.rundir}/muval.s{PARGS.s}.npy", 10**muvals[1])

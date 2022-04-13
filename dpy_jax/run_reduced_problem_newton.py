@@ -130,6 +130,7 @@ D_bsp_j_D_bsp_k = np.load(f'{outdir}/D_bsp_j_D_bsp_k.{sfx}.npy')
 nmults = len(GVARS.ell0_arr)
 dim_hyper = 2 * np.max(GVARS.ell0_arr) + 1
 num_j = len(GVARS.s_arr)
+print(num_j, GVARS.s_arr)
 smin = min(GVARS.s_arr)
 smax = max(GVARS.s_arr)
 

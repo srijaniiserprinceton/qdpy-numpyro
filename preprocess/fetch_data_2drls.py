@@ -97,6 +97,6 @@ while requests.status > 0:
     count += 1
 print(f" status = {requests.status}: Ready for download")
 res = client.get_request(requests, path=dldir)
-os.system(f"cd {dldir}; rm $(ls | egrep -v '{NDT}.6')")
-# os.system(f"cd {dldir}; rm $(ls | egrep -v '{NDT}.36')")
+# os.system(f"cd {dldir}; rm $(ls | egrep -v '{NDT}.6')")
+os.system(f"cd {dldir}; rm $(ls | egrep -v '{NDT}.36')")
 #----------------------------------------------------------------------#
