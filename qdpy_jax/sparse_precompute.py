@@ -380,7 +380,7 @@ def build_hypmat_all_cenmults():
         ell0_nmults.append(ell0)
 
         # building the namedtuple for the central multiplet and its neighbours            
-        CENMULT_AND_NBS = getnt4cenmult(n0, ell0, GVARS)
+        CENMULT_AND_NBS = getnt4cenmult(n0, ell0, GVARS)        
         SUBMAT_DICT = build_SUBMAT_INDICES(CENMULT_AND_NBS)
         omegaref_nmults.append(CENMULT_AND_NBS.omega_nbs[0])
 
@@ -401,9 +401,7 @@ def build_hypmat_all_cenmults():
                                                       len_sp_indices_maxmult))
             for c_ind in range(GVARS.nc):
                 # the sparse data for the mask locations
-                noc_hypmat_sparse_c = non_c_hypmat[c_ind, maskmat_cenmult]
-                print(n0, ell0, s, noc_hypmat_sparse_c_maxshaped.shape,
-                      noc_hypmat_sparse_c.shape)
+                noc_hypmat_sparse_c = non_c_hypmat[c_ind, maskmat_cenmult]                
                 # enhancing the shape to maxmult
                 noc_hypmat_sparse_c_maxshaped[c_ind, :len(noc_hypmat_sparse_c)] =\
                                                                 noc_hypmat_sparse_c
