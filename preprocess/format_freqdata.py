@@ -23,6 +23,7 @@ with open(f"{package_dir}/.config", "r") as f:
 scratch_dir = dirnames[1]
 ipdir = f"{scratch_dir}/input_files"
 dldir = f"{ipdir}/{INSTR}"
+splitdir = f"{dldir}/dlfiles/splitdir"
 #----------------------------------------------------------------------#
 
 
@@ -63,6 +64,15 @@ def get_fnames(suffix="split"):
     with open(f"{dldir}/dlfiles/fnames_{suffix}.txt", "r") as f:
         fnames = f.read().splitlines()
     return fnames
+
+
+def get_fnames_new():
+    os.system(f"ls {splitdir}/{INSTR}* >" +
+              f"{splitdir}/fnames.txt")
+    with open(f"{splitdir}/fnames.txt", "r") as f:
+        fnames = f.read().splitlines()
+    return fnames
+
 
 
 def setup_reformatting(fname):
@@ -166,6 +176,8 @@ def store_output(fname, splitdata):
 
 if __name__ == "__main__":
     fnames_split = get_fnames()
+    fnames_new = get_fnames_new()
+
     for fname in fnames_split:
         newname = RN.get_newname(fname, instrument=INSTR)
         print(newname)
@@ -177,3 +189,11 @@ if __name__ == "__main__":
         store_output(f'{dldir}/{INSTR}.in.{ARGS.tslen}.{mdi_day}.{numsplits}', dsplits)
         store_output(f'{dldir}/{INSTR}.out.{ARGS.tslen}.{mdi_day}.{numsplits}',
                      dsplits_out)
+
+    for fname in fnames_new:
+        fname_splits = fname.split('/')[-1].split('.')
+        mdi_day = fname_splits[-2]
+        numsplits = fname_splits[-1]
+        newfname = f"{dldir}/{INSTR}.in.{ARGS.tslen}.{mdi_day}.{numsplits}"
+        print(f"Writing {newfname}")
+        os.system(f"cp {fname} {newfname}")

@@ -36,9 +36,11 @@ scratch_dir = dirnames[1]
 ipdir = f"{scratch_dir}/input_files"
 instrdir = f"{ipdir}/{INSTR}"
 dldir = f"{instrdir}/dlfiles"
+splitdir = f"{dldir}/splitdir"
 
 if not os.path.isdir(instrdir): os.mkdir(instrdir)
 if not os.path.isdir(dldir): os.mkdir(dldir)
+if not os.path.isdir(splitdir): os.mkdir(splitdir)
 #----------------------------------------------------------------------#
 if INSTR=="hmi":
     series_name = "hmi.V_sht_2drls"
@@ -99,4 +101,29 @@ print(f" status = {requests.status}: Ready for download")
 res = client.get_request(requests, path=dldir)
 # os.system(f"cd {dldir}; rm $(ls | egrep -v '{NDT}.6')")
 os.system(f"cd {dldir}; rm $(ls | egrep -v '{NDT}.36')")
+#----------------------------------------------------------------------#
+
+client = jsoc.JSOCClient()
+response = client.search(a.Time(f'{day1}T00:00:00', f'{day2}T00:00:00'),
+                         a.jsoc.Series('hmi.v_sht_modes'),
+                         a.jsoc.PrimeKey('LMIN', '0') &
+                         a.jsoc.PrimeKey('LMAX', LMAX) &
+                         a.jsoc.PrimeKey('NDT', NDT) &
+                         a.jsoc.Notify(user_email))
+print(f"Requesting data...")
+requests = client.request_data(response)
+#----------------------------------------------------------------------#
+count = 0
+while requests.status > 0:
+    time.sleep(3)
+    requests = client.request_data(response)
+    print(f"request ID = {requests.id}; status = {requests.status}")
+    if count > 5:
+        print(f"Wait count = {count}. Trying to download")
+        break
+    count += 1
+print(f" status = {requests.status}: Ready for download")
+res = client.get_request(requests, path=splitdir)
+os.system(f"cd {splitdir}; rm $(ls | egrep -v '.138240')")
+os.system(f"cd {splitdir}; rm $(ls | egrep -v '.36')")
 #----------------------------------------------------------------------#
