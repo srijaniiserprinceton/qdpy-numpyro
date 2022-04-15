@@ -102,7 +102,7 @@ res = client.get_request(requests, path=dldir)
 # os.system(f"cd {dldir}; rm $(ls | egrep -v '{NDT}.6')")
 os.system(f"cd {dldir}; rm $(ls | egrep -v '{NDT}.36')")
 #----------------------------------------------------------------------#
-
+# ---- downloading the a-coefficient fits ---------------
 client = jsoc.JSOCClient()
 response = client.search(a.Time(f'{day1}T00:00:00', f'{day2}T00:00:00'),
                          a.jsoc.Series('hmi.v_sht_modes'),

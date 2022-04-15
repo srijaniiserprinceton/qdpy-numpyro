@@ -190,6 +190,8 @@ if __name__ == "__main__":
         store_output(f'{dldir}/{INSTR}.out.{ARGS.tslen}.{mdi_day}.{numsplits}',
                      dsplits_out)
 
+    # renaming the a-coeff fit data from hmi to appropriate format
+    # reformatting is not required as it's in the default format
     for fname in fnames_new:
         fname_splits = fname.split('/')[-1].split('.')
         mdi_day = fname_splits[-2]
