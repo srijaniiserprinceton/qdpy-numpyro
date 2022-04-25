@@ -64,6 +64,7 @@ def get_fnames(suffix="split"):
         fnames = f.read().splitlines()
     return fnames
 
+
 if __name__ == "__main__":
     fnames_split = get_fnames("split")
     fnames_rot2d = get_fnames("rot")

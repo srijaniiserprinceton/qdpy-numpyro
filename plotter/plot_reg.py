@@ -16,9 +16,13 @@ with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
 plotdir = f"{scratch_dir}/plots"
+knee_mu = np.array([ 0.1225026, 1.34397396, 11.34306532, 13.95488723, 200.00])
+sval = 1
+sind = int((sval+1)//2 - 1)
 
-suffix = "r09.w1.72d.gyre"
-reg_data = pd.read_csv(f"{package_dir}/dpy_jax/reg_misfit.{suffix}.txt")
+# suffix = "r09.w1.72d.gyre"
+suffix = f"s{sval}"
+reg_data = pd.read_csv(f"{package_dir}/dpy_jax/reg_misfit_{suffix}.txt")
 
 data_misfit = reg_data['data-misfit']
 model_misfit = reg_data['model-misfit']
@@ -38,22 +42,23 @@ data_mf_rescaled = rescale(data_misfit)
 model_mf_rescaled = rescale(model_misfit)
 slope = get_slope(model_mf_rescaled, data_mf_rescaled)
 knee_idx = np.argmin(abs(slope+1))
+knee_idx = np.argmin(abs(mu - knee_mu[sind]))
 
 range_x = model_misfit.max() - model_misfit.min()
 range_y = data_misfit.max() - data_misfit.min()
 
 max_nbs = 5
-fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(8, 4))
+fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(10, 4))
 axs = axs.flatten()
-axs[0].loglog(model_misfit, data_misfit, '+k')
+axs[0].semilogx(model_misfit, data_misfit, '+k')
 for i in range(2*max_nbs):
     axs[0].loglog(model_misfit[knee_idx-max_nbs+i],
                   data_misfit[knee_idx-max_nbs+i], '+r')
-axs[0].loglog(model_misfit[knee_idx], data_misfit[knee_idx], marker='s', color='red')
-axs[0].text(model_misfit[knee_idx]+0.04*range_x,
+axs[0].semilogx(model_misfit[knee_idx], data_misfit[knee_idx], marker='s', color='red')
+axs[0].text(model_misfit[knee_idx],
             data_misfit[knee_idx]+0.04*range_y, 
             f"$\\mu$ = {mu[knee_idx]:.5e}")
-axs[0].set_xlabel('Roughness')
+axs[0].set_xlabel('Model roughness')
 axs[0].set_ylabel('Data misfit')
 axs[0].set_title('L-curve')
 

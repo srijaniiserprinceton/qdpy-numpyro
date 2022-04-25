@@ -27,6 +27,7 @@ with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 
 smax_global = int(dirnames[3])
+smax_local = 5
 
 # reading the instrument from the rundir
 local_rundir = re.split('[/]+', ARGS.rundir, flags=re.IGNORECASE)[-1]
@@ -44,7 +45,8 @@ if(ARGS.full_qdpy_dpy == 'dpy'):
     outdir_wrt_scratchout = f"batch_runs_hybrid/{local_rundir}/dpy_files"
 
 #-------------------------READING THE RUNPARAMS---------------------------#
-RPARAMS = np.loadtxt(f"{rundir}/.params_smin_1_smax_{smax_global}.dat")
+# RPARAMS = np.loadtxt(f"{rundir}/.params_smin_1_smax_{smax_global}.dat")
+RPARAMS = np.loadtxt(f"{rundir}/.params_smin_1_smax_{smax_local}.dat")
 
 nmin, nmax, lmin, lmax, smin, smax, knotnum, rth, tslen, daynum, numsplits, exclude_qdpy, __=\
                                                                         params2vars(RPARAMS)
@@ -58,7 +60,7 @@ mlist_err = f"{rundir}/.mlist.err"
 os.system(f'python {mode_lister_py} --nmin {nmin} --nmax {nmax} --batch_run 1 \
             --lmin {lmin} --lmax {lmax} --instrument {instr} --tslen {tslen} \
             --daynum {daynum} --numsplits {numsplits} --outdir {outdir_wrt_scratchout} \
-            --exclude_qdpy {exclude_qdpy} --smax_global {smax_global} \
+            --exclude_qdpy {exclude_qdpy} --smax_global {smax_global}\
             >{mlist_out} 2>{mlist_err}')
 
 #-------------------------------GENERATE---------------------------------#
@@ -84,13 +86,13 @@ if (ARGS.full_qdpy_dpy == 'qdpy'):
     os.system(f"python {save_reduced_py} --instrument {instr} --load_mults 1\
                --rth {rth} --knot_num {knotnum} --tslen {tslen} --daynum {daynum}\
                --numsplits {numsplits} --batch_run 1 --batch_rundir {rundir}\
-               --smax_global {smax_global} --smax {smax_global}")
+               --smax_global {smax_global} --smax {smax_local}")
 
 else:
     save_reduced_py = f"{package_dir}/dpy_jax/save_reduced_problem.py"
     
     os.system(f"python {save_reduced_py} --instrument {instr} --smin {smin} \
-                --smax {smax} --batch_run 1 --batch_rundir {rundir}")
+                --smax {smax_local} --batch_run 1 --batch_rundir {rundir}")
 
 
 #------------------------RITZLAVELY POLYNOMIALS---------------------------#

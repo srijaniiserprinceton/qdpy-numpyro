@@ -7,7 +7,7 @@ current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
 _pythonpath = subprocess.check_output("which python", shell=True)
 pythonpath = _pythonpath.decode("utf-8").split("\n")[0]
-jobname = f"sbd.hyb-init"
+jobname = f"sgk.hyb-init"
 execpath = f"{package_dir}/jobscripts/batchjobs.sh"
 
 gnup_str = \
@@ -53,4 +53,4 @@ with open(f"{package_dir}/jobscripts/ipjobs_batch.sh", "w") as f:
     batchnames = [filename for filename in os.listdir(bashdir) if 
                   (filename[-3:] == '.sh')]
     for bname in batchnames:
-        f.write(f"sh {bashdir}/{bname} >logs/{bname}.out 2>logs/{bname}.err\n")
+        f.write(f"sh {bashdir}/{bname} &>logs/{bname}.oe\n")

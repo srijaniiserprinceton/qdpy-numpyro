@@ -147,6 +147,7 @@ def load_data(fname_re):
     # np.save(f"{output_dir}/err1d-{INSTR}.npy", np.array(err_list))
     return (rmesh, theta), (rot2d, err2d)
 
+
 def get_fnames(suffix="rot"):
     os.system(f"ls {dldir}/{INSTR}* | grep {suffix} > {dldir}/fnames_{suffix}.txt")
     with open(f"{dldir}/fnames_{suffix}.txt", "r") as f:

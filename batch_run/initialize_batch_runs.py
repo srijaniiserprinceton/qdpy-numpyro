@@ -51,7 +51,7 @@ for i in range(len(data_daynum_list)):
 
 # adding optional parameters to not use default
 
-nmin, nmax, lmin, lmax = 0, 30, 5, 294
+nmin, nmax, lmin, lmax = 0, 30, 5, 292
 # nmin, nmax, lmin, lmax = 0, 0, 200, 210
 
 smax_global = int(dirnames[3])
@@ -61,8 +61,10 @@ smin_arr = np.arange(1, smax_global+1, 2)
 smax_arr = np.arange(1, smax_global+1, 2)
 
 # at this point smin_arr = [1, 3, 5, ..., 1] and smax_arr = [1, 3, 5, ..., smax_global]
+smax = 5
 smin_arr = np.append(smin_arr, 1)
-smax_arr = np.append(smax_arr, smax_global)
+smax_arr = np.append(smax_arr, smax)
+# smax_arr = np.append(smax_arr, smax_global)
 
 # writing the parameters in each run directory for bookkeeping
 for i in range(len(data_daynum_list)):

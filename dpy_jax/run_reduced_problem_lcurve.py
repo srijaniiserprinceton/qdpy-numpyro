@@ -76,10 +76,7 @@ else:
     try:
         knee_mu = []
         for s in range(1, smax_global+1, 2):
-            try:
-                knee_mu.append(np.load(f"{PARGS.mu_batchdir}/muval.s{s}.npy"))
-            except FileNotFoundError:
-                knee_mu.append(1.0)
+            knee_mu.append(np.load(f"{PARGS.mu_batchdir}/muval.s{s}.npy"))
         knee_mu = np.asarray(knee_mu)
         knee_mu *= 1.
         print('Using optimal knee_mu.')
@@ -88,6 +85,9 @@ else:
         found_optimal = False
         print('Not using optimal knee_mu.')
 
+# knee_mu *= PARGS.mu # regularization parameter
+mu = PARGS.mu # regularization parameter
+# mu = 1.0
 #----------------------------------------------------------------------#
 GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             lmin=int(ARGS[1]),
@@ -320,7 +320,6 @@ if PARGS.plot:
                                         plotdir=plotdir, len_s=len_s)
 #----------------------------------------------------------------------# 
 len_data = len(data_acoeffs) # length of data
-mu = PARGS.mu # regularization parameter
 
 # changing the regularization as a function of depth
 # mu_depth = np.zeros_like(GVARS.ctrl_arr_dpt_full[0, :])
@@ -451,9 +450,10 @@ for i in range(len_s):
     print(c_arr_fit[i::len_s])
 
 #------------------------------------------------------------------------#
-with open(f"{current_dir}/reg_misfit.txt", "a") as f:
+with open(f"{current_dir}/reg_misfit_s{PARGS.s}.txt", "a") as f:
     f.seek(0, os.SEEK_END)
-    opstr = f"{mu:18.12e}, {data_misfit:18.12e}, {model_misfit:18.12e}\n"
+    # opstr = f"{mu:18.12e}, {data_misfit:18.12e}, {model_misfit:18.12e}\n"
+    opstr = f"{mu:18.12e}, {chisq:18.12e}, {model_misfit:18.12e}\n"
     f.write(opstr)
 
 #-----------------finding the model covariance matrix------------------#
@@ -501,9 +501,11 @@ soln_summary['knee_mu'] = knee_mu
 soln_summary['chisq'] = chisq
 soln_summary['mu'] = mu
 
+"""
 todays_date = date.today()
 timeprefix = datetime.now().strftime("%H.%M")
 dateprefix = f"{todays_date.day:02d}.{todays_date.month:02d}.{todays_date.year:04d}"
 fsuffix = f"{dateprefix}-{timeprefix}-{hsuffix}-{PARGS.s}"
 if (not PARGS.store_hess and not PARGS.batch_run):
     jf.save_obj(soln_summary, f"{summdir}/summary.dpt-{fsuffix}")
+"""

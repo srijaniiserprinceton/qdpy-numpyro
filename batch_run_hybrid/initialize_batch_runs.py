@@ -81,12 +81,12 @@ def write_paramsfile(dirname, fname, run_params):
     return None
 
 
-# nmin, nmax, lmin, lmax = 0, 0, 290, 294
-# nmin_q, nmax_q, lmin_q, lmax_q = 0, 0, 292, 294
-nmin, nmax, lmin, lmax = 0, 30, 5, 294
-nmin_q, nmax_q, lmin_q, lmax_q = 0, 30, 161, 294
+# nmin, nmax, lmin, lmax = 0, 0, 200, 210
+# nmin_q, nmax_q, lmin_q, lmax_q = 0, 0, 200, 202
+nmin, nmax, lmin, lmax = 0, 30, 5, 288
+nmin_q, nmax_q, lmin_q, lmax_q = 0, 30, 161, 288
 
-smin, smax = 1, smax_global
+smin, smax = 1, 5 #smax_global
 
 # writing the parameters in each run directory for bookkeeping
 for i in range(len(data_daynum_list)):
@@ -102,6 +102,7 @@ for i in range(len(data_daynum_list)):
     # making dpy-full params file
     run_params = make_run_params.make_run_params(nmin=nmin, nmax=nmax,
                                                  lmin=lmin, lmax=lmax,
+                                                 smin=smin, smax=smax,
                                                  smax_global=smax_global,
                                                  daynum=daynum)
     write_paramsfile(rundir_dpy_full_hess, fname, run_params)
@@ -109,6 +110,7 @@ for i in range(len(data_daynum_list)):
     # making qdpy params file
     run_params = make_run_params.make_run_params(nmin=nmin_q, nmax=nmax_q,
                                                  lmin=lmin_q, lmax=lmax_q,
+                                                 smin=smin, smax=smax,
                                                  smax_global=smax_global,
                                                  daynum=daynum)
     write_paramsfile(rundir_qdpy, fname, run_params)
@@ -116,6 +118,7 @@ for i in range(len(data_daynum_list)):
     # making dpy params file
     run_params = make_run_params.make_run_params(nmin=nmin, nmax=nmax,
                                                  lmin=lmin, lmax=lmax,
+                                                 smin=smin, smax=smax,
                                                  smax_global=smax_global,
                                                  daynum=daynum,
                                                  exclude_qdpy=1)

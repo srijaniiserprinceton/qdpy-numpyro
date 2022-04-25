@@ -97,7 +97,8 @@ def f(mu1):
     val1 = np.load(f'{PARGS.rundir}/carr_fit_{mu1:.5e}.npy')
     # mf = compute_misfit_wsr_slope(val0, val1)
     mf = compute_misfit_wsr(val0, val1, maxdiff=False)
-    print(f" mu = {mu1:.5e}, misfit = {mf:.5e}")
+    sind = (PARGS.s - 1)//2
+    print(f" mu = {mu1:.5e}, misfit = {mf:.5e}; carr = {val1/GVARS.ctrl_arr_dpt_clipped[sind, :]}")
     return mf
 
 
