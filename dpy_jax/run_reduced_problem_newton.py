@@ -480,7 +480,8 @@ if PARGS.plot:
     c_arr_err_full = jnp.reshape(ctrl_arr_err_full, (len_s, -1), 'F')
 
     # converting ctrl points to wsr and plotting
-    fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full, ctrl_arr_err_full,
+    fit_plot = postplotter.postplotter(GVARS, c_arr_fit_full, 
+                                       ctrl_arr_err_full,
                                        f'fit_{mu:.5e}',
                                        plotdir=plotdir)
 

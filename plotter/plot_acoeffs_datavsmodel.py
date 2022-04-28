@@ -14,6 +14,8 @@ plotdir = f"{scratch_dir}/plots"
 
 def plot_acoeffs_datavsmodel(pred_acoeffs, data_acoeffs, data_acoeffs_out_HMI,
                              data_acoeffs_sigma, label, plotdir=plotdir, len_s=10):
+    if pred_acoeffs.shape[0]%len_s != 0:
+        len_s += 1
     
     pred_acoeffs_plot = np.reshape(pred_acoeffs, (len_s, -1), 'F')
     data_acoeffs_plot = np.reshape(data_acoeffs, (len_s, -1), 'F')
@@ -39,6 +41,8 @@ def plot_acoeffs_datavsmodel(pred_acoeffs, data_acoeffs, data_acoeffs_out_HMI,
 def plot_acoeffs_dm_scaled(pred_acoeffs, data_acoeffs, data_acoeffs_out_HMI,
                            data_acoeffs_sigma, label, plotdir=plotdir, len_s=10):
 
+    if pred_acoeffs.shape[0]%len_s != 0:
+        len_s += 1
     pred_acoeffs_plot = np.reshape(pred_acoeffs, (len_s, -1), 'F')
     data_acoeffs_plot = np.reshape(data_acoeffs, (len_s, -1), 'F')
     data_acout_HMI_plot = np.reshape(data_acoeffs_out_HMI, (len_s, -1), 'F')
