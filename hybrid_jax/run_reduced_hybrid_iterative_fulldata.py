@@ -286,19 +286,39 @@ def data_misfit_fn_D(c_arr, dac_D, fullfac):
     pred_acoeffs_D = model_D(c_arr, fullfac)
     data_misfit_arr_D = (pred_acoeffs_D - dac_D)/acoeffs_sigma_HMI_D
     dm = 0.0
-    for i in range(len_s-1):
+    for i in range(len_s):
         dm += jnp.sum(jnp.square(data_misfit_arr_D[i::len_s]))
     return dm
+    """
+    dmarr = [jnp.asarray(data_misfit_arr_D[i::len_s]) for i in range(len_s)]
+    
+    def loop_dm(i, dm):
+        dm =  jdc_update(dm, dm[0] + jnp.sum(jnp.square(dmarr[i])), (0,))
+        return dm
+    
+    dm = jnp.array([0.0, 0.0])
+    return foril(0, len_s, loop_dm, dm)[0]
+    """
 
 
 def data_misfit_fn_Q(c_arr, dac_Q, fullfac):
     # predicted QDPT a-coefficients
     pred_acoeffs_Q = model_Q(c_arr, fullfac)
     data_misfit_arr_Q = (pred_acoeffs_Q - dac_Q)/acoeffs_sigma_HMI_Q
+    """
+    dmarr = [jnp.asarray(data_misfit_arr_Q[i::len_s]) for i in range(len_s)]
+    
+    def loop_dm(i, dm):
+        dm =  jdc_update(dm, dm[0] + jnp.sum(jnp.square(dmarr[i])), (0,))
+        return dm
+    
+    dm = jnp.array([0.0, 0.0])
+    return foril(0, len_s, loop_dm, dm)[0]
+    """
     dm = 0.0
-    for i in range(len_s-1):
+    for i in range(len_s):
         dm += jnp.sum(jnp.square(data_misfit_arr_Q[i::len_s]))
-    return dm #jnp.sum(jnp.square(data_misfit_arr_Q))
+    return dm
 
 
 def model_misfit_fn(c_arr, fullfac, mu_scale=knee_mu):
@@ -386,8 +406,8 @@ def model_D(c_arr, fullfac):
     return pred_acoeffs
 
 
-model_D_ = jit(model_D)
-pred_acoeffs_D = model_D_(true_params_flat, 1)
+# model_D_ = jit(model_D)
+pred_acoeffs_D = model_D(true_params_flat, 1)
 
 dac_Q = data_acoeffs_Q * 1.0
 dac_D = data_acoeffs_D * 1.0
@@ -436,8 +456,8 @@ def get_eigs(mat):
     eigvals = eigval_sort_slice(eigvals, eigvecs)
     return eigvals
 
-model_Q_ = jit(model_Q)
-pred_acoeffs_Q = model_Q_(true_params_flat, 1)
+# model_Q_ = jit(model_Q)
+pred_acoeffs_Q = model_Q(true_params_flat, 1)
 
 # these arrays should be very close
 np.testing.assert_array_almost_equal(pred_acoeffs_Q, data_acoeffs_Q)
@@ -507,9 +527,9 @@ plot_acoeffs.plot_acoeffs_datavsmodel(pred_acoeffs_Q, data_acoeffs_Q,
 '''
 #---------------------- jitting the functions --------------------------#
 grad_fn = jax.grad(loss_fn)
-_grad_fn = jit(grad_fn)
-_update_H = jit(update_H)
-_loss_fn = jit(loss_fn)
+_grad_fn = grad_fn #jit(grad_fn)
+_update_H = update_H #jit(update_H)
+_loss_fn = loss_fn #jit(loss_fn)
 #-----------------------initialization of params------------------#
 c_init = np.ones_like(true_params_flat)
 #------------------plotting the initial profiles-------------------#

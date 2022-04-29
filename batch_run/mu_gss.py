@@ -3,6 +3,7 @@ import re
 import numpy as np
 import argparse
 import fnmatch
+import subprocess
 from qdpy import globalvars as gvar_jax
 from scipy.integrate import simps
 
@@ -21,6 +22,9 @@ package_dir = os.path.dirname(current_dir)
 with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
+
+_pythonpath = subprocess.check_output("which python", shell=True)
+pythonpath = _pythonpath.decode("utf-8").split("\n")[0]
 
 smax_global = int(dirnames[3])
 
@@ -47,7 +51,11 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             smax_global=smax_global)
 
 # storing the hessian for the particular s
-os.system(f"python {run_newton_py} --store_hess 1 --instrument {instr} " +
+runstr = (f"{pythonpath} {run_newton_py} --store_hess 1 --instrument {instr} " +
+      f"--mu 1.0 --batch_run 1 --batch_rundir {PARGS.rundir} --plot 1 " +
+      f">{tempout} 2>{temperr}")
+print(f"Storing hessian by running: {runstr}")
+os.system(f"{pythonpath} {run_newton_py} --store_hess 1 --instrument {instr} " +
       f"--mu 1.0 --batch_run 1 --batch_rundir {PARGS.rundir} --plot 1 " +
       f">{tempout} 2>{temperr}")
 
@@ -90,7 +98,7 @@ def compute_misfit_wsr_slope(arr1, arr2, slope=True):
 
 
 def f(mu1):
-    os.system(f"python {run_newton_py} --read_hess 1 --instrument {instr} " +
+    os.system(f"{pythonpath} {run_newton_py} --read_hess 1 --instrument {instr} " +
               f"--mu {mu1} --batch_run 1 --batch_rundir {PARGS.rundir} --plot 1 " +
               f"--s {PARGS.s} >{tempout} 2>{temperr}")
     
@@ -142,6 +150,6 @@ def gssrec(f, a, b, tol=1.0, h=None, hp=None, c=None, d=None, fc=None, fd=None):
 fname = fnmatch.filter(os.listdir(PARGS.rundir), 'true_params_flat*.npy')[0]
 val0 = np.load(f'{PARGS.rundir}/{fname}')
 
-mu_limits = [1e-6, 5e1]
+mu_limits = [1e-6, 1e3]
 muvals = gssrec(f, np.log10(mu_limits[0]), np.log10(mu_limits[1]))
 np.save(f"{PARGS.rundir}/muval.s{PARGS.s}.npy", 10**muvals[1])

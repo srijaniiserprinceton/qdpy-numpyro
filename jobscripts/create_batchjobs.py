@@ -7,6 +7,7 @@ current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
 _pythonpath = subprocess.check_output("which python", shell=True)
 pythonpath = _pythonpath.decode("utf-8").split("\n")[0]
+parallelpath = "/homes/hanasoge/parallel/bin/parallel"
 jobname = f"sgk.hyb-init"
 execpath = f"{package_dir}/jobscripts/batchjobs.sh"
 
@@ -20,8 +21,9 @@ f"""#!/bin/bash
 #PBS -q clx
 echo \"Starting at \"`date`
 cd $PBS_O_WORKDIR
+source activate jaxpyro
 {pythonpath} {package_dir}/batch_run/initialize_batch_runs.py
-parallel --jobs 12 < $PBS_O_WORKDIR/ipjobs_batch.sh
+{parallelpath} --jobs 12 < $PBS_O_WORKDIR/ipjobs_batch.sh
 echo \"Finished at \"`date`
 """
 
