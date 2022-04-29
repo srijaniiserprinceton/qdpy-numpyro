@@ -557,6 +557,8 @@ c_arr = c_init * true_params_flat
 init_acoeffs_D = model_D(c_arr, 1)
 init_acoeffs_Q = model_Q(c_arr, 1)
 
+print(f"initiailizing complete")
+
 """
 plot_acoeffs.plot_acoeffs_datavsmodel(init_acoeffs_D, data_acoeffs_D,
                                       data_acoeffs_out_HMI_D,
@@ -589,8 +591,11 @@ N0 = 1
 itercount = 0
 
 model_misfit = model_misfit_fn(true_params_flat, 1)
+print(f"[0] model misfit computation")
 loss = _loss_fn(true_params_flat, data_acoeffs_D, data_acoeffs_Q, 1)
+print(f"[1] loss function computation")
 grads = _grad_fn(true_params_flat, data_acoeffs_D, data_acoeffs_Q, 1)
+print(f"[2] gradinet function computation")
 data_misfit = loss - mu * model_misfit
 tinit = 0
 print(f'[{itercount:3d} | {tinit:6.1f} sec ] ' +
