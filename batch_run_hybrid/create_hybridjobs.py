@@ -22,7 +22,7 @@ print(batchnames)
 
 count = 0
 num_batches = len(batchnames)
-num_jobs = 1
+num_jobs = 5
 for i in range(num_jobs):
     job_args = []
     jobdpy_args = []
@@ -61,6 +61,7 @@ for i in range(num_jobs):
 echo \"Starting at \"`date`
 echo \"First dataset = {bn_start}\"
 echo \"Last dataset = {bname}\"
+source activate jaxpyro
 """
     slurm_str = \
     f"""#!/bin/bash
