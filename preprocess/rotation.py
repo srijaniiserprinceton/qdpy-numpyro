@@ -173,7 +173,7 @@ if __name__=="__main__":
         es = get_interpolated_ws(err2d, smax)
         wsig = []
 
-        newname = RN.get_newname(fnames_rot2d[i], instrument=INSTR)
+        newname = RN.get_newname(fnames_rot2d[i], instrument=INSTR, numsplits=smax)
         fname_splits = newname.split('.')
         mdi_day = fname_splits[2]
         numsplits = fname_splits[3]

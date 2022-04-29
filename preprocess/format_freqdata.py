@@ -178,6 +178,7 @@ if __name__ == "__main__":
     fnames_split = get_fnames()
     fnames_new = get_fnames_new()
 
+    '''
     for fname in fnames_split:
         newname = RN.get_newname(fname, instrument=INSTR)
         print(newname)
@@ -189,13 +190,15 @@ if __name__ == "__main__":
         store_output(f'{dldir}/{INSTR}.in.{ARGS.tslen}.{mdi_day}.{numsplits}', dsplits)
         store_output(f'{dldir}/{INSTR}.out.{ARGS.tslen}.{mdi_day}.{numsplits}',
                      dsplits_out)
-
+    '''
     # renaming the a-coeff fit data from hmi to appropriate format
     # reformatting is not required as it's in the default format
     for fname in fnames_new:
         fname_splits = fname.split('/')[-1].split('.')
         mdi_day = fname_splits[-2]
         numsplits = fname_splits[-1]
-        newfname = f"{dldir}/{INSTR}.in.{ARGS.tslen}.{mdi_day}.{numsplits}"
+        newfname_in = f"{dldir}/{INSTR}.in.{ARGS.tslen}.{mdi_day}.{numsplits}"
+        newfname_out = f"{dldir}/{INSTR}.out.{ARGS.tslen}.{mdi_day}.{numsplits}"
         print(f"Writing {newfname}")
-        os.system(f"cp {fname} {newfname}")
+        os.system(f"cp {fname} {newfname_in}")
+        os.system(f"cp {fname} {newfname_out}")

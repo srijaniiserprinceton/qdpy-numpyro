@@ -98,6 +98,7 @@ class GlobalVars():
         self.progdir = self.local_dir
 
         fsuffix = f"{self.tslen}d.{self.daynum}.{self.numsplits}"
+        fsuffix_wsr = f"{self.tslen}d.{self.daynum}.{smax_global}"
         self.filename_suffix = f"{self.instrument}.{fsuffix}"
         self.hmidata_in = np.loadtxt(f"{self.ipdir}/{self.instrument}/" +
                                      f"{self.instrument}.in.{fsuffix}")
@@ -136,10 +137,10 @@ class GlobalVars():
 
         self.fwindow = qdPars.fwindow
         self.wsr = -1.0*np.loadtxt(f'{self.ipdir}/{self.instrument}/' +
-                                   f'wsr.{self.instrument}.{fsuffix}')[:self.smax_global//2+1]
+                        f'wsr.{self.instrument}.{fsuffix_wsr}')[:self.smax_global//2+1]
         # self.err1d = np.loadtxt(f'{self.ipdir}/err1d-{self.instrument}.dat')
         self.wsr_err = np.loadtxt(f'{self.ipdir}/{self.instrument}/' +
-                                  f'err.{self.instrument}.{fsuffix}')[:self.smax_global//2+1]
+                        f'err.{self.instrument}.{fsuffix_wsr}')[:self.smax_global//2+1]
 
         self.wsr = self.sfactor[:, NAX]*self.wsr
         self.wsr_err = self.sfactor[:, NAX]*self.wsr_err

@@ -47,11 +47,13 @@ if INSTR=="hmi":
     daylist_fname = "daylist.hmi"
     LMAX = "200"
     NDT = "138240"
+    freq_series_name = "hmi.v_sht_modes"
 elif INSTR=="mdi":
     series_name = "mdi.vw_V_sht_2drls"
     daylist_fname = "daylist.mdi"
     LMAX = "300"
     NDT = "103680"
+    freq_series_name = "mdi.vw_V_sht_modes"
 
 drms_client = drms.Client()
 segment_info = drms_client.info(series_name)
@@ -105,7 +107,7 @@ os.system(f"cd {dldir}; rm $(ls | egrep -v '{NDT}.36')")
 # ---- downloading the a-coefficient fits ---------------
 client = jsoc.JSOCClient()
 response = client.search(a.Time(f'{day1}T00:00:00', f'{day2}T00:00:00'),
-                         a.jsoc.Series('hmi.v_sht_modes'),
+                         a.jsoc.Series(f'{freq_series_name}'),
                          a.jsoc.PrimeKey('LMIN', '0') &
                          a.jsoc.PrimeKey('LMAX', LMAX) &
                          a.jsoc.PrimeKey('NDT', NDT) &
@@ -124,6 +126,6 @@ while requests.status > 0:
     count += 1
 print(f" status = {requests.status}: Ready for download")
 res = client.get_request(requests, path=splitdir)
-os.system(f"cd {splitdir}; rm $(ls | egrep -v '.138240')")
-os.system(f"cd {splitdir}; rm $(ls | egrep -v '.36')")
+os.system(f"cd {splitdir}; rm $(ls | egrep -v '.{NDT}')")
+os.system(f"cd {splitdir}; rm $(ls | egrep -v '\\.36')")
 #----------------------------------------------------------------------#

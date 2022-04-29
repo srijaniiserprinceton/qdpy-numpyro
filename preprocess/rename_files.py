@@ -12,7 +12,7 @@ scratch_dir = dirnames[1]
 ipdir = f"{scratch_dir}/input_files"
 outdir = f"{ipdir}/hmi"
 #----------------------------------------------------------------------#
-def get_newname(fname, suffix="split", instrument="hmi"):
+def get_newname(fname, suffix="split", instrument="hmi", numsplits=36):
 
     mdi_daylist = pd.read_table(f'daylist.{instrument}', delim_whitespace=True,
                                 names=('SN', 'MDI', 'DATE'),
@@ -32,14 +32,14 @@ def get_newname(fname, suffix="split", instrument="hmi"):
               f"{mdi_daylist['MDI'][idx]}")
         mdi_day = mdi_daylist['MDI'][idx]
         found = 1
-        newname = f"{instrument}.{suffix}.{mdi_day}.18"
+        newname = f"{instrument}.{suffix}.{mdi_day}.{numsplits}"
     except IndexError:
         mdidatestr = mdi_daylist['DATE'].values[0]
         strsplit = mdidatestr.split('-')
         mdidate = datetime(int(strsplit[0]), int(strsplit[1]), int(strsplit[2]))
         mdiday = mdi_daylist['MDI'].values[0]
         thisday = mdiday + (thisdate - mdidate).days
-        newname = f"{instrument}.{suffix}.{thisday}.18"
+        newname = f"{instrument}.{suffix}.{thisday}.{numsplits}"
         print(f"{date_str} -- NOT FOUND -- mdi_day = {thisday}")
         found = 0
         pass
