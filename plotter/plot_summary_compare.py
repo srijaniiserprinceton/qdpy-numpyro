@@ -22,6 +22,7 @@ parser.add_argument("--outdir", help="output directory",
 PARGS = parser.parse_args()
 #------------------------------------------------------------------------#
 
+"""
 dirnames = subprocess.check_output(["ls", f"{PARGS.outdir}"])
 dirnames = dirnames.decode().split('\n')
 numdir = len(dirnames)
@@ -31,6 +32,10 @@ idx = int(input(f"Select dataset to be plotted: "))
 outdir = f"{PARGS.outdir}/{dirnames[idx]}/summaryfiles"
 outdir = f"{PARGS.outdir}/{dirnames[idx]}/plots"
 print(f"outdir = {outdir}")
+"""
+outdir = f"{PARGS.outdir}"
+plotdir = f"{PARGS.outdir}"
+
 
 def select_and_load():
     os.system(f"ls {outdir}/summary* > {outdir}/fnames.txt")
@@ -76,6 +81,7 @@ def plot_from_summary(summlist):
         fig, ax = fit_plot.plot_fit_wsr(fig=fig, ax=ax, pcolor=colors[count])
         count += 1
     return fig
+
 
 if __name__ == "__main__":
     summary_list = select_and_load()
