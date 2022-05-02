@@ -1,5 +1,5 @@
 #/bin/sh
-INSTR=mdi
+INSTR=hmi
 echo "[0.] Generating the daylist ..."
 python create_daylist.py --instrument $INSTR > temp.out 2> temp.err
 echo "[1.] Fetching data from JSOC ..."

@@ -199,6 +199,7 @@ if __name__ == "__main__":
         numsplits = fname_splits[-1]
         newfname_in = f"{dldir}/{INSTR}.in.{ARGS.tslen}.{mdi_day}.{numsplits}"
         newfname_out = f"{dldir}/{INSTR}.out.{ARGS.tslen}.{mdi_day}.{numsplits}"
-        print(f"Writing {newfname}")
+        print(f"Writing {newfname_in}")
+        print(f"Writing {newfname_out}")
         os.system(f"cp {fname} {newfname_in}")
         os.system(f"cp {fname} {newfname_out}")
