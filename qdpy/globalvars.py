@@ -79,7 +79,7 @@ class GlobalVars():
 
     def __init__(self, lmin=200, lmax=200, n0=0, rth=0.9, knot_num=15,
                  load_from_file=0, relpath='.', instrument='hmi',
-                 tslen=72, daynum=6328, numsplits=18, smax_global=19):
+                 tslen=72, daynum=6328, numsplits=36, smax_global=19):
 
         # storing the parameters required for inversion
         self.tslen = tslen
