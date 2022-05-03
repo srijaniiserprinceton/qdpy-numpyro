@@ -251,7 +251,7 @@ if __name__ == "__main__":
     np.save(f'{outdir}/acoeffs_sigma_HMI.{sfx}.npy', GVARS.acoeffs_sigma)
     print(f"--SAVING COMPLETE--")
 
-    sys.exit()
+    # sys.exit()
     #-------------COMPARING AGAINST supmat_qdpt and dpy_jax----------------#
     # testing only valid for nmin = 0, nmax = 0, lmin = 200, lmax = 201
     synth_hypmat = np.zeros((nmults, dim_hyper, dim_hyper))
