@@ -138,6 +138,7 @@ smax = max(GVARS.s_arr)
 
 len_s = len(sind_arr) # number of s to fit
 nc = len(cind_arr) # number of c to fit
+print(f"len_s = {len_s}")
 #------------------------------------------------------------------------#
 # slicing the Pjl correctly in angular degree s and computing normalization
 # calculating the denominator of a-coefficient converion apriori

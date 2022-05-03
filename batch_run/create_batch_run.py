@@ -25,6 +25,7 @@ batchnames = [filename for filename in os.listdir(batch_dir) if
 
 mu_start = np.array([1.e-4, 1.e-5, 1.e-4])
 smax_local = 5
+smax_local = smax_global * 1
 run_newton_py = f"{package_dir}/dpy_jax/run_reduced_problem_newton.py"
 run_iterative_py = f"{package_dir}/dpy_jax/run_reduced_problem_iterative.py"
 
@@ -42,6 +43,8 @@ for bname in batchnames:
                     f"{batch_dir}/{bname}/s{s}_dhess.npy\n")
             f.write(f"cp {batch_dir}/{bname}/mhess*.npy " +
                     f"{batch_dir}/{bname}/s{s}_mhess.npy\n")
+            f.write(f"cp {batch_dir}/{bname}/carr_fit_1.00000e+00.npy " +
+                    f"{batch_dir}/{bname}/s{s}_carr.npy\n")
         
     
         # all s fitting with the optimal mu

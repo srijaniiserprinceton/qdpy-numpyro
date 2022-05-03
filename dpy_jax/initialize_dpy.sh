@@ -12,7 +12,7 @@ EXCLUDE_QDPY_MODES_DEFAULT=0
 INSTR_DEFAULT="hmi"
 TSLEN_DEFAULT=72
 DAYNUM_DEFAULT=6328
-NUMSPLIT_DEFAULT=18
+NUMSPLIT_DEFAULT=36
 
 echo "----------------------------------------"
 echo "         Model attributes"

@@ -30,14 +30,19 @@ except FileNotFoundError:
     sys.exit()
 
 # loading the final fitted hybrid carr_fit from the summary files and the true params
+c7 = np.load(f'{scratch_dir}/carr_dpy/s7-cfit.npy')
 true_params_flat = summary['true_params_flat']
 carr_fit_hybrid = summary['c_arr_fit'] * true_params_flat
+carr_fit_hybrid[3::5] = c7# * true_params_flat[3::5]
+carr_fit_dpt = true_params_flat
 
 # making the wsr profiles
 bsp_basis = summary['params']['dpy']['GVARS'].bsp_basis_full
 
-sind_arr = np.array([0,1,2])
-cind_arr = np.arange(len(carr_fit_dpt)//3)
+# sind_arr = np.array([0,1,2])
+# cind_arr = np.arange(len(carr_fit_dpt)//3)
+sind_arr = np.arange(5)
+cind_arr = np.arange(len(carr_fit_dpt)//5)
 
 carr_fit_dpt_full = jf.c4fit_2_c4plot(summary['params']['dpy']['GVARS'],
                                       carr_fit_dpt, sind_arr, cind_arr)
@@ -49,9 +54,8 @@ wsr_dpt_full = carr_fit_dpt_full @ bsp_basis
 wsr_hybrid_full = carr_fit_hybrid_full @ bsp_basis
 
 # making the part not fitted for proper sigma                                                  
-wsr_sigma[0, :-1018] = wsr_sigma[0, -1018]
-wsr_sigma[1, :-1018] = wsr_sigma[1, -1018]
-wsr_sigma[2, :-1018] = wsr_sigma[2, -1018]
+for i in range(wsr_sigma.shape[0]):
+    wsr_sigma[i, :-1018] = wsr_sigma[i, -1018]
 
 # plotting 
 r = summary['params']['dpy']['GVARS'].r
@@ -59,15 +63,16 @@ r = summary['params']['dpy']['GVARS'].r
 fig, ax = plt.subplots(1, 3, figsize=(10,5))
 
 for i in range(3):
-    ax[i].plot(r, wsr_hybrid_full[i] - wsr_dpt_full[i], 'k', lw = 1)
-    ax[i].fill_between(r, wsr_sigma[i], -wsr_sigma[i], color='red',
+    idx = i + 2
+    ax[i].plot(r, wsr_hybrid_full[idx] - wsr_dpt_full[idx], 'k', lw = 1)
+    ax[i].fill_between(r, wsr_sigma[idx], -wsr_sigma[idx], color='red',
                        alpha=0.4)
     
     ax[i].grid(True)
     ax[i].set_xlim([0.88, 1])
 
     ax[i].set_xlabel('$r$ in $R_{\odot}$')
-    ax[i].set_ylabel('$w_{%i}^{\mathrm{hybrid}}(r) - w_{%i}^{\mathrm{DPT}}(r)$ in $\mu$Hz'%(2*i+1, 2*i+1))
+    ax[i].set_ylabel('$w_{%i}^{\mathrm{hybrid}}(r) - w_{%i}^{\mathrm{DPT}}(r)$ in $\mu$Hz'%(2*idx+1, 2*idx+1))
 
 left  = 0.07  # the left side of the subplots of the figure
 right = 0.98    # the right side of the subplots of the figure
@@ -85,13 +90,18 @@ plt.savefig(f'dpy-hybrid-{PARGS.daynum}.pdf')
 fig, ax = plt.subplots(3, 1, figsize=(4,9))
 
 for i in range(3):
-    ax[i].plot(r, wsr_dpt_full[i], 'k', lw = 1)
-    ax[i].plot(r, wsr_hybrid_full[i], 'r', lw = 1)
+    idx = i + 2
+    ax[i].plot(r, wsr_dpt_full[idx], 'k', lw=0.2, label='JSOC')
+    ax[i].plot(r, wsr_hybrid_full[idx], 'r', lw=0.2, label='DPY')
+    ax[i].fill_between(r, wsr_dpt_full[idx] - abs(wsr_sigma[idx]), 
+                       wsr_dpt_full[idx] + abs(wsr_sigma[idx]), color='blue',
+                       alpha=0.2)
     ax[i].grid(True)
-    ax[i].set_ylabel('$w_{%i}(r) - w_{%i}^{\mathrm{ref}}(r)$ in $\mu$Hz'%(2*i+1, 2*i+1))
+    # ax[i].set_ylabel('$w_{%i}(r) - w_{%i}^{\mathrm{ref}}(r)$ in $\mu$Hz'%(2*idx+1, 2*idx+1))
+    ax[i].set_ylabel('$w_{%i}(r)$ in $\mu$Hz'%(2*idx+1))
+    ax[i].legend()
 
 ax[2].set_xlabel('$r$ in $R_{\odot}$')
-
 plt.tight_layout()
 
 plt.savefig(f'dpy-hybrid-full-{PARGS.daynum}.pdf')

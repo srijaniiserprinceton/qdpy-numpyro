@@ -81,10 +81,10 @@ if(ARGS.s == 1):
 
 # to generate the precomptued files for the entire inversion (all s)
 elif(ARGS.s == 0):
-    smax = 5
+    # smax = 9
     #-------------------------READING THE RUNPARAMS---------------------------#               
-    # RPARAMS = np.loadtxt(f"{ARGS.rundir}/.params_smin_1_smax_{SMAX_GLOBAL}.dat")
-    RPARAMS = np.loadtxt(f"{ARGS.rundir}/.params_smin_1_smax_{smax}.dat")
+    RPARAMS = np.loadtxt(f"{ARGS.rundir}/.params_smin_1_smax_{SMAX_GLOBAL}.dat")
+    # RPARAMS = np.loadtxt(f"{ARGS.rundir}/.params_smin_1_smax_{smax}.dat")
     nmin, nmax, lmin, lmax, smin, smax, knotnum, rth, tslen, daynum, numsplits, smax_global =\
                                                                 params2vars(RPARAMS)
 
