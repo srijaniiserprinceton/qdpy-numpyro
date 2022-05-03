@@ -186,6 +186,8 @@ carr_sigma_flat = np.reshape(carr_sigma,
 noc_diag_flat = np.reshape(noc_diag,
                            (len(sind_arr) * len(cind_arr), -1), 'F')
 
+print(len(sind_arr), len(cind_arr), len(sind_arr) * len(cind_arr))
+
 # this is essentially the model function
 pred += true_params_flat @ noc_diag_flat
 
@@ -204,7 +206,7 @@ for i in range(num_params):
     true_params_samples[i, :] = np.random.normal(loc=true_params_flat[i],
                                                  scale=np.abs(carr_sigma_flat[i]),
                                                  size=num_samples)
-
+'''
 # step 1 of renormalization
 true_params_samples_renormed = jf.model_renorm(true_params_samples,
                                                true_params_flat_shaped,
@@ -216,14 +218,13 @@ sigma2scale = np.zeros(num_params)
 for i in range(num_params):
     __, sigma2scale[i] = norm.fit(true_params_samples_renormed[i])
     # sigma2scale[i] = abs(carr_sigma_flat[i])
-
+'''
 #-------------saving miscellaneous files-------------------#
 sfx = GVARS.filename_suffix
 
 np.save(f'{outdir}/fixed_part.{sfx}.npy', diag_evals_fixed)
 np.save(f'{outdir}/param_coeff_flat.{sfx}.npy', noc_diag_flat)
 np.save(f'{outdir}/true_params_flat.{sfx}.npy', true_params_flat)
-np.save(f'{outdir}/sigma2scale.{sfx}.npy', sigma2scale)
 # np.save(f'{outdir}/model_params_sigma.npy', carr_sigma_flat*20.)
 np.save(f'{outdir}/data_model.{sfx}.npy', eigvals_model)
 np.save(f'{outdir}/cind_arr.{sfx}.npy', cind_arr)

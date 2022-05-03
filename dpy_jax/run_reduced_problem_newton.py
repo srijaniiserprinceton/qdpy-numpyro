@@ -127,7 +127,6 @@ sind_arr = np.load(f'{outdir}/sind_arr.{sfx}.npy')
 # shape (nmults x (smax+1) x 2*ellmax+1) 
 RL_poly = np.load(f'{outdir}/RL_poly.{sfx}.npy')
 # model_params_sigma = np.load(f'{outdir}/model_params_sigma.npy')*100.
-sigma2scale = np.load(f'{outdir}/sigma2scale.{sfx}.npy')
 D_bsp_j_D_bsp_k = np.load(f'{outdir}/D_bsp_j_D_bsp_k.{sfx}.npy')
 #------------------------------------------------------------------------# 
 nmults = len(GVARS.ell0_arr)
