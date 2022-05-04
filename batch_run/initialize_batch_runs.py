@@ -31,7 +31,7 @@ batch_run_dir = f"{scratch_dir}/batch_runs_dpy"
 
 for i in range(len(data_daynum_list)):
     daynum = data_daynum_list[i]
-    batch_subdirpath = f"{batch_run_dir}/hmi_72d_{daynum}_18" 
+    batch_subdirpath = f"{batch_run_dir}/hmi_72d_{daynum}_36" 
 
     # creating the directory for one of the batch runs
     if(os.path.isdir(batch_subdirpath)):
@@ -61,15 +61,14 @@ smin_arr = np.arange(1, smax_global+1, 2)
 smax_arr = np.arange(1, smax_global+1, 2)
 
 # at this point smin_arr = [1, 3, 5, ..., 1] and smax_arr = [1, 3, 5, ..., smax_global]
-smax = 5
 smin_arr = np.append(smin_arr, 1)
-smax_arr = np.append(smax_arr, smax)
+smax_arr = np.append(smax_arr, smax_global)
 # smax_arr = np.append(smax_arr, smax_global)
 
 # writing the parameters in each run directory for bookkeeping
 for i in range(len(data_daynum_list)):
     daynum = data_daynum_list[i]
-    run_dir = f"{batch_run_dir}/hmi_72d_{daynum}_18"
+    run_dir = f"{batch_run_dir}/hmi_72d_{daynum}_36"
 
     for j in range(len(smin_arr)):
         smin, smax = smin_arr[j], smax_arr[j]
