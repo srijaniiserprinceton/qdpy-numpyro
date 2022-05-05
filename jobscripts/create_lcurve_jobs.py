@@ -23,6 +23,8 @@ parser.add_argument("--jobtype", default="pbs",
                     type=str, help="pbs/slurm")
 parser.add_argument("--cluster", default="intel",
                     type=str, help="intel, cchpc, gpu")
+parser.add_argument("--instr", default="hmi",
+                    type=str, help="hmi or mdi")
 ARGS = parser.parse_args()
 
 muexp_min = np.log10(ARGS.mumax)
@@ -39,7 +41,7 @@ if ARGS.cluster == "intel": activate_parallel = ""
 
 rundir = ARGS.rundir
 sval = ARGS.s
-instr = "hmi"
+instr = ARGS.instr
 
 jobname = f"s{sval}.Lcurve"
 

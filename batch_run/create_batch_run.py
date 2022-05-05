@@ -31,7 +31,6 @@ smax_local = smax_global * 1
 lcurve_slist = [7]
 run_newton_py = f"{package_dir}/dpy_jax/run_reduced_problem_newton.py"
 run_lcurve_py = f"{package_dir}/jobscripts/create_lcurve_jobs.py"
-run_iterative_py = f"{package_dir}/dpy_jax/run_reduced_problem_iterative.py"
 
 for bname in batchnames:
     instr = re.split('[_]+', bname, flags=re.IGNORECASE)[0]
@@ -49,9 +48,9 @@ for bname in batchnames:
 
             if lcurve:
                 f.write(f"{pythonpath} {run_lcurve_py} --jobtype {PARGS.jobtype} "
-                        f"--rundir {batch_dir}/{bname} --s {s}\n")
+                        f"--rundir {batch_dir}/{bname} --s {s} --instr {instr}\n")
             else:
-                f.write(f"{pythonpath} {current_dir}/mu_gss.py "
+                f.write(f"{pythonpath} {current_dir}/mu_gss.py --instr {instr} "
                         f"--rundir {batch_dir}/{bname} --s {s}\n")
             f.write(f"cp {batch_dir}/{bname}/dhess*.npy " +
                     f"{batch_dir}/{bname}/s{s}_dhess.npy\n")

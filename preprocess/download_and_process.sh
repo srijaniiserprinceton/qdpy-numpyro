@@ -1,5 +1,5 @@
 #/bin/sh
-INSTR=hmi
+INSTR=mdi
 SMAX=$(python read_smax.py)
 echo "instrument = $INSTR; smax = $SMAX"
 echo "[0.] Generating the daylist ..."

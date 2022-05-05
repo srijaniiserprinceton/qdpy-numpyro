@@ -13,10 +13,11 @@ package_dir = os.path.dirname(current_dir)
 with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
-datadir = f"{scratch_dir}/input_files/hmi"
+instr = dirnames[4]
+datadir = f"{scratch_dir}/input_files/{instr}"
 
 #------------------READING THE DATA FILE NAMES-----------------------#
-datafnames = fnmatch.filter(os.listdir(datadir), 'hmi.in.*')
+datafnames = fnmatch.filter(os.listdir(datadir), f'{instr}.in.*')
 
 # list to store the available daynum
 data_daynum_list = []
@@ -31,7 +32,7 @@ batch_run_dir = f"{scratch_dir}/batch_runs_dpy"
 
 for i in range(len(data_daynum_list)):
     daynum = data_daynum_list[i]
-    batch_subdirpath = f"{batch_run_dir}/hmi_72d_{daynum}_36" 
+    batch_subdirpath = f"{batch_run_dir}/{instr}_72d_{daynum}_36" 
 
     # creating the directory for one of the batch runs
     if(os.path.isdir(batch_subdirpath)):
@@ -68,7 +69,7 @@ smax_arr = np.append(smax_arr, smax_global)
 # writing the parameters in each run directory for bookkeeping
 for i in range(len(data_daynum_list)):
     daynum = data_daynum_list[i]
-    run_dir = f"{batch_run_dir}/hmi_72d_{daynum}_36"
+    run_dir = f"{batch_run_dir}/{instr}_72d_{daynum}_36"
 
     for j in range(len(smin_arr)):
         smin, smax = smin_arr[j], smax_arr[j]
