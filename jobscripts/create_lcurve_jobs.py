@@ -21,6 +21,8 @@ parser.add_argument("--rundir", type=str,
                     default="/tier2/tifr/samarth/qdpy_iofiles/batch_runs_dpy/hmi_72d_6328_18")
 parser.add_argument("--jobtype", default="pbs",
                     type=str, help="pbs/slurm")
+parser.add_argument("--cluster", default="intel",
+                    type=str, help="intel, cchpc, gpu")
 ARGS = parser.parse_args()
 
 muexp_min = np.log10(ARGS.mumax)
@@ -30,6 +32,11 @@ mu_list = 10**muexp_list
 print(f"mu = {mu_list}")
 
 execpath = f"{package_dir}/dpy_jax/run_reduced_problem_lcurve.py"
+parallelpath = "parallel"
+activate_parallel = "module load GnuParallel"
+if ARGS.cluster == "intel": parallelpath = "/homes/hanasoge/parallel/bin/parallel"
+if ARGS.cluster == "intel": activate_parallel = ""
+
 rundir = ARGS.rundir
 sval = ARGS.s
 instr = "hmi"
@@ -41,15 +48,16 @@ f"""#!/bin/bash
 #PBS -N {jobname}
 #PBS -o out-{jobname}.log
 #PBS -e err-{jobname}.log
-#PBS -l select=1:ncpus=112:mem=700gb
+#PBS -l select=1:ncpus=32:mem=70gb
 #PBS -l walltime=06:00:00
-#PBS -q clx
+#PBS -q small
 echo \"Starting at \"`date`
 cd $PBS_O_WORKDIR
+{activate_parallel}
 source activate jaxpyro
 {pythonpath} {package_dir}/batch_run/batch_precompute.py --rundir {rundir} --s {sval}
 {pythonpath} {execpath} --store_hess 1 --instrument {instr} --mu 1.0 --batch_run 1 --batch_rundir {rundir} --s {sval}
-/homes/hanasoge/parallel/bin/parallel --jobs 80 < $PBS_O_WORKDIR/ipjobs_lcurve_s{sval}.sh
+{parallelpath} --jobs 8 < $PBS_O_WORKDIR/ipjobs_lcurve_s{sval}.sh
 echo \"Finished at \"`date`
 """
 
@@ -68,7 +76,7 @@ conda activate jax-gpu
 echo \"Starting at \"`date`                                                                   
 {pythonpath} {package_dir}/batch_run/batch_precompute.py --rundir {rundir} --s {sval}
 {pythonpath} {execpath} --store_hess 1 --instrument {instr} --mu 1.0 --batch_run 1 --batch_rundir {rundir} --s {sval}
-parallel --jobs 80 < {pacakge_dir}/jobscripts/ipjobs_lcurve_s{sval}.sh
+parallel --jobs 80 < {package_dir}/jobscripts/ipjobs_lcurve_s{sval}.sh
 echo \"Finished at \"`date`
 """
 
@@ -89,8 +97,8 @@ with open(f"{package_dir}/jobscripts/ipjobs_lcurve_s{sval}.sh", "w") as f:
         f.write(ipjobs_str + job_args + oefile + " \n")
 
 if ARGS.jobtype == "pbs":
-    os.system(f"cd {pacakge_dir}/jobscripts; qsub gnup_lcurve_s{sval}.pbs")
+    os.system(f"cd {package_dir}/jobscripts; qsub gnup_lcurve_s{sval}.pbs")
 elif ARGS.jobtype == "slurm":
-    os.system(f"cd {pacakge_dir}/jobscripts; squeue gnup_lcurve_s{sval}.slurm")
+    os.system(f"cd {package_dir}/jobscripts; squeue gnup_lcurve_s{sval}.slurm")
 else:
     print(f"invalid jobtype {ARGS.jobtype}. Can take only pbs or slurm")

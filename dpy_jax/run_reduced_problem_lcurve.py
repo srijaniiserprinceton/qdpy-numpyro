@@ -124,8 +124,6 @@ sind_arr = np.load(f'{outdir}/sind_arr.{sfx}.npy')
 # Reading RL poly from precomputed file
 # shape (nmults x (smax+1) x 2*ellmax+1) 
 RL_poly = np.load(f'{outdir}/RL_poly.{sfx}.npy')
-# model_params_sigma = np.load(f'{outdir}/model_params_sigma.npy')*100.
-sigma2scale = np.load(f'{outdir}/sigma2scale.{sfx}.npy')
 D_bsp_j_D_bsp_k = np.load(f'{outdir}/D_bsp_j_D_bsp_k.{sfx}.npy')
 #------------------------------------------------------------------------# 
 nmults = len(GVARS.ell0_arr)
@@ -450,7 +448,7 @@ for i in range(len_s):
 #------------------------------------------------------------------------#
 with open(f"{PARGS.batch_rundir}/regmisfit-s{PARGS.s}-{daynum}.txt", "a") as f:
     f.seek(0, os.SEEK_END)
-    if f.tell():
+    if not f.tell():
         f.write("mu,data-misfit,model-misfit\n")
     else:
         opstr = f"{mu:18.12e}, {chisq:18.12e}, {model_misfit:18.12e}\n"
