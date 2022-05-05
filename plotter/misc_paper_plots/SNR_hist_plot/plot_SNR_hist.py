@@ -30,14 +30,17 @@ ax7= fig.add_subplot(2,2,3)
 ax9= fig.add_subplot(2,2,4)
 
 # min ell array for filtering modes
-min_ell_arr = np.array([0, 100, 160, 200], dtype='int')
+min_ell_arr = np.array([0, 100, 200], dtype='int')
+max_ell_arr = np.array([100, 200, 300], dtype='int')
 
 # histogram params
 bins = 20
 
 # transparancy
-alpha_arr = np.array([0.2, 0.3, 0.5, 0.6])
+alpha_arr = np.array([0.2, 0.3, 0.5])
+color_arr = np.array(['k', 'b', 'r'])
 
+'''
 mask_mult = nl_arr[:,1] >= min_ell_arr[0]
 # creating the "old" histograms (from the previous ell_min)                                   
 hist_1_old = np.histogram(SNR[0, mask_mult], bins=bins, density=True)
@@ -45,9 +48,14 @@ hist_3_old = np.histogram(SNR[1, mask_mult], bins=bins, density=True)
 hist_5_old = np.histogram(SNR[2, mask_mult], bins=bins, density=True)
 hist_7_old = np.histogram(SNR[3, mask_mult], bins=bins, density=True)
 hist_9_old = np.histogram(SNR[4, mask_mult], bins=bins, density=True)
+'''
 
 for min_ell_ind, min_ell in enumerate(min_ell_arr):
-    mask_mult = nl_arr[:,1] >= min_ell
+    max_ell = max_ell_arr[min_ell_ind]
+    mask_mult_1 = nl_arr[:,1] >= min_ell
+    mask_mult_2 = nl_arr[:,1] < max_ell
+    
+    mask_mult = mask_mult_1 * mask_mult_2
 
     # creating the "new" histograms
     hist_1 = np.histogram(SNR[0, mask_mult], bins=bins, density=True)
@@ -80,16 +88,17 @@ for min_ell_ind, min_ell in enumerate(min_ell_arr):
     '''
     
     # plotting the histograms
-    ax1.hist(hist_1[1][:-1], weights = hist_1[0],
-             alpha=alpha_arr[min_ell_ind], label='$\ell \geq %i$'%min_ell)
-    ax3.hist(hist_3[1][:-1], weights = hist_3[0],
-             alpha=alpha_arr[min_ell_ind], label='$\ell \geq %i$'%min_ell)
-    ax5.hist(hist_5[1][:-1], weights = hist_5[0],
-             alpha=alpha_arr[min_ell_ind], label='$\ell \geq %i$'%min_ell)
-    ax7.hist(hist_7[1][:-1], weights = hist_7[0],
-             alpha=alpha_arr[min_ell_ind], label='$\ell \geq %i$'%min_ell)
-    ax9.hist(hist_9[1][:-1], weights = hist_9[0],
-             alpha=alpha_arr[min_ell_ind], label='$\ell \geq %i$'%min_ell)
+    ax1.hist(hist_1[1][:-1], weights = hist_1[0], color=color_arr[min_ell_ind],
+             alpha=alpha_arr[min_ell_ind],
+             label='$%i \leq \ell < %i$'%(min_ell, max_ell))
+    ax3.hist(hist_3[1][:-1], weights = hist_3[0], color=color_arr[min_ell_ind],
+             alpha=alpha_arr[min_ell_ind])
+    ax5.hist(hist_5[1][:-1], weights = hist_5[0], color=color_arr[min_ell_ind],
+             alpha=alpha_arr[min_ell_ind])
+    ax7.hist(hist_7[1][:-1], weights = hist_7[0], color=color_arr[min_ell_ind],
+             alpha=alpha_arr[min_ell_ind])
+    ax9.hist(hist_9[1][:-1], weights = hist_9[0], color=color_arr[min_ell_ind],
+             alpha=alpha_arr[min_ell_ind])
     
     ax1.set_yticks([])
     ax3.set_yticks([])
@@ -97,17 +106,19 @@ for min_ell_ind, min_ell in enumerate(min_ell_arr):
     ax7.set_yticks([])
     ax9.set_yticks([])
 
+    '''
     # resetting the old histograms 
     hist_1_old = hist_1
     hist_3_old = hist_3
     hist_5_old = hist_5
     hist_7_old = hist_7
     hist_9_old = hist_9
+    '''
 
 def get_text_loc(ax):
     x_norm, y_norm = 0.05, 0.9
-    if(ax == ax5):
-        x_norm = 0.7
+    if(ax == ax1 or ax == ax3):
+        x_norm = 0.75
     
     x0, x1 = ax.get_xlim()
     y0, y1 = ax.get_ylim()
