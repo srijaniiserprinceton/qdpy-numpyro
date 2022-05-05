@@ -17,8 +17,6 @@ parser.add_argument("--batch_run", help="flag to indicate its a batch run",
                     type=int, default=0)
 parser.add_argument("--batch_rundir", help="local directory for batch run",
                     type=str, default=".")
-parser.add_argument("--mu_batchdir", help="directory of converged mu",
-                    type=str, default=".")
 parser.add_argument("--plot", help="plot",
                     type=bool, default=False)
 parser.add_argument("--s", help="which s is being fit, default is 0 which is all",
@@ -76,10 +74,9 @@ else:
     try:
         knee_mu = []
         for s in range(1, smax_global+1, 2):
-            knee_mu.append(np.load(f"{PARGS.mu_batchdir}/muval.s{s}.npy"))
+            knee_mu.append(1.0)
         knee_mu = np.asarray(knee_mu)
         knee_mu *= 1.
-        print('Using optimal knee_mu.')
     except FileNotFoundError:
         knee_mu = np.ones(smax_global//2 + 1) #np.array([1., 1., 1.])
         found_optimal = False
@@ -87,6 +84,7 @@ else:
 
 # knee_mu *= PARGS.mu # regularization parameter
 mu = PARGS.mu # regularization parameter
+daynum = int(ARGS[7])
 # mu = 1.0
 #----------------------------------------------------------------------#
 GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
@@ -450,11 +448,13 @@ for i in range(len_s):
     print(c_arr_fit[i::len_s])
 
 #------------------------------------------------------------------------#
-with open(f"{current_dir}/reg_misfit_s{PARGS.s}.txt", "a") as f:
+with open(f"{PARGS.batch_rundir}/regmisfit-s{PARGS.s}-{daynum}.txt", "a") as f:
     f.seek(0, os.SEEK_END)
-    # opstr = f"{mu:18.12e}, {data_misfit:18.12e}, {model_misfit:18.12e}\n"
-    opstr = f"{mu:18.12e}, {chisq:18.12e}, {model_misfit:18.12e}\n"
-    f.write(opstr)
+    if f.tell():
+        f.write("mu,data-misfit,model-misfit\n")
+    else:
+        opstr = f"{mu:18.12e}, {chisq:18.12e}, {model_misfit:18.12e}\n"
+        f.write(opstr)
 
 #-----------------finding the model covariance matrix------------------#
 # can be shown that the model covariance matrix has the following form
