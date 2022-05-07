@@ -61,7 +61,7 @@ smin_arr = np.arange(1, smax_global+1, 2)
 smax_arr = np.arange(1, smax_global+1, 2)
 
 # at this point smin_arr = [1, 3, 5, ..., 1] and smax_arr = [1, 3, 5, ..., smax_global]
-smax = 5
+smax = smax_global
 smin_arr = np.append(smin_arr, 1)
 smax_arr = np.append(smax_arr, smax)
 # smax_arr = np.append(smax_arr, smax_global)

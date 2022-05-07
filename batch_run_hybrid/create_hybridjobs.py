@@ -22,7 +22,7 @@ print(batchnames)
 
 count = 0
 num_batches = len(batchnames)
-num_jobs = 5
+num_jobs = 10
 for i in range(num_jobs):
     job_args = []
     jobdpy_args = []

@@ -86,7 +86,7 @@ def write_paramsfile(dirname, fname, run_params):
 nmin, nmax, lmin, lmax = 0, 30, 5, 292
 nmin_q, nmax_q, lmin_q, lmax_q = 0, 30, 161, 292
 
-smin, smax = 1, 5 #smax_global
+smin, smax = 1, smax_global
 
 # writing the parameters in each run directory for bookkeeping
 for i in range(len(data_daynum_list)):
