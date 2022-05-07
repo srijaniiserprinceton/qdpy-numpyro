@@ -52,6 +52,8 @@ max_ell_arr = np.array([100, 200, 300], dtype='int')
 # radial grid
 r = np.loadtxt(f'{scratch_dir}/input_files/r.dat')
 
+def_density = False
+
 def get_text_loc(ax):
     x_norm, y_norm = 0.05, 0.9
     if(ax == ax1 or ax == ax3):
@@ -109,11 +111,11 @@ for i in range(len(data_daynum_arr)):
         mask_mult = mask_mult_1 * mask_mult_2
         
         # creating the "new" histograms
-        hist_1 = np.histogram(SNR[0, mask_mult], bins=bins, density=True)
-        hist_3 = np.histogram(SNR[1, mask_mult], bins=bins, density=True)
-        hist_5 = np.histogram(SNR[2, mask_mult], bins=bins, density=True)
-        hist_7 = np.histogram(SNR[3, mask_mult], bins=bins, density=True)
-        hist_9 = np.histogram(SNR[4, mask_mult], bins=bins, density=True)
+        hist_1 = np.histogram(SNR[0, mask_mult], bins=bins, density=def_density)
+        hist_3 = np.histogram(SNR[1, mask_mult], bins=bins, density=def_density)
+        hist_5 = np.histogram(SNR[2, mask_mult], bins=bins, density=def_density)
+        hist_7 = np.histogram(SNR[3, mask_mult], bins=bins, density=def_density)
+        hist_9 = np.histogram(SNR[4, mask_mult], bins=bins, density=def_density)
         
         
         # plotting the histograms
@@ -128,13 +130,13 @@ for i in range(len(data_daynum_arr)):
                  alpha=alpha_arr[min_ell_ind])
         ax9.hist(hist_9[1][:-1], weights = hist_9[0], color=color_arr[min_ell_ind],
                  alpha=alpha_arr[min_ell_ind])
-        
+    '''
     ax1.set_yticks([])
     ax3.set_yticks([])
     ax5.set_yticks([])
     ax7.set_yticks([])
     ax9.set_yticks([])
-
+    '''
     # setting the texts in each subplot to indicate s
     x_text, y_text = get_text_loc(ax1)
     ax1.text(x_text, y_text, '$a_1/\sigma(a_1)$', fontsize=16)
@@ -154,9 +156,9 @@ for i in range(len(data_daynum_arr)):
     
     plt.suptitle("Normalized SNR histograms of odd $a$-coefficients", fontsize=18)
     
-    plt.subplots_adjust(left=0.02,
+    plt.subplots_adjust(left=0.04,
                         bottom=0.1,
-                        right=0.94,
+                        right=0.96,
                         top=0.94,
                         wspace=0.1,
                         hspace=0.1)
