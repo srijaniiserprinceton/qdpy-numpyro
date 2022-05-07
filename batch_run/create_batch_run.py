@@ -24,7 +24,6 @@ batchnames = [filename for filename in os.listdir(batch_dir) if
               (os.path.isdir(f"{batch_dir}/{filename}") and filename[0]!='.')]
 
 mu_start = np.array([1.e-4, 1.e-5, 1.e-4])
-smax_local = 5
 smax_local = smax_global * 1
 run_newton_py = f"{package_dir}/dpy_jax/run_reduced_problem_newton.py"
 run_iterative_py = f"{package_dir}/dpy_jax/run_reduced_problem_iterative.py"
