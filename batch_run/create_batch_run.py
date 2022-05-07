@@ -62,7 +62,7 @@ for bname in batchnames:
         f.write(f"cp {batch_dir}/{bname}/plots/fit_{mu:.5e}_wsr.pdf " +
                 f"{batch_dir}/{bname}/plots/fit_wsr_sall_optimal_mu.pdf\n")
 
-"""
+        """
         for s in range(1, smax_local+1, 2):
             for lcs in lcurve_slist:
                 if s == lcs:
@@ -70,5 +70,5 @@ for bname in batchnames:
                             f"--rundir {batch_dir}/{bname} --s {s}\n")
                     f.write(f"{pythonpath} {run_lcurve_py} --jobtype {PARGS.jobtype} "
                             f"--rundir {batch_dir}/{bname} --s {s} --instr {instr}\n")
-"""
+        """
     os.system(f"chmod u+x {bashscr_dir}/{bname}.sh")
