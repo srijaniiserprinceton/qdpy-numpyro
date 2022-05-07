@@ -6,6 +6,6 @@ package_dir = os.path.dirname(current_dir)
 with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
-smax_val = int(dirnames[3])
+instr = dirnames[4]
 #----------------------------------------------------------------------
-print(smax_val)
+print(instr)

@@ -82,6 +82,8 @@ if (ARGS.full_qdpy_dpy == 'qdpy'):
     # copying the sparsee_precompute_acoeff.py to the local run directory                     
     os.system(f"cp {package_dir}/qdpy_jax/sparse_precompute.py \
                 {rundir}/sparse_precompute_batch.py")
+    # copying the .config to the local run directory to be used by sparse_precompute        
+    os.system(f"cp {package_dir}/.config {ARGS.rundir}/.")
     
     os.system(f"python {save_reduced_py} --instrument {instr} --load_mults 1\
                --rth {rth} --knot_num {knotnum} --tslen {tslen} --daynum {daynum}\

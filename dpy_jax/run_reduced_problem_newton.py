@@ -304,7 +304,7 @@ np.save(f"{outdir}/pred_acoeffs.{sfx}", pred_acoeffs)
 data_acoeffs = GVARS.acoeffs_true
 # np.random.seed(3)
 # data_acoeffs_err = np.random.normal(loc=0, scale=acoeffs_sigma_HMI)
-# data_acoeffs = data_acoeffs + 0.0*data_acoeffs_err
+# data_acoeffs = data_acoeffs + 0.1*data_acoeffs_err
 data_acoeffs_out_HMI = GVARS.acoeffs_out_HMI
 print(f"data_acoeffs = {data_acoeffs[:15]}")
 #----------------------------------------------------------------------# 
@@ -331,7 +331,7 @@ mu = PARGS.mu # regularization parameter
 #-----------------------the main training loop--------------------------#
 # initialization of params
 c_init = np.ones_like(true_params_flat) + 0.0*np.random.rand(len(true_params_flat))
-c_init *= true_params_flat
+c_init *= true_params_flat * 0.5
 print(f"Number of parameters = {len(c_init)}")
 
 #------------------plotting the initial profiles-------------------#                     

@@ -17,6 +17,9 @@ from dpy_jax import prune_multiplets
 from dpy_jax import build_cenmults as build_cnm
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
+with open(f"{current_dir}/.config", "r") as f:
+    dirnames = f.read().splitlines()
+instrument = dirnames[4]
 
 # defining functions used in multiplet functions in the script
 getnt4cenmult = build_cnm.getnt4cenmult
@@ -40,7 +43,8 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             tslen=int(ARGS[6]),
                             daynum=int(ARGS[7]),
                             numsplits=int(ARGS[8]),
-                            smax_global=int(ARGS[9]))
+                            smax_global=int(ARGS[9]),
+                            instrument=f'{instrument}')
 
 nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx =\
                     prune_multiplets.get_pruned_attributes(GVARS)
