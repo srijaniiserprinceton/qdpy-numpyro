@@ -21,10 +21,13 @@ datafnames = fnmatch.filter(os.listdir(datadir), f'{instr}.in.*')
 
 # list to store the available daynum
 data_daynum_list = []
+data_numsplit_list = []
 
 for i in range(len(datafnames)):
     daynum_label = re.split('[.]+', datafnames[i], flags=re.IGNORECASE)[3]
+    num_splits = re.split('[.]+', datafnames[i], flags=re.IGNORECASE)[-1]
     data_daynum_list.append(int(daynum_label))
+    data_numsplit_list.append(int(num_splits))
 
 #---------------CREATING THE BATCHRUN STRUCTURE-----------------------#
 # the directory which contains subdirectories of the batch run
@@ -32,7 +35,8 @@ batch_run_dir = f"{scratch_dir}/batch_runs_dpy"
 
 for i in range(len(data_daynum_list)):
     daynum = data_daynum_list[i]
-    batch_subdirpath = f"{batch_run_dir}/{instr}_72d_{daynum}_36" 
+    numsplits = data_numsplit_list[i]
+    batch_subdirpath = f"{batch_run_dir}/{instr}_72d_{daynum}_{numsplits}" 
 
     # creating the directory for one of the batch runs
     if(os.path.isdir(batch_subdirpath)):
@@ -52,8 +56,8 @@ for i in range(len(data_daynum_list)):
 
 # adding optional parameters to not use default
 
-nmin, nmax, lmin, lmax = 0, 30, 5, 292
-# nmin, nmax, lmin, lmax = 0, 0, 200, 210
+# nmin, nmax, lmin, lmax = 0, 30, 5, 292
+nmin, nmax, lmin, lmax = 0, 0, 200, 210
 
 smax_global = int(dirnames[3])
 
@@ -70,7 +74,8 @@ smax_arr = np.append(smax_arr, smax_global)
 # writing the parameters in each run directory for bookkeeping
 for i in range(len(data_daynum_list)):
     daynum = data_daynum_list[i]
-    run_dir = f"{batch_run_dir}/{instr}_72d_{daynum}_36"
+    numsplits = data_numsplit_list[i]
+    run_dir = f"{batch_run_dir}/{instr}_72d_{daynum}_{numsplits}"
 
     for j in range(len(smin_arr)):
         smin, smax = smin_arr[j], smax_arr[j]

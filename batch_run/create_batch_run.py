@@ -28,7 +28,7 @@ batchnames = [filename for filename in os.listdir(batch_dir) if
               (os.path.isdir(f"{batch_dir}/{filename}") and filename[0]!='.')]
 
 smax_local = smax_global * 1
-lcurve_slist = [7]
+lcurve_slist = []
 run_newton_py = f"{package_dir}/dpy_jax/run_reduced_problem_newton.py"
 run_lcurve_py = f"{package_dir}/jobscripts/create_lcurve_jobs.py"
 

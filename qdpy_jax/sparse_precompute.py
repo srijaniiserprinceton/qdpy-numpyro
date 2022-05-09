@@ -15,7 +15,9 @@ from qdpy_jax import prune_multiplets
 from qdpy_jax import build_cenmult_and_nbs as build_cnm
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
-with open(f"{current_dir}/.config", "r") as f:
+module_dir = os.path.dirname(os.path.realpath(jf.__file__))
+package_dir = os.path.dirname(module_dir)
+with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 instrument = dirnames[4]
 

@@ -32,9 +32,9 @@ for k in fname.split('/')[:-1]:
     batchdir += k + '/'
 
 
-def check_ones(carr, threshold=0.05):
+def check_ones(carr, threshold=0.25):
     num_data = len(carr)
-    num_near1 = abs(carr - 1) >= threshold
+    num_near1 = (abs(carr - 1) >= threshold).sum()
     near1_fraction = num_near1 / num_data
     return near1_fraction
 

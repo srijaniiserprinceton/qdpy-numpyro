@@ -22,10 +22,13 @@ datafnames = fnmatch.filter(os.listdir(datadir), 'hmi.in.*')
 
 # list to store the available daynum
 data_daynum_list = []
+data_numsplit_list = []
 
 for i in range(len(datafnames)):
     daynum_label = re.split('[.]+', datafnames[i], flags=re.IGNORECASE)[3]
+    num_splits = re.split('[.]+', datafnames[i], flags=re.IGNORECASE)[-1]
     data_daynum_list.append(int(daynum_label))
+    data_numsplit_list.append(int(num_splits))
 
 #---------------CREATING THE BATCHRUN STRUCTURE-----------------------#
 # the directory which contains subdirectories of the batch run
@@ -33,7 +36,8 @@ batch_run_dir = f"{scratch_dir}/batch_runs_hybrid"
 
 for i in range(len(data_daynum_list)):
     daynum = data_daynum_list[i]
-    batch_subdirpath = f"{batch_run_dir}/hmi_72d_{daynum}_18" 
+    numsplits = data_numsplit_list[i]
+    batch_subdirpath = f"{batch_run_dir}/hmi_72d_{daynum}_{numsplits}" 
 
     # creating the directory for one of the batch runs
     if(os.path.isdir(batch_subdirpath)):
@@ -81,19 +85,20 @@ def write_paramsfile(dirname, fname, run_params):
     return None
 
 
-# nmin, nmax, lmin, lmax = 0, 0, 200, 210
-# nmin_q, nmax_q, lmin_q, lmax_q = 0, 0, 200, 202
-nmin, nmax, lmin, lmax = 0, 30, 5, 292
-nmin_q, nmax_q, lmin_q, lmax_q = 0, 30, 161, 292
+nmin, nmax, lmin, lmax = 0, 0, 200, 210
+nmin_q, nmax_q, lmin_q, lmax_q = 0, 0, 200, 202
+# nmin, nmax, lmin, lmax = 0, 30, 5, 292
+# nmin_q, nmax_q, lmin_q, lmax_q = 0, 30, 161, 292
 
 smin, smax = 1, smax_global
 
 # writing the parameters in each run directory for bookkeeping
 for i in range(len(data_daynum_list)):
     daynum = data_daynum_list[i]
-    rundir_dpy = f"{batch_run_dir}/hmi_72d_{daynum}_18/dpy_files"
-    rundir_qdpy = f"{batch_run_dir}/hmi_72d_{daynum}_18/qdpy_files"
-    rundir_dpy_full_hess = f"{batch_run_dir}/hmi_72d_{daynum}_18/dpy_full_hess"
+    numsplits = data_numsplit_list[i]
+    rundir_dpy = f"{batch_run_dir}/hmi_72d_{daynum}_{numsplits}/dpy_files"
+    rundir_qdpy = f"{batch_run_dir}/hmi_72d_{daynum}_{numsplits}/qdpy_files"
+    rundir_dpy_full_hess = f"{batch_run_dir}/hmi_72d_{daynum}_{numsplits}/dpy_full_hess"
 
     #--------------------------------------------------------------------#
     # making dpy params file for full modeset for hessian                           

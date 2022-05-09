@@ -274,6 +274,7 @@ if __name__ == "__main__":
 
         start_idx += 2*201 + 1
 
+    '''
     #----------------------COMPARING AGAINST supmat_qdpt.npy-----------------#
 
     for i in tqdm(range(len(ell0_arr)), desc='comparing with qdPy'):
@@ -286,7 +287,6 @@ if __name__ == "__main__":
 
     print('200 AND 201 TESTING PASSED SUCCESSSFULLY')
 
-    '''
     #-----------------------COMPARING AGAINST dpy_jax--------------------------#
     eigvals_from_dpy_jax = np.load(f'{outdir}/eigvals_model_dpy_jax.npy')
     np.testing.assert_array_almost_equal(DPT_eigvals_from_qdpy,

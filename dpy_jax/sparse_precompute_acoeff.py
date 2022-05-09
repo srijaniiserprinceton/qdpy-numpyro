@@ -17,7 +17,9 @@ from dpy_jax import prune_multiplets
 from dpy_jax import build_cenmults as build_cnm
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
-with open(f"{current_dir}/.config", "r") as f:
+module_dir = os.path.dirname(os.path.realpath(jf.__file__))
+package_dir = os.path.dirname(module_dir)
+with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 instrument = dirnames[4]
 

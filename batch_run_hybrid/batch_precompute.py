@@ -27,7 +27,7 @@ with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 
 smax_global = int(dirnames[3])
-smax_local = 5
+smax_local = smax_global
 
 # reading the instrument from the rundir
 local_rundir = re.split('[/]+', ARGS.rundir, flags=re.IGNORECASE)[-1]
