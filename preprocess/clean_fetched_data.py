@@ -31,7 +31,7 @@ def retain_files(dirname, fname_filter):
 
 params = jsp.jsocParams(instr=INSTR)
 retain_files(dldir, f"{params.NDT}.36")
-retain_files(splitdir, f".{params.NDT}.")
+retain_files(splitdir, f"\\.{params.NDT}\\.")
 retain_files(splitdir, "\\.36")
 # os.system(f"cd {dldir}; rm $(ls | egrep -v '{NDT}.36')")
 # os.system(f"cd {splitdir}; rm $(ls | egrep -v '.{NDT}.')")
