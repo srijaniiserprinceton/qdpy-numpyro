@@ -41,7 +41,11 @@ PARSER.add_argument("--tslen", help="72d or 360d",
 PARSER.add_argument("--startidx", help="idx for daynum start",
                     type=int, default=0)
 PARSER.add_argument("--endidx", help="idx for daynum end",
-                    type=int, default=60)
+                    type=int, default=40)
+PARSER.add_argument("--wsr", help="download wsr",
+                    type=bool, default=0)
+PARSER.add_argument("--splits", help="download splits",
+                    type=bool, default=0)
 ARGS = PARSER.parse_args()
 del PARSER
 #-----------------------------------------------------------------------#
@@ -67,59 +71,64 @@ pt = pd.read_table(f'{daylist_fname}', delim_whitespace=True,
                           'DATE': str})
 
 day1 = pt['DATE'][ds_idx]
-day2 = pt['DATE'][de_iex]
+day2 = pt['DATE'][de_idx]
 print(f"day1 = {day1}; day2 = {day2}")
 print(f"atime = {a.Time(f'{day1}T00:00:00', f'{day2}T00:00:00')}")
-#----------------------------------------------------------------------#
-client = jsoc.JSOCClient()
-response = client.search(a.Time(f'{day1}T00:00:00', f'{day2}T00:00:00'),
-                         a.jsoc.Series(series_name),
-                         a.jsoc.Segment(segments[0]),
-                         a.jsoc.Segment(segments[1]),
-                         a.jsoc.Segment(segments[2]),
-                         a.jsoc.Segment(segments[3]),
-                         a.jsoc.PrimeKey('LMIN', '0') &
-                         a.jsoc.PrimeKey('LMAX', LMAX) &
-                         a.jsoc.PrimeKey('NDT', NDT) &
-                         a.jsoc.PrimeKey('NACOEFF', '6') &
-                         a.jsoc.PrimeKey('RADEXP', '-6') &
-                         a.jsoc.PrimeKey('LATEXP', '-2'),
-                         a.jsoc.Notify(user_email))
-print(f"Requesting data...")
-requests = client.request_data(response)
-#----------------------------------------------------------------------#
-count = 0
-while requests.status > 0:
-    time.sleep(3)
+
+if ARGS.wsr:
+    #----------------------------------------------------------------------#
+    client = jsoc.JSOCClient()
+    response = client.search(a.Time(f'{day1}T00:00:00', f'{day2}T00:00:00'),
+                             a.jsoc.Series(series_name),
+                             a.jsoc.Segment(segments[0]),
+                             a.jsoc.Segment(segments[1]),
+                             a.jsoc.Segment(segments[2]),
+                             a.jsoc.Segment(segments[3]),
+                             a.jsoc.PrimeKey('LMIN', '0') &
+                             a.jsoc.PrimeKey('LMAX', LMAX) &
+                             a.jsoc.PrimeKey('NDT', NDT) &
+                             a.jsoc.PrimeKey('NACOEFF', '6') &
+                             a.jsoc.PrimeKey('RADEXP', '-6') &
+                             a.jsoc.PrimeKey('LATEXP', '-2'),
+                             a.jsoc.Notify(user_email))
+    print(f"Requesting data...")
     requests = client.request_data(response)
-    print(f"request ID = {requests.id}; status = {requests.status}")
-    if count > 5:
-        print(f"Wait count = {count}. Trying to download")
-        break
-    count += 1
-print(f" status = {requests.status}: Ready for download")
-res = client.get_request(requests, path=dldir)
-#----------------------------------------------------------------------#
-# ---- downloading the a-coefficient fits ---------------
-client = jsoc.JSOCClient()
-response = client.search(a.Time(f'{day1}T00:00:00', f'{day2}T00:00:00'),
-                         a.jsoc.Series(f'{freq_series_name}'),
-                         a.jsoc.PrimeKey('LMIN', '0') &
-                         a.jsoc.PrimeKey('LMAX', LMAX) &
-                         a.jsoc.PrimeKey('NDT', NDT) &
-                         a.jsoc.Notify(user_email))
-print(f"Requesting data...")
-requests = client.request_data(response)
-#----------------------------------------------------------------------#
-count = 0
-while requests.status > 0:
-    time.sleep(3)
+    #----------------------------------------------------------------------#
+    count = 0
+    while requests.status > 0:
+        time.sleep(3)
+        requests = client.request_data(response)
+        print(f"request ID = {requests.id}; status = {requests.status}")
+        if count > 5:
+            print(f"Wait count = {count}. Trying to download")
+            break
+        count += 1
+    print(f" status = {requests.status}: Ready for download")
+    res = client.get_request(requests, path=dldir)
+    #----------------------------------------------------------------------#
+
+
+if ARGS.splits:
+    # ---- downloading the a-coefficient fits ---------------
+    client = jsoc.JSOCClient()
+    response = client.search(a.Time(f'{day1}T00:00:00', f'{day2}T00:00:00'),
+                             a.jsoc.Series(f'{freq_series_name}'),
+                             a.jsoc.PrimeKey('LMIN', '0') &
+                             a.jsoc.PrimeKey('LMAX', LMAX) &
+                             a.jsoc.PrimeKey('NDT', NDT) &
+                             a.jsoc.Notify(user_email))
+    print(f"Requesting data...")
     requests = client.request_data(response)
-    print(f"request ID = {requests.id}; status = {requests.status}")
-    if count > 5:
-        print(f"Wait count = {count}. Trying to download")
-        break
-    count += 1
-print(f" status = {requests.status}: Ready for download")
-res = client.get_request(requests, path=splitdir)
-#----------------------------------------------------------------------#
+    #----------------------------------------------------------------------#
+    count = 0
+    while requests.status > 0:
+        time.sleep(3)
+        requests = client.request_data(response)
+        print(f"request ID = {requests.id}; status = {requests.status}")
+        if count > 5:
+            print(f"Wait count = {count}. Trying to download")
+            break
+        count += 1
+    print(f" status = {requests.status}: Ready for download")
+    res = client.get_request(requests, path=splitdir)
+    #----------------------------------------------------------------------#
