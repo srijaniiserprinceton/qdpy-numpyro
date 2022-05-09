@@ -9,14 +9,13 @@ package_dir = os.path.dirname(current_dir)
 _pythonpath = subprocess.check_output("which python", shell=True)
 pythonpath = _pythonpath.decode("utf-8").split("\n")[0]
 parallelpath = "/homes/hanasoge/parallel/bin/parallel"
-jobname = f"sgk.hyb-init"
+jobname = f"sgk.init"
 execpath = f"{package_dir}/jobscripts/batchjobs.sh"
 
 gnup_str = \
 f"""#!/bin/bash
 #PBS -N {jobname}
-#PBS -o out-{jobname}.log
-#PBS -e err-{jobname}.log
+#PBS -oe {jobname}.oe
 #PBS -l select=1:ncpus=112:mem=700gb
 #PBS -l walltime=12:00:00
 #PBS -q clx
@@ -52,23 +51,15 @@ with open(f"{package_dir}/jobscripts/gnup_batch.slurm", "w") as f:
     f.write(slurm_str)
 
 bashdir = f"{package_dir}/jobscripts/bashbatch"
+os.system(f"cd {bashdir}; ls *.sh | grep hybrid > hybridnames.txt")
+os.system(f"cd {bashdir}; ls *.sh | grep -v hybrid > dpynames.txt")
+with open(f"{bashdir}/dpynames.txt", "r") as f: dpynames = f.read().splitlines()
+with open(f"{bashdir}/hybridnames.txt", "r") as f: hybridnames = f.read().splitlines()
+batchnames = []
+batchnames.extend(dpynames)
+batchnames.extend(hybridnames)
 
-batchnames = [filename for filename in os.listdir(bashdir) if 
-              (filename[-3:] == '.sh')]
-batchnames = np.asarray(batchnames)
-
-# list to store the available daynum                                                          
-data_daynum_list = []
-for i in range(len(batchnames)):
-    fname = re.split('[.]+', batchnames[i], flags=re.IGNORECASE)[0]
-    daynum_label = re.split('[_]+', fname, flags=re.IGNORECASE)[-2]
-    data_daynum_list.append(int(daynum_label))
-
-data_daynum_list = np.asarray(data_daynum_list).astype('int')
-sort_ind_daynum = np.argsort(np.asarray(data_daynum_list))
-batchnames = batchnames[sort_ind_daynum]
 
 with open(f"{package_dir}/jobscripts/ipjobs_batch.sh", "w") as f:
-    
     for bname in batchnames:
         f.write(f"sh {bashdir}/{bname} &>logs/{bname}.oe\n")

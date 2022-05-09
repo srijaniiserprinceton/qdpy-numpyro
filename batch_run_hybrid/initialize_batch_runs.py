@@ -85,10 +85,10 @@ def write_paramsfile(dirname, fname, run_params):
     return None
 
 
-nmin, nmax, lmin, lmax = 0, 0, 200, 210
-nmin_q, nmax_q, lmin_q, lmax_q = 0, 0, 200, 202
-# nmin, nmax, lmin, lmax = 0, 30, 5, 292
-# nmin_q, nmax_q, lmin_q, lmax_q = 0, 30, 161, 292
+# nmin, nmax, lmin, lmax = 0, 0, 200, 210
+# nmin_q, nmax_q, lmin_q, lmax_q = 0, 0, 200, 202
+nmin, nmax, lmin, lmax = 0, 30, 5, 292
+nmin_q, nmax_q, lmin_q, lmax_q = 0, 30, 161, 292
 
 smin, smax = 1, smax_global
 
