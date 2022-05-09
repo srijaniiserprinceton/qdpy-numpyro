@@ -50,6 +50,8 @@ for bname in batchnames:
                     f"{batch_dir}/{bname}/s{s}_carr.npy\n")
             f.write(f"cp {batch_dir}/{bname}/carr_fit_scaled_1.00000e+00.npy " +
                     f"{batch_dir}/{bname}/s{s}_carr_scaled.npy\n")
+            f.write(f"{pythonpath} {current_dir}/check_mugss.py " +
+                    f"--fname {batch_dir}/{bname}/s{s}_carr_scaled.npy\n")
         
        # all s fitting with the optimal mu
         mu = 1.0
