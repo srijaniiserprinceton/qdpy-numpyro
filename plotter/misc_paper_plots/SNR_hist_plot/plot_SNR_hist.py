@@ -54,6 +54,12 @@ r = np.loadtxt(f'{scratch_dir}/input_files/r.dat')
 
 def_density = False
 
+# for dimensionalization of wsr before plotting
+M_sol = 1.989e33       # in grams                                                   
+R_sol = 6.956e10       # in cm                                                               
+B_0 = 10e5             # in Gauss (base of convection zone)                                  
+OM = np.sqrt(4*np.pi*R_sol*B_0**2/M_sol)
+
 def get_text_loc(ax):
     x_norm, y_norm = 0.05, 0.9
     if(ax == ax1 or ax == ax3):
@@ -167,17 +173,60 @@ for i in range(len(data_daynum_arr)):
     plt.close()
     
     # the wsr profiles plot
-    fig, ax = plt.subplots(5, 1, figsize=(10, 10), sharex=True)
+    fig = plt.figure(figsize=(17, 10))
+
+    ax1= fig.add_subplot(2,3,1)
+    ax3= fig.add_subplot(2,3,2)
+    ax5= fig.add_subplot(2,3,3)
+
+    ax7= fig.add_subplot(2,2,3)
+    ax9= fig.add_subplot(2,2,4)
     
     wsr = np.loadtxt(f'{instr_ipfiles_dir}/wsr.{instr}.72d.{daynum}.{smax}') * -1.0
+    # converting wsr to nhz
+    wsr *= OM * 1e9
+
+    ax1.plot(r, wsr[0], 'k', label='$w_1(r)$ in nHz')
+    ax1.set_xlim([0, 1])
+    ax1.grid(alpha=0.3)
+    ax1.legend(fontsize=16)
     
-    for i in range(5):
-        ax[i].plot(r, wsr[i], label='$w_{%i}$'%(2*i+1))
-        ax[i].set_xlim([0, 1])
-        ax[i].grid()
-        ax[i].legend()
+    ax3.plot(r, wsr[1], 'k', label='$w_3(r)$ in nHz')
+    ax3.set_xlim([0, 1])
+    ax3.grid(alpha=0.3)
+    ax3.legend(fontsize=16)
+    
+    ax5.plot(r, wsr[2], 'k', label='$w_5(r)$ in nHz')
+    ax5.set_xlim([0, 1])
+    ax5.grid(alpha=0.3)
+    ax5.legend(fontsize=16)
+    
+    ax7.plot(r, wsr[3], 'k', label='$w_7(r)$ in nHz')
+    ax7.set_xlim([0, 1])
+    ax7.grid(alpha=0.3)
+    ax7.legend(fontsize=16)
+    
+    ax9.plot(r, wsr[4], 'k', label='$w_9(r)$ in nHz')
+    ax9.set_xlim([0, 1])
+    ax9.grid(alpha=0.3)
+    ax9.legend(fontsize=16)
         
-    plt.tight_layout()
+    plt.suptitle("1.5D $w_s(r)$ profiles from 2DRLS $\Omega(r,\\theta)$ JSOC profiles",
+                 fontsize=18)
+
+    plt.subplots_adjust(left=0.06,
+                        bottom=0.1,
+                        right=0.98,
+                        top=0.94,
+                        wspace=0.12,
+                        hspace=0.12)
+    
+    fig.add_subplot(111, frameon=False)
+    # hide tick and tick label of the big axes
+    plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
+    plt.grid(False)
+    plt.xlabel('$r$ in $R_{\odot}$', fontsize=16)
+    
     plt.savefig(f'wsr_{instr}_{daynum}.pdf')
     plt.close()
     

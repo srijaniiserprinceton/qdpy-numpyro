@@ -445,6 +445,7 @@ if PARGS.plot:
 # reconverting back to model_params in units of true_params_flat
 c_arr_fit = c_arr/true_params_flat
 np.save(f"{outdir}/carr_fit_{mu:.5e}.npy", c_arr)
+np.save(f"{outdir}/carr_fit_scaled_{mu:.5e}.npy", c_arr_fit)
 print(f"carrfit saved in: {outdir}/carr_fit_{mu:.5e}.npy")
 
 for i in range(len_s):

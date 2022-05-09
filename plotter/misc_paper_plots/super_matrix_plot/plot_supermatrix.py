@@ -41,7 +41,7 @@ cb.set_ticks(tick_locs)
 
 cb.set_ticklabels(["$-100$", "$-1$", "$-0.1$", "$0$", "$0.1$", "$1$", "$100$"])
 
-cb.ax.tick_params(labelsize=16)
+cb.ax.tick_params(labelsize=30)
 
 for axline in two_lp1_cumulative[:-1]:
     ax.axhline(y=axline, color='gray', alpha=0.5)
@@ -59,14 +59,14 @@ ax.set_yticks([], [])
 x_offset = 0.0
 for i, ell0 in enumerate(cnm_nbs[:,1]):
     x_loc = ell0 + x_offset
-    ax.text(x_loc - 50, 0 - 50, '${}_{0}S_{%i}$'%ell0, fontsize=20)
+    ax.text(x_loc - 120, 0 - 50, '${}_{0}S_{%i}$'%ell0, fontsize=34)
     x_offset = two_lp1_cumulative[i]
     
 
 y_offset = 0.0
 for i, ell0 in enumerate(cnm_nbs[:,1]):
     y_loc = ell0 + y_offset
-    ax.text(0 - 180, y_loc + 0, '${}_{0}S_{%i}$'%ell0, fontsize=20)
+    ax.text(0 - 300, y_loc + 10, '${}_{0}S_{%i}$'%ell0, fontsize=34)
     y_offset = two_lp1_cumulative[i]
 
 
@@ -76,10 +76,10 @@ ax.invert_yaxis()
 ax.set_aspect('equal')
 
 #-------------------subplots tight layout--------------------------------#
-left  = 0.01  # the left side of the subplots of the figure
-right = 1.0    # the right side of the subplots of the figure
+left  = 0.12  # the left side of the subplots of the figure
+right = 0.89    # the right side of the subplots of the figure
 bottom = 0.01   # the bottom of the subplots of the figure
-top = 0.95      # the top of the subplots of the figure
+top = 0.97      # the top of the subplots of the figure
 wspace = 0.2   # the amount of width reserved for blank space between subplots
 hspace = 0.2   # the amount of height reserved for white space between subplots
 plt.subplots_adjust(left=left, right=right,

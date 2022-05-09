@@ -2,6 +2,7 @@ import subprocess
 import argparse
 import numpy as np
 import os
+import re
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
 package_dir = os.path.dirname(current_dir)
@@ -51,8 +52,23 @@ with open(f"{package_dir}/jobscripts/gnup_batch.slurm", "w") as f:
     f.write(slurm_str)
 
 bashdir = f"{package_dir}/jobscripts/bashbatch"
+
+batchnames = [filename for filename in os.listdir(bashdir) if 
+              (filename[-3:] == '.sh')]
+batchnames = np.asarray(batchnames)
+
+# list to store the available daynum                                                          
+data_daynum_list = []
+for i in range(len(batchnames)):
+    fname = re.split('[.]+', batchnames[i], flags=re.IGNORECASE)[0]
+    daynum_label = re.split('[_]+', fname, flags=re.IGNORECASE)[-2]
+    data_daynum_list.append(int(daynum_label))
+
+data_daynum_list = np.asarray(data_daynum_list).astype('int')
+sort_ind_daynum = np.argsort(np.asarray(data_daynum_list))
+batchnames = batchnames[sort_ind_daynum]
+
 with open(f"{package_dir}/jobscripts/ipjobs_batch.sh", "w") as f:
-    batchnames = [filename for filename in os.listdir(bashdir) if 
-                  (filename[-3:] == '.sh')]
+    
     for bname in batchnames:
         f.write(f"sh {bashdir}/{bname} &>logs/{bname}.oe\n")

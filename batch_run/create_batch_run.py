@@ -48,6 +48,8 @@ for bname in batchnames:
                     f"{batch_dir}/{bname}/s{s}_mhess.npy\n")
             f.write(f"cp {batch_dir}/{bname}/carr_fit_1.00000e+00.npy " +
                     f"{batch_dir}/{bname}/s{s}_carr.npy\n")
+            f.write(f"cp {batch_dir}/{bname}/carr_fit_scaled_1.00000e+00.npy " +
+                    f"{batch_dir}/{bname}/s{s}_carr_scaled.npy\n")
         
        # all s fitting with the optimal mu
         mu = 1.0
@@ -60,7 +62,7 @@ for bname in batchnames:
         f.write(f"cp {batch_dir}/{bname}/plots/fit_{mu:.5e}_wsr.pdf " +
                 f"{batch_dir}/{bname}/plots/fit_wsr_sall_optimal_mu.pdf\n")
 
-
+        """
         for s in range(1, smax_local+1, 2):
             for lcs in lcurve_slist:
                 if s == lcs:
@@ -68,5 +70,5 @@ for bname in batchnames:
                             f"--rundir {batch_dir}/{bname} --s {s}\n")
                     f.write(f"{pythonpath} {run_lcurve_py} --jobtype {PARGS.jobtype} "
                             f"--rundir {batch_dir}/{bname} --s {s} --instr {instr}\n")
-
+        """
     os.system(f"chmod u+x {bashscr_dir}/{bname}.sh")
