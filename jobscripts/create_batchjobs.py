@@ -15,7 +15,8 @@ execpath = f"{package_dir}/jobscripts/batchjobs.sh"
 gnup_str = \
 f"""#!/bin/bash
 #PBS -N {jobname}
-#PBS -oe {jobname}.oe
+#PBS -joe
+#PBS -o {jobname}.oe
 #PBS -l select=1:ncpus=112:mem=700gb
 #PBS -l walltime=12:00:00
 #PBS -q clx

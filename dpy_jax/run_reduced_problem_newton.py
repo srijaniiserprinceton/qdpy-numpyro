@@ -63,8 +63,7 @@ if (not PARGS.batch_run):
     summdir = f"{scratch_dir}/summaryfiles"
     plotdir = f"{scratch_dir}/plots"
     smax_global = int(ARGS[9])
-    knee_mu = np.ones(smax_global//2 + 1) #np.array([1., 1., 1.])
-    # knee_mu = np.array([0.10020888, 1.61559062, 5.31731352])
+    knee_mu = np.ones(smax_global//2 + 1)
 
 else:
     n0lminlmax_dir = f"{PARGS.batch_rundir}"
@@ -81,13 +80,6 @@ else:
             except FileNotFoundError:
                 knee_mu.append(1.0)
         knee_mu = np.asarray(knee_mu)
-        knee_mu *= 1.
-        print('Using optimal knee_mu.')
-    except FileNotFoundError:
-        knee_mu = np.ones(smax_global//2 + 1) #np.array([1., 1., 1.])
-        found_optimal = False
-        print('Not using optimal knee_mu.')
-
 #----------------------------------------------------------------------#
 GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             lmin=int(ARGS[1]),

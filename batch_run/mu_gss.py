@@ -153,3 +153,6 @@ val0 = np.load(f'{PARGS.rundir}/{fname}')
 mu_limits = [1e-10, 1e+10]
 muvals = gssrec(f, np.log10(mu_limits[0]), np.log10(mu_limits[1]))
 np.save(f"{PARGS.rundir}/muval.s{PARGS.s}.npy", 10**muvals[1])
+os.system(f"{pythonpath} {run_newton_py} --read_hess 1 --instrument {instr} " +
+          f"--mu 1.0 --batch_run 1 --batch_rundir {PARGS.rundir} --plot 1 " +
+          f"--s {PARGS.s} >{tempout} 2>{temperr}")
