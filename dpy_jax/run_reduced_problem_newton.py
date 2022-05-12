@@ -72,14 +72,13 @@ else:
     outdir = f"{PARGS.batch_rundir}"
     summdir = f"{PARGS.batch_rundir}/summaryfiles"
     plotdir = f"{PARGS.batch_rundir}/plots"
-    try:
-        knee_mu = []
-        for s in range(1, smax_global+1, 2):
-            try:
-                knee_mu.append(np.load(f"{PARGS.mu_batchdir}/muval.s{s}.npy"))
-            except FileNotFoundError:
-                knee_mu.append(1.0)
-        knee_mu = np.asarray(knee_mu)
+    knee_mu = []
+    for s in range(1, smax_global+1, 2):
+        try:
+            knee_mu.append(np.load(f"{PARGS.mu_batchdir}/muval.s{s}.npy"))
+        except FileNotFoundError:
+            knee_mu.append(1.0)
+    knee_mu = np.asarray(knee_mu)
 #----------------------------------------------------------------------#
 GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
                             lmin=int(ARGS[1]),

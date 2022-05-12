@@ -7,6 +7,7 @@ package_dir = os.path.dirname(current_dir)
 with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
+INSTR = dirnames[-1]
 
 _pythonpath = subprocess.check_output("which python",
                                         shell=True)
@@ -14,15 +15,23 @@ pythonpath = _pythonpath.decode("utf-8").split("\n")[0]
 execpath = f"{package_dir}/hybrid_jax/run_reduced_hybrid_iterative_fulldata.py"
 dpy_iterpath = f"{package_dir}/dpy_jax/run_reduced_problem_iterative.py"
 
-batchnames = [filename for
-              filename in os.listdir(f"{scratch_dir}/batch_runs_hybrid")
-              if (os.path.isdir(f"{scratch_dir}/batch_runs_hybrid/{filename}")
-                  and filename[0]!='.')]
+
+hybrid_dir = f"{scratch_dir}/batch_runs_hybrid"
+os.system(f"cd {hybrid_dir}; ls | grep {INSTR} > hybridnames.txt")
+with open(f"{hybrid_dir}/hybridnames.txt", "r") as f: hybridnames = f.read().splitlines()
+batchnames = [hname for hname in hybridnames 
+              if (os.path.isdir(f"{hybrid_dir}/{hname}") and 
+                 (hname[0] != '.'))]
+
+# batchnames = [filename for
+#               filename in os.listdir(f"{scratch_dir}/batch_runs_hybrid")
+#               if (os.path.isdir(f"{scratch_dir}/batch_runs_hybrid/{filename}")
+#                   and filename[0]!='.')]
 print(batchnames)
 
 count = 0
 num_batches = len(batchnames)
-num_jobs = 10
+num_jobs = 4
 for i in range(num_jobs):
     job_args = []
     jobdpy_args = []

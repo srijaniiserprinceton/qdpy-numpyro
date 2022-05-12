@@ -252,6 +252,7 @@ if __name__ == "__main__":
     print(f"--SAVING COMPLETE--")
 
     # sys.exit()
+    '''
     #-------------COMPARING AGAINST supmat_qdpt and dpy_jax----------------#
     # testing only valid for nmin = 0, nmax = 0, lmin = 200, lmax = 201
     synth_hypmat = np.zeros((nmults, dim_hyper, dim_hyper))
@@ -274,7 +275,6 @@ if __name__ == "__main__":
 
         start_idx += 2*201 + 1
 
-    '''
     #----------------------COMPARING AGAINST supmat_qdpt.npy-----------------#
 
     for i in tqdm(range(len(ell0_arr)), desc='comparing with qdPy'):

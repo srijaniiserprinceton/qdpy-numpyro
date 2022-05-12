@@ -128,7 +128,7 @@ sind_arr_D = np.load(f'{dpy_dir}/sind_arr.{sfxD}.npy')
 # Reading RL poly from precomputed file
 # shape (nmults x (smax+1) x 2*ellmax+1) 
 RL_poly_D = np.load(f'{dpy_dir}/RL_poly.{sfxD}.npy')
-sigma2scale = np.load(f'{dpy_dir}/sigma2scale.{sfxD}.npy')
+# sigma2scale = np.load(f'{dpy_dir}/sigma2scale.{sfxD}.npy')
 D_bsp_j_D_bsp_k = np.load(f'{dpy_dir}/D_bsp_j_D_bsp_k.{sfxD}.npy')
 
 #-------------loading precomputed files for the problem-------------------#
