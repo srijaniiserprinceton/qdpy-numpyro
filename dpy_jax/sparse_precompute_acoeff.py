@@ -27,6 +27,8 @@ instrument = dirnames[4]
 getnt4cenmult = build_cnm.getnt4cenmult
 _find_idx = wigmap.find_idx
 jax_minus1pow_vec = jf.jax_minus1pow_vec
+w3j = wigmap.w3j
+w3jvecm = wigmap.w3j_vecm
 
 # jitting the jax_gamma and jax_Omega functions
 jax_Omega_ = jit(jf.jax_Omega)
@@ -55,42 +57,13 @@ CNM = build_cnm.getnt4cenmult(GVARS)
 
 # extracting attributes from CNM_AND_NBS
 num_cnm = len(CNM.omega_cnm)
-ellmax = np.max(CNM.nl_cnm[:,1])
+ellmax = np.max(CNM.nl_cnm[:, 1])
 
 
 lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
                                      nl_idx_pruned,
                                      omega_pruned)
 
-'''
-def get_bsp_basis_elements(x):
-    """Returns the integrated basis polynomials
-    forming the B-spline.
-
-    Parameters
-    ----------
-    x : float, array-like
-        The grid to be used for integration.
-
-    bsp_params : A tuple containing (nc, t, k),
-        where nc = the number of control points,
-        t = the knot array from splrep,
-        k = degree of the spline polynomials.
-    """
-    nc_total, t, k = GVARS.bsp_params
-    basis_elements = np.zeros((GVARS.nc, len(x)))
-
-    # looping over the basis elements for each control point
-    for c_ind in range(GVARS.nc):
-        # c = np.zeros(GVARS.ctrl_arr_dpt.shape[1])
-        c = np.zeros_like(GVARS.ctrl_arr_dpt_full[0, :])
-        c[GVARS.knot_ind_th + c_ind] = 1.0
-        basis_elements[c_ind, :] = splev(x, (t, c, k))
-    return basis_elements
-
-# extracting the basis elements once 
-bsp_basis = get_bsp_basis_elements(GVARS.r)
-'''
 
 def build_integrated_part(eig_idx, ell, s):
     '''Builds the integrated part of the kernel
@@ -135,6 +108,7 @@ def build_integrated_part(eig_idx, ell, s):
     # shape (nc,)
     post_integral = integrate.trapz(integrand, GVARS.r, axis=1)
     return post_integral
+
 
 def integrate_fixed_wsr(eig_idx, ell, s):
     '''Builds the integrated part of the fixed
@@ -215,14 +189,16 @@ def build_hm_nonint_n_fxd_1cnm(s):
         # self coupling for isolated multiplets
         ell = CNM.nl_cnm[i, 1]
 
-        wig1_idx, fac1 = _find_idx(ell, s, ell, 1)
-        wigidx1ij = np.searchsorted(wig_idx, wig1_idx)
-        wigval1 = fac1 * wig_list[wigidx1ij]
+        # wig1_idx, fac1 = _find_idx(ell, s, ell, 1)
+        # wigidx1ij = np.searchsorted(wig_idx, wig1_idx)
+        # wigval1 = fac1 * wig_list[wigidx1ij]
+        wigval1 = w3j(ell, s, ell, -1, 0, 1)
 
         m_arr = np.arange(-ell, ell+1)
-        wig_idx_i, fac = _find_idx(ell, s, ell, m_arr)
-        wigidx_for_s = np.searchsorted(wig_idx, wig_idx_i)
-        wigvalm = fac * wig_list[wigidx_for_s]
+        # wig_idx_i, fac = _find_idx(ell, s, ell, m_arr)
+        # wigidx_for_s = np.searchsorted(wig_idx, wig_idx_i)
+        # wigvalm = fac * wig_list[wigidx_for_s]
+        wigvalm = w3jvecm(ell, s, ell, -m_arr, 0*m_arr, m_arr)
 
         #-------------------------------------------------------
         # computing the ell1, ell2 dependent factors such as

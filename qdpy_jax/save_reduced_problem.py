@@ -29,6 +29,20 @@ with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
 
+
+
+def test_closeness(arr1, arr2, teststr):
+    test_pass = True
+    try:
+        np.testing.assert_array_almost_equal(arr1, arr2)
+    except AssertionError:
+        test_pass = False
+        maxdiff = abs(arr1 - arr2).max()
+        print(f"{teststr}: maxdiff = {maxdiff:8.4e}")
+    return test_pass
+
+
+
 def model():
     eigval_model = np.array([])
 
@@ -251,13 +265,12 @@ if __name__ == "__main__":
     np.save(f'{outdir}/acoeffs_sigma_HMI.{sfx}.npy', GVARS.acoeffs_sigma)
     print(f"--SAVING COMPLETE--")
 
-    # sys.exit()
-    '''
+    sys.exit()
     #-------------COMPARING AGAINST supmat_qdpt and dpy_jax----------------#
     # testing only valid for nmin = 0, nmax = 0, lmin = 200, lmax = 201
     synth_hypmat = np.zeros((nmults, dim_hyper, dim_hyper))
 
-    DPT_eigvals_from_qdpy= np.zeros(2 * (2*201 + 1))
+    DPT_eigvals_from_qdpy= np.zeros(2 * (2*ell0_arr[0]+ 1))
 
     start_idx = 0
     for i in range(2):    
@@ -276,19 +289,23 @@ if __name__ == "__main__":
         start_idx += 2*201 + 1
 
     #----------------------COMPARING AGAINST supmat_qdpt.npy-----------------#
-
+    tests_passed = True
     for i in tqdm(range(len(ell0_arr)), desc='comparing with qdPy'):
-        # qdpt supermatrix from qdPy
         ell0 = ell0_arr[i]
-        qdpt_supmat = np.load(f'supmat_qdpt_{ell0}.npy').real
+        # qdpt supermatrix from qdPy
+        qdpt_supmat = np.load(f'{current_dir}/supmat_qdpt_{ell0}_{ARGS.smax_global}.npy').real
         dim_super = qdpt_supmat.shape[0]
-        np.testing.assert_array_almost_equal(qdpt_supmat,
-                                            synth_hypmat[i][:dim_super,:dim_super])
+        np.save(f'synth-{ell0}-{ARGS.smax_global}.npy', synth_hypmat[i][:dim_super, :dim_super])
+        tests_passed *= test_closeness(qdpt_supmat, 
+                                       synth_hypmat[i][:dim_super,:dim_super],
+                                       f"ell = {ell0}: qdpy =/= synth hypmat")
+        tests_passed *= test_closeness(np.diag(qdpt_supmat), 
+                                       np.diag(synth_hypmat[i][:dim_super,:dim_super]),
+                                       f"ell = {ell0}: diag(qdpy) =/= diag(synth hypmat)")
 
-    print('200 AND 201 TESTING PASSED SUCCESSSFULLY')
+    if tests_passed: print("200 and 201 tests passed SUCCESSFULLY")
 
     #-----------------------COMPARING AGAINST dpy_jax--------------------------#
     eigvals_from_dpy_jax = np.load(f'{outdir}/eigvals_model_dpy_jax.npy')
     np.testing.assert_array_almost_equal(DPT_eigvals_from_qdpy,
                                         eigvals_from_dpy_jax)
-    '''

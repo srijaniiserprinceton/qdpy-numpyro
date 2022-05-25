@@ -17,7 +17,7 @@ def save_obj(obj, name):
 
 
 def load_obj(name):
-    name_ext = name[:-4]
+    name_ext = name[-4:]
     if name_ext != ".pkl":
         name = name + ".pkl"
     # with open(name + '.pkl', 'rb') as f:

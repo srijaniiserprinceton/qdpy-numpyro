@@ -13,12 +13,13 @@ package_dir = os.path.dirname(current_dir)
 with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
-datadir = f"{scratch_dir}/input_files/hmi"
-
+INSTR = dirnames[4]
 smax_global = int(dirnames[3])
 
+datadir = f"{scratch_dir}/input_files/{INSTR}"
+
 #------------------READING THE DATA FILE NAMES-----------------------#
-datafnames = fnmatch.filter(os.listdir(datadir), 'hmi.in.*')
+datafnames = fnmatch.filter(os.listdir(datadir), f'{INSTR}.in.*')
 
 # list to store the available daynum
 data_daynum_list = []
@@ -37,7 +38,7 @@ batch_run_dir = f"{scratch_dir}/batch_runs_hybrid"
 for i in range(len(data_daynum_list)):
     daynum = data_daynum_list[i]
     numsplits = data_numsplit_list[i]
-    batch_subdirpath = f"{batch_run_dir}/hmi_72d_{daynum}_{numsplits}" 
+    batch_subdirpath = f"{batch_run_dir}/{INSTR}_72d_{daynum}_{numsplits}" 
 
     # creating the directory for one of the batch runs
     if(os.path.isdir(batch_subdirpath)):

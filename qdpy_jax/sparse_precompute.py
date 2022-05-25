@@ -25,6 +25,8 @@ instrument = dirnames[4]
 getnt4cenmult = build_cnm.getnt4cenmult
 jax_minus1pow_vec = jf.jax_minus1pow_vec
 _find_idx = wigmap.find_idx
+w3j = wigmap.w3j
+w3jvecm = wigmap.w3j_vecm
 
 # jitting the jax_gamma and jax_Omega functions
 jax_Omega_ = jf.jax_Omega
@@ -48,6 +50,7 @@ GVARS = gvar_jax.GlobalVars(n0=int(ARGS[0]),
 
 nl_pruned, nl_idx_pruned, omega_pruned, wig_list, wig_idx =\
                     prune_multiplets.get_pruned_attributes(GVARS)
+assert len(wig_idx) == len(wig_list), "wigners idx =/= wiglist"
 
 lm = load_multiplets.load_multiplets(GVARS, nl_pruned,
                                      nl_idx_pruned,
@@ -223,14 +226,16 @@ def build_hm_nonint_n_fxd_1cnm(CNM_AND_NBS, SUBMAT_DICT, dim_hyper, s):
             startx, endx = startx_arr[i], endx_arr[i]
             starty, endy = startx_arr[j], endx_arr[j]
 
-            wig1_idx, fac1 = _find_idx(ell1, s, ell2, 1)
-            wigidx1ij = np.searchsorted(wig_idx, wig1_idx)
-            wigval1 = fac1 * wig_list[wigidx1ij]
+            # wig1_idx, fac1 = _find_idx(ell1, s, ell2, 1)
+            # wigidx1ij = np.searchsorted(wig_idx, wig1_idx)
+            # wigval1 = fac1 * wig_list[wigidx1ij]
+            wigval1 = w3j(ell1, s, ell2, -1, 0, 1)
 
             m_arr = np.arange(-ellmin, ellmin+1)
-            wig_idx_i, fac = _find_idx(ell1, s, ell2, m_arr)
-            wigidx_for_s = np.searchsorted(wig_idx, wig_idx_i)
-            wigvalm = fac * wig_list[wigidx_for_s]
+            # wig_idx_i, fac = _find_idx(ell1, s, ell2, m_arr)
+            # wigidx_for_s = np.searchsorted(wig_idx, wig_idx_i)
+            # wigvalm = fac * wig_list[wigidx_for_s]
+            wigvalm = w3jvecm(ell1, s, ell2, -m_arr, 0*m_arr, m_arr)
             
             # the mask matrix. Setting the elements in the relevant diagonal to 1                
             # this happens for all s where selection rule doesn't set it to zero

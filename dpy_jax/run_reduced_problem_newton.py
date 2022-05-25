@@ -169,6 +169,16 @@ def loop_in_mults(mult_ind, ppa):
     return (_pred, _pred_acoeff)
 
 
+def data_misfit_arr_fn_debug(c_arr):
+    pred = fixed_part + c_arr @ param_coeff_flat
+    pred_acoeffs = jnp.zeros(num_j * nmults)
+    __, pred_acoeffs = foril(0, nmults, loop_in_mults, (pred, pred_acoeffs))
+    data_misfit_arr = (data_acoeffs - pred_acoeffs)/acoeffs_sigma_HMI
+    return pred_acoeffs, data_acoeffs, data_misfit_arr
+
+
+
+
 def data_misfit_arr_fn(c_arr):
     pred = fixed_part + c_arr @ param_coeff_flat
     pred_acoeffs = jnp.zeros(num_j * nmults)
@@ -322,7 +332,7 @@ mu = PARGS.mu # regularization parameter
 #-----------------------the main training loop--------------------------#
 # initialization of params
 c_init = np.ones_like(true_params_flat) + 0.0*np.random.rand(len(true_params_flat))
-c_init *= true_params_flat * 0.5
+c_init *= true_params_flat * 1.0
 print(f"Number of parameters = {len(c_init)}")
 
 #------------------plotting the initial profiles-------------------#                     
@@ -402,7 +412,15 @@ while ((abs(loss_diff) > loss_threshold) and
 
     model_misfit = model_misfit_fn(c_arr)
     data_misfit = loss - mu*model_misfit
-
+    '''
+    pac, dac, msft = data_misfit_arr_fn_debug(c_arr)
+    np.save(f"{scratch_dir}/testcase-dpyfull/grads-{itercount:02d}.npy", grads)
+    np.save(f"{scratch_dir}/testcase-dpyfull/carrtotal-{itercount:02d}.npy", c_arr)
+    np.save(f"{scratch_dir}/testcase-dpyfull/data-misfitarr-{itercount:02d}.npy", msft)
+    np.save(f"{scratch_dir}/testcase-dpyfull/pac-{itercount:02d}.npy", pac)
+    np.save(f"{scratch_dir}/testcase-dpyfull/dac-{itercount:02d}.npy", dac)
+    np.save(f"{scratch_dir}/testcase-dpyfull/aisg-{itercount:02d}.npy", acoeffs_sigma_HMI)
+    '''
     loss_diff = loss_prev - loss
     loss_arr.append(loss)
     itercount += 1

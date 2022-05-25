@@ -111,10 +111,10 @@ def model():
 
 def compare_hypmat():
     # generating the true synthetic eigenfrequencies
-    evals_dpy = model_().block_until_ready()
+    evals_dpy = model_().block_until_ready()[403:804]
     
     # compraring with qdpt.py
-    supmat_qdpt_200 = np.load("supmat_qdpt_200.npy").real
+    supmat_qdpt_200 = np.load("supmat_qdpt_200_9.npy").real
 
     evals_qdpt = np.diag(supmat_qdpt_200)[:401]
 

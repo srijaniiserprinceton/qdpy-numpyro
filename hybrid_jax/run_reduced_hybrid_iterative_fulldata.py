@@ -51,6 +51,13 @@ with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
 
+
+def testvals(val1, val2, teststr):
+    np.testing.assert_array_almost_equal(val1, val2)
+    print(f"[TESTING] {teststr}: PASSED -- " 
+          f"maxdiff = {abs(val1 - val2).max():.5e}")
+    return None
+
 n0lminlmax_dir_dpy = f"{PARGS.rundir}/dpy_files"
 n0lminlmax_dir_qdpy = f"{PARGS.rundir}/qdpy_files"
 outdir = f"{PARGS.rundir}"
@@ -61,6 +68,8 @@ plotdir = f"{PARGS.rundir}/plots"
 dpy_dir = f"{PARGS.rundir}/dpy_files"
 dpyfull_dir = f"{PARGS.rundir}/dpy_full_hess"
 qdpy_dir = f"{PARGS.rundir}/qdpy_files"
+instr_dirname = PARGS.rundir.split('/')[-1]
+test_dir = f"{PARGS.rundir}/../../batch_runs_dpy/{instr_dirname}"
 #------------------------------------------------------------------------# 
 sys.path.append(f"{package_dir}/plotter")
 import postplotter
@@ -147,6 +156,23 @@ omega0_arr_Q = np.load(f'{qdpy_dir}/omega0_arr.{sfxQ}.npy')
 # Reading RL poly from precomputed file
 # shape (nmults x (smax+1) x 2*ellmax+1)
 RL_poly_Q = np.load(f'{qdpy_dir}/RL_poly.{sfxQ}.npy')
+
+#-------------loading DPT files for testing -------------------# 
+sfxD = GVARS_D.filename_suffix
+_data_D = np.load(f'{test_dir}/data_model.{sfxD}.npy')
+_true_params_flat_D = np.load(f'{test_dir}/true_params_flat.{sfxD}.npy')
+_param_coeff_flat_D = np.load(f'{test_dir}/param_coeff_flat.{sfxD}.npy')
+_fixed_part_D = np.load(f'{test_dir}/fixed_part.{sfxD}.npy')
+_acoeffs_sigma_HMI_D = np.load(f'{test_dir}/acoeffs_sigma_HMI.{sfxD}.npy')
+_acoeffs_HMI_D = np.load(f'{test_dir}/acoeffs_HMI.{sfxD}.npy')
+_cind_arr_D = np.load(f'{test_dir}/cind_arr.{sfxD}.npy')
+_sind_arr_D = np.load(f'{test_dir}/sind_arr.{sfxD}.npy')
+# Reading RL poly from precomputed file
+# shape (nmults x (smax+1) x 2*ellmax+1) 
+_RL_poly_D = np.load(f'{test_dir}/RL_poly.{sfxD}.npy')
+# sigma2scale = np.load(f'{test_dir}/sigma2scale.{sfxD}.npy')
+_D_bsp_j_D_bsp_k = np.load(f'{test_dir}/D_bsp_j_D_bsp_k.{sfxD}.npy')
+testvals(D_bsp_j_D_bsp_k, _D_bsp_j_D_bsp_k, "Djk(hybrid) = Djk(DPT)")
 
 #-------------------Miscellaneous parameters---------------------------#
 nmults_D = len(GVARS_D.ell0_arr)
@@ -281,6 +307,18 @@ data_acoeffs_Q = foril(0, nmults_Q, loop_in_mults_Q, data_acoeffs_Q)
 
 len_data = len(data_acoeffs_D) + len(data_acoeffs_Q)
 #--------------------------------------------------------------------------# 
+def data_misfit_arr_fn_D(c_arr, dac_D, fullfac):
+    pred_acoeffs_D = model_D(c_arr, fullfac) # predicted DPT a-coefficients
+    data_misfit_arr_D = (pred_acoeffs_D - dac_D)/acoeffs_sigma_HMI_D
+    return pred_acoeffs_D, data_misfit_arr_D
+
+
+def data_misfit_arr_fn_Q(c_arr, dac_Q, fullfac):
+    pred_acoeffs_Q = model_Q(c_arr, fullfac) # predicted QDPT a-coefficients
+    data_misfit_arr_Q = (pred_acoeffs_Q - dac_Q)/acoeffs_sigma_HMI_Q
+    return pred_acoeffs_Q, data_misfit_arr_Q
+
+
 def data_misfit_fn_D(c_arr, dac_D, fullfac):
     # predicted DPT a-coefficients
     pred_acoeffs_D = model_D(c_arr, fullfac)
@@ -289,32 +327,12 @@ def data_misfit_fn_D(c_arr, dac_D, fullfac):
     for i in range(len_s):
         dm += jnp.sum(jnp.square(data_misfit_arr_D[i::len_s]))
     return dm
-    """
-    dmarr = [jnp.asarray(data_misfit_arr_D[i::len_s]) for i in range(len_s)]
-    
-    def loop_dm(i, dm):
-        dm =  jdc_update(dm, dm[0] + jnp.sum(jnp.square(dmarr[i])), (0,))
-        return dm
-    
-    dm = jnp.array([0.0, 0.0])
-    return foril(0, len_s, loop_dm, dm)[0]
-    """
 
 
 def data_misfit_fn_Q(c_arr, dac_Q, fullfac):
     # predicted QDPT a-coefficients
     pred_acoeffs_Q = model_Q(c_arr, fullfac)
     data_misfit_arr_Q = (pred_acoeffs_Q - dac_Q)/acoeffs_sigma_HMI_Q
-    """
-    dmarr = [jnp.asarray(data_misfit_arr_Q[i::len_s]) for i in range(len_s)]
-    
-    def loop_dm(i, dm):
-        dm =  jdc_update(dm, dm[0] + jnp.sum(jnp.square(dmarr[i])), (0,))
-        return dm
-    
-    dm = jnp.array([0.0, 0.0])
-    return foril(0, len_s, loop_dm, dm)[0]
-    """
     dm = 0.0
     for i in range(len_s):
         dm += jnp.sum(jnp.square(data_misfit_arr_Q[i::len_s]))
@@ -324,6 +342,9 @@ def data_misfit_fn_Q(c_arr, dac_Q, fullfac):
 def model_misfit_fn(c_arr, fullfac, mu_scale=knee_mu):
     # Djk is the same for s=1, 3, 5
     Djk = D_bsp_j_D_bsp_k
+    np.testing.assert_array_almost_equal(D_bsp_j_D_bsp_k, _D_bsp_j_D_bsp_k)
+    print(f"[TESTING] Djk(hybrid) = Djk(dpt): PASSED -- " 
+          f"maxdiff = {abs(D_bsp_j_D_bsp_k - _D_bsp_j_D_bsp_k).max():.5e}")
     sidx, eidx = 0, GVARS_D.knot_ind_th
     cDc = 0.0
 
@@ -558,7 +579,6 @@ init_acoeffs_D = model_D(c_arr, 1)
 init_acoeffs_Q = model_Q(c_arr, 1)
 
 print(f"initiailizing complete")
-
 """
 plot_acoeffs.plot_acoeffs_datavsmodel(init_acoeffs_D, data_acoeffs_D,
                                       data_acoeffs_out_HMI_D,
@@ -581,7 +601,6 @@ plot_acoeffs.plot_acoeffs_dm_scaled(init_acoeffs_Q, data_acoeffs_Q,
                                     plotdir=plotdir, len_s=len_s)
 """
 #----------------------------------------------------------------------#
-
 loss = 1e25
 loss_diff = loss - 1.
 loss_arr = []
@@ -612,7 +631,6 @@ dm_list = []
 mm_list = []
 dm_list.append(data_misfit)
 mm_list.append(model_misfit)
-
 t1s = time.time()
 # while ((abs(loss_diff) > loss_threshold) and
 #        (itercount < maxiter)):
@@ -623,7 +641,20 @@ while(kiter < kmax):
     grads = _grad_fn(carr_total, data_acoeffs_D, data_acoeffs_Q, 1)
     carr_total = _update_H(carr_total, grads, hess_inv)
     loss = _loss_fn(carr_total, data_acoeffs_D, data_acoeffs_Q, 1)
-    
+    '''
+    pacD, msftD = data_misfit_arr_fn_D(carr_total, data_acoeffs_D, 1)
+    pacQ, msftQ = data_misfit_arr_fn_Q(carr_total, data_acoeffs_Q, 1)
+    np.save(f"{scratch_dir}/testcase-hybrid/grads-{kiter:02d}.npy", grads)
+    np.save(f"{scratch_dir}/testcase-hybrid/carrtotal-{kiter:02d}.npy", carr_total)
+    np.save(f"{scratch_dir}/testcase-hybrid/data-misfitarrD-{kiter:02d}.npy", msftD)
+    np.save(f"{scratch_dir}/testcase-hybrid/data-misfitarrQ-{kiter:02d}.npy", msftQ)
+    np.save(f"{scratch_dir}/testcase-hybrid/pacD-{kiter:02d}.npy", pacD)
+    np.save(f"{scratch_dir}/testcase-hybrid/pacQ-{kiter:02d}.npy", pacQ)
+    np.save(f"{scratch_dir}/testcase-hybrid/aisgD-{kiter:02d}.npy", acoeffs_sigma_HMI_D)
+    np.save(f"{scratch_dir}/testcase-hybrid/aisgQ-{kiter:02d}.npy", acoeffs_sigma_HMI_Q)
+    np.save(f"{scratch_dir}/testcase-hybrid/dacD-{kiter:02d}.npy", data_acoeffs_D)
+    np.save(f"{scratch_dir}/testcase-hybrid/dacQ-{kiter:02d}.npy", data_acoeffs_Q)
+    '''
     model_misfit = model_misfit_fn(carr_total, 1)
     data_misfit = loss - mu*model_misfit
     loss_diff = loss_prev - loss

@@ -207,12 +207,14 @@ def compute_uniq_wigners(ell, s, ellp, m):
 
 
 if __name__ == "__main__":
-    _find_idx = jax.jit(find_idx)
-    ell1, s, ell2 = 200, 5, 202
-    m = jnp.arange(ell1+1)
+#    _find_idx = jax.jit(find_idx)
+    _find_idx = find_idx
+    ell1, s, ell2 = 193, 1, 209
+    ellmin = min(ell1, ell2)
+    m = np.arange(ellmin+1)
     wig_list, wig_idx = compute_uniq_wigners(ell1, s, ell2, m)
     wig_list = jnp.asarray(wig_list)
-    m_test = np.arange(16)
+    m_test = np.arange(ellmin)
     __ = get_wig_from_pc(ell1, s, ell2, m_test)
     __ = get_wig_from_pc(ell2, s, ell1, m_test)
     __ = get_wig_from_pc(ell1, s, ell2, -m_test)
@@ -229,7 +231,7 @@ if __name__ == "__main__":
     c = find_idx(ell1, s, ell2, m)
 
     # timing the jitted version
-    _find_idx = jax.jit(find_idx)
+#    _find_idx = jax.jit(find_idx)
     __ = _find_idx(ell1, s, ell2, m)
 
     t3 = time.time()
