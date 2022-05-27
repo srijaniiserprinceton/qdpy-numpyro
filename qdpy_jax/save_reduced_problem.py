@@ -117,6 +117,8 @@ if __name__ == "__main__":
                         type=int, default=0)
     parser.add_argument("--batch_rundir", help="local directory for batch run",
                         type=str, default=".")
+    parser.add_argument("--compare_qdPy", help="compare with qdPy",
+                        action="store_true")
     ARGS = parser.parse_args()
 
     if(not ARGS.batch_run):
@@ -265,45 +267,46 @@ if __name__ == "__main__":
     np.save(f'{outdir}/acoeffs_sigma_HMI.{sfx}.npy', GVARS.acoeffs_sigma)
     print(f"--SAVING COMPLETE--")
 
+    if ARGS.compare_qdPy:
+        #-------------COMPARING AGAINST supmat_qdpt and dpy_jax----------------#
+        # testing only valid for nmin = 0, nmax = 0, lmin = 200, lmax = 201
+        synth_hypmat = np.zeros((nmults, dim_hyper, dim_hyper))
+
+        DPT_eigvals_from_qdpy= np.zeros(2 * (2*ell0_arr[0]+ 1))
+
+        start_idx = 0
+        for i in range(2):    
+            ell0 = ell0_arr[i]
+            end_idx  = start_idx + (2*ell0 + 1)
+            # densifying
+            synth_hypmat[i] = sparse.coo_matrix((synth_hypmat_sparse[i],
+                                                sp_indices_all[i]),
+                                                shape = (dim_hyper,
+                                                        dim_hyper)).toarray()
+
+            # DPT eigenvalues in muHz
+            DPT_eigvals_from_qdpy[start_idx:end_idx] =\
+                np.diag(synth_hypmat[i])[:2*ell0+1] * 1.0/2./omega0_arr[i]*GVARS.OM*1e6
+
+            start_idx += 2*201 + 1
+
+        #----------------------COMPARING AGAINST supmat_qdpt.npy-----------------#
+        tests_passed = True
+        for i in tqdm(range(len(ell0_arr)), desc='comparing with qdPy'):
+            ell0 = ell0_arr[i]
+            # qdpt supermatrix from qdPy
+            qdpt_supmat = np.load(f'{current_dir}/supmat_qdpt_{ell0}_{ARGS.smax_global}.npy').real
+            dim_super = qdpt_supmat.shape[0]
+            np.save(f'synth-{ell0}-{ARGS.smax_global}.npy', synth_hypmat[i][:dim_super, :dim_super])
+            tests_passed *= test_closeness(qdpt_supmat, 
+                                           synth_hypmat[i][:dim_super,:dim_super],
+                                           f"ell = {ell0}: qdpy =/= synth hypmat")
+            tests_passed *= test_closeness(np.diag(qdpt_supmat), 
+                                           np.diag(synth_hypmat[i][:dim_super,:dim_super]),
+                                           f"ell = {ell0}: diag(qdpy) =/= diag(synth hypmat)")
+
+        if tests_passed: print("200 and 201 tests passed SUCCESSFULLY")
     sys.exit()
-    #-------------COMPARING AGAINST supmat_qdpt and dpy_jax----------------#
-    # testing only valid for nmin = 0, nmax = 0, lmin = 200, lmax = 201
-    synth_hypmat = np.zeros((nmults, dim_hyper, dim_hyper))
-
-    DPT_eigvals_from_qdpy= np.zeros(2 * (2*ell0_arr[0]+ 1))
-
-    start_idx = 0
-    for i in range(2):    
-        ell0 = ell0_arr[i]
-        end_idx  = start_idx + (2*ell0 + 1)
-        # densifying
-        synth_hypmat[i] = sparse.coo_matrix((synth_hypmat_sparse[i],
-                                            sp_indices_all[i]),
-                                            shape = (dim_hyper,
-                                                    dim_hyper)).toarray()
-
-        # DPT eigenvalues in muHz
-        DPT_eigvals_from_qdpy[start_idx:end_idx] =\
-            np.diag(synth_hypmat[i])[:2*ell0+1] * 1.0/2./omega0_arr[i]*GVARS.OM*1e6
-
-        start_idx += 2*201 + 1
-
-    #----------------------COMPARING AGAINST supmat_qdpt.npy-----------------#
-    tests_passed = True
-    for i in tqdm(range(len(ell0_arr)), desc='comparing with qdPy'):
-        ell0 = ell0_arr[i]
-        # qdpt supermatrix from qdPy
-        qdpt_supmat = np.load(f'{current_dir}/supmat_qdpt_{ell0}_{ARGS.smax_global}.npy').real
-        dim_super = qdpt_supmat.shape[0]
-        np.save(f'synth-{ell0}-{ARGS.smax_global}.npy', synth_hypmat[i][:dim_super, :dim_super])
-        tests_passed *= test_closeness(qdpt_supmat, 
-                                       synth_hypmat[i][:dim_super,:dim_super],
-                                       f"ell = {ell0}: qdpy =/= synth hypmat")
-        tests_passed *= test_closeness(np.diag(qdpt_supmat), 
-                                       np.diag(synth_hypmat[i][:dim_super,:dim_super]),
-                                       f"ell = {ell0}: diag(qdpy) =/= diag(synth hypmat)")
-
-    if tests_passed: print("200 and 201 tests passed SUCCESSFULLY")
 
     #-----------------------COMPARING AGAINST dpy_jax--------------------------#
     eigvals_from_dpy_jax = np.load(f'{outdir}/eigvals_model_dpy_jax.npy')

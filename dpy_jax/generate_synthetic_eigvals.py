@@ -44,6 +44,8 @@ parser.add_argument("--batch_run", help="flag to indicate its a batch run",
                     type=int, default=0)
 parser.add_argument("--batch_rundir", help="local directory for batch run",
                     type=str, default=".")
+parser.add_argument("--compare_qdPy", help="compare with qdpy",
+                    action="store_true")
 ARGS = parser.parse_args()
 #------------------------------------------------------------------------# 
 if(not ARGS.batch_run):
@@ -117,6 +119,8 @@ def compare_hypmat():
     supmat_qdpt_200 = np.load("supmat_qdpt_200_9.npy").real
 
     evals_qdpt = np.diag(supmat_qdpt_200)[:401]
+    print(f"from qdPy   : {evals_qdpt[0]:.6e}")
+    print(f"from dpy-jax: {evals_dpy[0]:.6e}")
 
     # comparing with qdpt.py
     np.testing.assert_array_almost_equal(evals_dpy, evals_qdpt)
@@ -129,7 +133,7 @@ def compare_hypmat():
 
 if __name__ == "__main__":
     model_ = jit(model)
-    # eigvals_true = compare_hypmat()
+    if ARGS.compare_qdPy: eigvals_true = compare_hypmat()
     eigvals_true = model_()
 
     # storing the eigvals sigmas

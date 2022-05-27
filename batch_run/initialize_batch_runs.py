@@ -57,7 +57,7 @@ for i in range(len(data_daynum_list)):
 # adding optional parameters to not use default
 
 nmin, nmax, lmin, lmax = 0, 30, 5, 292
-# nmin, nmax, lmin, lmax = 0, 0, 200, 210
+# nmin, nmax, lmin, lmax = 0, 0, 200, 201
 
 smax_global = int(dirnames[3])
 

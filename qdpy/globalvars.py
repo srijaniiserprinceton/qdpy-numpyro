@@ -138,7 +138,6 @@ class GlobalVars():
         self.fwindow = qdPars.fwindow
         self.wsr = -1.0*np.loadtxt(f'{self.ipdir}/{self.instrument}/' +
                         f'wsr.{self.instrument}.{fsuffix_wsr}')[:self.smax_global//2+1]
-        self.wsr[-1] *= 0.0
         # self.err1d = np.loadtxt(f'{self.ipdir}/err1d-{self.instrument}.dat')
         self.wsr_err = np.loadtxt(f'{self.ipdir}/{self.instrument}/' +
                         f'err.{self.instrument}.{fsuffix_wsr}')[:self.smax_global//2+1]
