@@ -307,7 +307,6 @@ if __name__ == "__main__":
 
         if tests_passed: print("200 and 201 tests passed SUCCESSFULLY")
     sys.exit()
-
     #-----------------------COMPARING AGAINST dpy_jax--------------------------#
     eigvals_from_dpy_jax = np.load(f'{outdir}/eigvals_model_dpy_jax.npy')
     np.testing.assert_array_almost_equal(DPT_eigvals_from_qdpy,
