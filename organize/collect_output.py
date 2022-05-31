@@ -33,6 +33,42 @@ for dpyname in dirnames[:-1]:
                f"{scratch_dir}/carr_dpy/carr_dpy_{daynum}.npy")
 
 print("====================================================================")
+print(f"Collecting the summary file of dpy fit")
+dirnames = subprocess.check_output(["ls", f"{dpy_batchdir}"])
+dirnames = dirnames.decode().split('\n')
+for hybridname in dirnames[:-1]:
+    hybridsplit = hybridname.split('_')
+    daynum = int(hybridsplit[2])
+    os.system(f'cd {dpy_batchdir}/{hybridname}/summaryfiles; ls -arth summary* | ' +
+              f'tail -1 > {dpy_batchdir}/{hybridname}/summaryfiles/latest_summary.txt')
+    with open(f'{dpy_batchdir}/{hybridname}/summaryfiles/latest_summary.txt') as f:
+        sumname = f.read().splitlines()
+    print(sumname)
+    copy_files(f"{dpy_batchdir}/{hybridname}/summaryfiles/{sumname[0]}",
+               f"{scratch_dir}/dpy-summary/summary_{daynum}.pkl")
+
+print("====================================================================")
+print(f"Collecting the wsr sigma file")
+dirnames = subprocess.check_output(["ls", f"{dpy_batchdir}"])
+dirnames = dirnames.decode().split('\n')
+for dpyname in dirnames[:-1]:
+    dpysplit = dpyname.split('_')
+    daynum = int(dpysplit[2])
+    copy_files(f"{dpy_batchdir}/{dpyname}/wsr_sigma.npy",
+               f"{scratch_dir}/sigma-files/wsr_sigma_{daynum}.npy")
+
+
+print("====================================================================")
+print(f"Collecting the acoeff sigma file of")
+dirnames = subprocess.check_output(["ls", f"{dpy_batchdir}"])
+dirnames = dirnames.decode().split('\n')
+for hybridname in dirnames[:-1]:
+    hybridsplit = hybridname.split('_')
+    daynum = int(hybridsplit[2])
+    copy_files(f"{dpy_batchdir}/{hybridname}/acoeffs_sigma_HMI*.npy",
+               f"{scratch_dir}/acoeff-sigma-files/acoeff_sigma_{daynum}.npy")
+
+print("====================================================================")
 print(f"Collecting the summary file of hybrid fit")
 dirnames = subprocess.check_output(["ls", f"{hybrid_batchdir}"])
 dirnames = dirnames.decode().split('\n')
@@ -42,12 +78,4 @@ for hybridname in dirnames[:-1]:
     copy_files(f"{hybrid_batchdir}/{hybridname}/summaryfiles/summary*.pkl",
                f"{scratch_dir}/hybrid-summary/summary_{daynum}.pkl")
 
-print("====================================================================")
-print(f"Collecting the wsr sigma file")
-dirnames = subprocess.check_output(["ls", f"{dpy_batchdir}"])
-dirnames = dirnames.decode().split('\n')
-for dpyname in dirnames[:-1]:
-    dpysplit = dpyname.split('_')
-    daynum = int(dpysplit[2])
-    copy_files(f"cp {dpy_batchdir}/{dpyname}/wsr_sigma.npy",
-               f"{scratch_dir}/sigma-files/wsr_sigma_{daynum}.npy")
+

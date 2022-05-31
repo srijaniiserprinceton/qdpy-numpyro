@@ -605,7 +605,7 @@ loss = 1e25
 loss_diff = loss - 1.
 loss_arr = []
 loss_threshold = 1e-1
-kmax = 20
+kmax = 5
 N0 = 1
 itercount = 0
 

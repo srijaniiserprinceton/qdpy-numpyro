@@ -20,7 +20,7 @@ def load_obj(name):
     name_ext = name[-4:]
     if name_ext != ".pkl":
         name = name + ".pkl"
-    # with open(name + '.pkl', 'rb') as f:
+    print(f"Loading {name}")
     with open(name, 'rb') as f:
         return pickle.load(f)
     return None
