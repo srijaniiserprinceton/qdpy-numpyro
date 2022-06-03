@@ -150,7 +150,8 @@ def gssrec(f, a, b, tol=1.0, h=None, hp=None, c=None, d=None, fc=None, fd=None):
 fname = fnmatch.filter(os.listdir(PARGS.rundir), 'true_params_flat*.npy')[0]
 val0 = np.load(f'{PARGS.rundir}/{fname}')
 
-mu_limits = [1e-10, 1e+10]
+# mu_limits = [1e-10, 1e+10]
+mu_limits = [1.e-5, 1e+5]
 muvals = gssrec(f, np.log10(mu_limits[0]), np.log10(mu_limits[1]))
 np.save(f"{PARGS.rundir}/muval.s{PARGS.s}.npy", 10**muvals[1])
 os.system(f"{pythonpath} {run_newton_py} --read_hess 1 --instrument {instr} " +
