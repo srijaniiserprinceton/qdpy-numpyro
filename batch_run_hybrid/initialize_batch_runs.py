@@ -97,9 +97,9 @@ smin, smax = 1, smax_global
 for i in range(len(data_daynum_list)):
     daynum = data_daynum_list[i]
     numsplits = data_numsplit_list[i]
-    rundir_dpy = f"{batch_run_dir}/hmi_72d_{daynum}_{numsplits}/dpy_files"
-    rundir_qdpy = f"{batch_run_dir}/hmi_72d_{daynum}_{numsplits}/qdpy_files"
-    rundir_dpy_full_hess = f"{batch_run_dir}/hmi_72d_{daynum}_{numsplits}/dpy_full_hess"
+    rundir_dpy = f"{batch_run_dir}/{INSTR}_72d_{daynum}_{numsplits}/dpy_files"
+    rundir_qdpy = f"{batch_run_dir}/{INSTR}_72d_{daynum}_{numsplits}/qdpy_files"
+    rundir_dpy_full_hess = f"{batch_run_dir}/{INSTR}_72d_{daynum}_{numsplits}/dpy_full_hess"
 
     #--------------------------------------------------------------------#
     # making dpy params file for full modeset for hessian                           
