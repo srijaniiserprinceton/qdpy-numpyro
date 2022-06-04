@@ -48,12 +48,12 @@ rplot_ind = np.argmin(np.abs(r - rplot))
 def get_Omega_r_theta(wsr):    
     Omega_r_theta = (legpoly*scale_fac) @ wsr / r * unitconv
     
-    return Omega_r_theta
+    return -1.0 * Omega_r_theta # -1 to match the convention of Vorontsov (2002)
 
 
 # choosing the solar minima with respect to which we will plot
 # https://www.weather.gov/news/201509-solar-cycle says it happened in Dec, 2019
-dayind_solmin = 1 # 50 for Dec, 2019
+dayind_solmin = 0 # 50 for Dec, 2019
 day_solmin = pt['MDI'][dayind_solmin]
 wsr_dpt_solmin = np.load(f'{scratch_dir}/plot_files/wsr_dpy_fit_{day_solmin}.npy')
 wsr_hybrid_solmin = np.load(f'{scratch_dir}/plot_files/wsr_hybrid_fit_{day_solmin}.npy')
@@ -82,7 +82,6 @@ for dayind in range(dayind_min, dayind_max+1):
     try:
         wsr_dpt = np.load(f'{scratch_dir}/plot_files/wsr_dpy_fit_{day}.npy')
         wsr_hybrid = np.load(f'{scratch_dir}/plot_files/wsr_hybrid_fit_{day}.npy')
-        wsr_hybrid[2] = wsr_dpt[2] * 1.0
     except FileNotFoundError:
         print(f"Bad day = {day}")
         nan_vals = np.zeros((1, len(theta))) + np.nan
@@ -135,7 +134,8 @@ plt.figure()
 meshval = Omega_dpt_timearr_rel
 masknan = ~np.isnan(meshval)
 meshmax = abs(meshval[masknan]).max()
-plt.pcolormesh(yy, tt * 180./np.pi, meshval, vmin=-meshmax, vmax=meshmax, cmap='jet')
+meshmax = 4. # hardcoding
+plt.pcolormesh(yy, tt * 180./np.pi, meshval, cmap='jet', vmin=-meshmax, vmax=meshmax)
 plt.colorbar()
 plt.savefig(f'{scratch_dir}/plot_files/Omega_dpt_timearr_rel.pdf')
 
@@ -152,6 +152,7 @@ plt.figure()
 meshval = Omega_hybrid_timearr[1:] - Omega_dpt_timearr[1:]
 masknan = ~np.isnan(meshval)
 meshmax = abs(meshval[masknan]).max()
+meshmax *= 0.4
 plt.pcolormesh(yy, tt * 180./np.pi, meshval, vmin=-meshmax, vmax=meshmax, cmap='jet')
 plt.colorbar()
 plt.savefig(f'{scratch_dir}/plot_files/Omega_hybrid_rel_dpt.pdf')
