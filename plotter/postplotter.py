@@ -40,26 +40,15 @@ class postplotter:
 
     def plot_fit_wsr(self, fig=None, ax=None, pcolor='red'):
         if fig == None and ax == None:
-            fig, ax = plt.subplots(3, 2, figsize=(15, 7), sharex=True)
+            fig, ax = plt.subplots(5, 2, figsize=(25, 7), sharex=True)
 
         lw = 0.5
         # plot the wsr from dpt (no-spline)
         ax[0, 0].plot(self.r, self.wsr_dpt[0], 'k', linewidth=lw)
         ax[1, 0].plot(self.r, self.wsr_dpt[1], 'k', linewidth=lw)
         ax[2, 0].plot(self.r, self.wsr_dpt[2], 'k', linewidth=lw)
-
-        # ax[0, 0].fill_between(self.r,
-        #                       self.wsr_dpt[0]-self.wsr_err[0],
-        #                       self.wsr_dpt[0]+self.wsr_err[0],
-        #                       alpha=0.5, color='gray')
-        # ax[1, 0].fill_between(self.r,
-        #                       self.wsr_dpt[1]-self.wsr_err[1],
-        #                       self.wsr_dpt[1]+self.wsr_err[1],
-        #                       alpha=0.5, color='gray')
-        # ax[2, 0].fill_between(self.r,
-        #                       self.wsr_dpt[2]-self.wsr_err[2],
-        #                       self.wsr_dpt[2]+self.wsr_err[2],
-        #                       alpha=0.5, color='gray')
+        ax[3, 0].plot(self.r, self.wsr_dpt[3], 'k', linewidth=lw)
+        ax[4, 0].plot(self.r, self.wsr_dpt[4], 'k', linewidth=lw)
 
         # construct the spline from ctrl_arr_dpt_full
         wsr_spl_full = gen_wsr.get_wsr_from_spline(self.GVARS, self.r,
@@ -75,30 +64,42 @@ class postplotter:
                       color=pcolor, alpha=0.5, linewidth=lw)
         ax[2, 0].plot(self.r, wsr_spl_full[2], '--', 
                       color=pcolor, alpha=0.5, linewidth=lw)
+        ax[3, 0].plot(self.r, wsr_spl_full[3], '--', 
+                      color=pcolor, alpha=0.5, linewidth=lw)
+        ax[4, 0].plot(self.r, wsr_spl_full[4], '--', 
+                      color=pcolor, alpha=0.5, linewidth=lw)
 
         # settin axis labels and title
         ax[0, 0].set_title(f'$w_s(r)$ DPT vs. {self.tag}', size=16)
         ax[0, 0].set_ylabel('$w_1(r)$ in $\mu$Hz', size=16)
         ax[1, 0].set_ylabel('$w_3(r)$ in $\mu$Hz', size=16)
         ax[2, 0].set_ylabel('$w_5(r)$ in $\mu$Hz', size=16)
-        ax[2, 0].set_xlabel('$r$ in $R_{\odot}$', size=16)
+        ax[3, 0].set_ylabel('$w_7(r)$ in $\mu$Hz', size=16)
+        ax[4, 0].set_ylabel('$w_9(r)$ in $\mu$Hz', size=16)
+        ax[4, 0].set_xlabel('$r$ in $R_{\odot}$', size=16)
         
         # plotting the error percentages
         w1r_errperc = self.get_percent_error(wsr_spl_full[0], self.wsr_dpt[0])
         w3r_errperc = self.get_percent_error(wsr_spl_full[1], self.wsr_dpt[1])
         w5r_errperc = self.get_percent_error(wsr_spl_full[2], self.wsr_dpt[2])
+        w7r_errperc = self.get_percent_error(wsr_spl_full[3], self.wsr_dpt[3])
+        w9r_errperc = self.get_percent_error(wsr_spl_full[4], self.wsr_dpt[4])
         
         ax[0, 1].semilogy(self.r, abs(w1r_errperc), color=pcolor, alpha=0.5)
         ax[1, 1].semilogy(self.r, abs(w3r_errperc), color=pcolor, alpha=0.5)
         ax[2, 1].semilogy(self.r, abs(w5r_errperc), color=pcolor, alpha=0.5)
+        ax[3, 1].semilogy(self.r, abs(w7r_errperc), color=pcolor, alpha=0.5)
+        ax[4, 1].semilogy(self.r, abs(w9r_errperc), color=pcolor, alpha=0.5)
         
         # settin axis labels
         ax[0, 1].set_ylabel('% offset in $w_1(r)$', size=14)
         ax[1, 1].set_ylabel('% offset in $w_3(r)$', size=14)
         ax[2, 1].set_ylabel('% offset in $w_5(r)$', size=14)
-        ax[2, 1].set_xlabel('$r$ in $R_{\odot}$', size=16)
+        ax[3, 1].set_ylabel('% offset in $w_7(r)$', size=14)
+        ax[4, 1].set_ylabel('% offset in $w_9(r)$', size=14)
+        ax[4, 1].set_xlabel('$r$ in $R_{\odot}$', size=16)
 
-        ax[2,1].set_xlim([0, 1])
+        ax[4, 1].set_xlim([0, 1])
         
         plt.tight_layout()
         plt.savefig(f'{self.plotdir}/{self.tag}_wsr.pdf')
