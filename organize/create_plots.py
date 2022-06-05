@@ -45,6 +45,10 @@ for i in range(41):
                 f"--plot 1")
     print(compute_str)
 
+fitplot_dir = f"{scratch_dir}/dpy_kneemu"
+if not (os.path.isdir(fitplot_dir)):
+    os.mkdir(fitplot_dir)
+
 
 for i in range(41):
     daynum = int(pt['MDI'][i])
