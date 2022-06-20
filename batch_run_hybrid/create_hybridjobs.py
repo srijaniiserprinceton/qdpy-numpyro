@@ -31,7 +31,7 @@ print(batchnames)
 
 count = 0
 num_batches = len(batchnames)
-num_jobs = 1
+num_jobs = 4
 for i in range(num_jobs):
     job_args = []
     jobdpy_args = []
@@ -42,7 +42,7 @@ for i in range(num_jobs):
         bname = batchnames[num_jobs*j + i]
         print(f"Creating job for {bname}")
         batch_hybrid_dir = f"{scratch_dir}/batch_runs_hybrid/{bname}"
-        mu_batchdir = f"{scratch_dir}/batch_runs_dpy/{bname}"
+        mu_batchdir = f"{scratch_dir}/batch_runs_hybrid/{bname}/dpy_full_hess"
         batch_rundir = f"{batch_hybrid_dir}/dpy_full_hess"
         instr = bname.split('_')[0]
         job_str = f"{pythonpath} {execpath} "
