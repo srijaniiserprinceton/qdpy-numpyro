@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 import os
+import subprocess
+import sys
 
 #-----------------------------------------------------------------------
 current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -34,8 +36,7 @@ pt = pd.read_table(f'../preprocess/daylist.{INSTR}', delim_whitespace=True,
                           'MDI': np.int64,
                           'DATE': str})
 
-
-for i in range(41):
+for i in range(77):
     daynum = int(pt['MDI'][i])
     compute_str = (f"{pythonpath} " +
                 f"{package_dir}/dpy_jax/run_reduced_problem_newton.py " +
@@ -45,12 +46,13 @@ for i in range(41):
                 f"--plot 1")
     print(compute_str)
 
+
 fitplot_dir = f"{scratch_dir}/dpy_kneemu"
 if not (os.path.isdir(fitplot_dir)):
     os.mkdir(fitplot_dir)
 
 
-for i in range(41):
+for i in range(77):
     daynum = int(pt['MDI'][i])
     copy_str = (f"cp {dpy_batchdir}/{INSTR}_72d_{daynum}_36/plots/fit_1.00000e+00_wsr.pdf " +
                f"{scratch_dir}/dpy_kneemu/fit_{daynum}.pdf")
