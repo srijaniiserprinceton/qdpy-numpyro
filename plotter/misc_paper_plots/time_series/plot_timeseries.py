@@ -12,8 +12,10 @@ with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
 INSTR = dirnames[4]
+INSTR = "hmi"
+orgfiles_dir = f"{scratch_dir}/{INSTR}-run1/organized-files"
 
-GVARS_OM = np.load(f'{scratch_dir}/plot_files/GVARS_OM.npy')
+GVARS_OM = np.load(f'{orgfiles_dir}/plot_files/GVARS_OM.npy')
 
 # loading the daylist 
 pt = pd.read_table(f'{package_dir}/preprocess/daylist.{INSTR}', delim_whitespace=True,
@@ -32,7 +34,7 @@ scale_fac = np.sqrt((2*s + 1)/4./np.pi)
 unitconv = GVARS_OM * 1e9
 
 # radial grid
-r = np.load(f'{scratch_dir}/plot_files/r.npy')
+r = np.load(f'{orgfiles_dir}/plot_files/r.npy')
 
 # theta grid
 theta = np.linspace(0.0, np.pi, 180)
@@ -41,7 +43,7 @@ for i in range(len(theta)):
     th = theta[i]
     legpoly[i] = lpmn(0, s.max(), np.cos(th))[1][0, 1::2]
 
-rplot = 0.98
+rplot = 1.0
 rplot_ind = np.argmin(np.abs(r - rplot))
 
 # computing Omega(r, theta)
@@ -55,8 +57,8 @@ def get_Omega_r_theta(wsr):
 # https://www.weather.gov/news/201509-solar-cycle says it happened in Dec, 2019
 dayind_solmin = 0 # 50 for Dec, 2019
 day_solmin = pt['MDI'][dayind_solmin]
-wsr_dpt_solmin = np.load(f'{scratch_dir}/plot_files/wsr_dpy_fit_{day_solmin}.npy')
-wsr_hybrid_solmin = np.load(f'{scratch_dir}/plot_files/wsr_hybrid_fit_{day_solmin}.npy')
+wsr_dpt_solmin = np.load(f'{orgfiles_dir}/plot_files/wsr_dpy_fit_{day_solmin}.npy')
+wsr_hybrid_solmin = np.load(f'{orgfiles_dir}/plot_files/wsr_hybrid_fit_{day_solmin}.npy')
 
 # array to store the wsr_dpt timeseries at rplot
 Omega_r_theta_dpt_solmin = get_Omega_r_theta(wsr_dpt_solmin)
@@ -80,8 +82,8 @@ for dayind in range(dayind_min, dayind_max+1):
         continue
         
     try:
-        wsr_dpt = np.load(f'{scratch_dir}/plot_files/wsr_dpy_fit_{day}.npy')
-        wsr_hybrid = np.load(f'{scratch_dir}/plot_files/wsr_hybrid_fit_{day}.npy')
+        wsr_dpt = np.load(f'{orgfiles_dir}/plot_files/wsr_dpy_fit_{day}.npy')
+        wsr_hybrid = np.load(f'{orgfiles_dir}/plot_files/wsr_hybrid_fit_{day}.npy')
     except FileNotFoundError:
         print(f"Bad day = {day}")
         nan_vals = np.zeros((1, len(theta))) + np.nan
@@ -111,14 +113,14 @@ fig, ax = plt.subplots(1, 1, figsize=(5, 10))
 im = plt.pcolormesh(xx, yy, Omega_r_theta_dpt_solmin, cmap='jet_r', rasterized=True)
 fig.colorbar(im)
 ax.set_aspect('equal')
-plt.savefig(f'{scratch_dir}/plot_files/Omega_r_theta_solmin.pdf')
+plt.savefig(f'{orgfiles_dir}/plot_files/Omega_r_theta_solmin.pdf')
 
 fig, ax = plt.subplots(1, 1, figsize=(5, 10))
 meshval = Omega_r_theta_dpt_solmin - Omega_r_theta_hybrid_solmin
 im = plt.pcolormesh(xx, yy, meshval, cmap='jet_r', rasterized=True)
 fig.colorbar(im)
 ax.set_aspect('equal')
-plt.savefig(f'{scratch_dir}/plot_files/Omega_r_theta_solmin-diff.pdf')
+plt.savefig(f'{orgfiles_dir}/plot_files/Omega_r_theta_solmin-diff.pdf')
 
 
 # plotting the timeseries
@@ -137,7 +139,7 @@ meshmax = abs(meshval[masknan]).max()
 meshmax = 4. # hardcoding
 plt.pcolormesh(yy, tt * 180./np.pi, meshval, cmap='jet', vmin=-meshmax, vmax=meshmax)
 plt.colorbar()
-plt.savefig(f'{scratch_dir}/plot_files/Omega_dpt_timearr_rel.pdf')
+plt.savefig(f'{orgfiles_dir}/plot_files/Omega_dpt_timearr_rel.pdf')
 
 plt.figure()
 meshval = Omega_hybrid_timearr_rel
@@ -145,14 +147,14 @@ masknan = ~np.isnan(meshval)
 meshmax = abs(meshval[masknan]).max()
 plt.pcolormesh(yy, tt * 180./np.pi, meshval, vmin=-meshmax, vmax=meshmax, cmap='jet')
 plt.colorbar()
-plt.savefig(f'{scratch_dir}/plot_files/Omega_hybrid_timearr_rel.pdf')
+plt.savefig(f'{orgfiles_dir}/plot_files/Omega_hybrid_timearr_rel.pdf')
 
 
 plt.figure()
 meshval = Omega_hybrid_timearr[1:] - Omega_dpt_timearr[1:]
 masknan = ~np.isnan(meshval)
 meshmax = abs(meshval[masknan]).max()
-meshmax *= 0.4
+meshmax = 0.0065
 plt.pcolormesh(yy, tt * 180./np.pi, meshval, vmin=-meshmax, vmax=meshmax, cmap='jet')
 plt.colorbar()
-plt.savefig(f'{scratch_dir}/plot_files/Omega_hybrid_rel_dpt.pdf')
+plt.savefig(f'{orgfiles_dir}/plot_files/Omega_hybrid_rel_dpt.pdf')

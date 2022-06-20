@@ -22,32 +22,28 @@ def copy_files(srcname, destname):
     return None
 
 
-print("====================================================================")
-print(f"Collecting the carr_fit files from DPY fit")
-dirnames = subprocess.check_output(["ls", f"{dpy_batchdir}"])
-dirnames = dirnames.decode().split('\n')
-for dpyname in dirnames[:-1]:
-    dpysplit = dpyname.split('_')
-    daynum = int(dpysplit[2])
-    copy_files(f"{dpy_batchdir}/{dpyname}/carr_fit_1.00000e+00.npy",
-               f"{scratch_dir}/carr_dpy/carr_dpy_{daynum}.npy")
+def delete_files(fname):
+    try:
+        os.system(f"rm {fname}")
+    except FileNotFoundError:
+        print(f"{fname} NOT FOUND")
+        return None
+    print(f"Deleting {fname}")
+    return None
+
 
 print("====================================================================")
-print(f"Collecting the summary file of hybrid fit")
+print(f"Collecting the carr_fit files from DPY fit")
 dirnames = subprocess.check_output(["ls", f"{hybrid_batchdir}"])
 dirnames = dirnames.decode().split('\n')
 for hybridname in dirnames[:-1]:
     hybridsplit = hybridname.split('_')
     daynum = int(hybridsplit[2])
-    copy_files(f"{hybrid_batchdir}/{hybridname}/summaryfiles/summary*.pkl",
-               f"{scratch_dir}/hybrid-summary/summary_{daynum}.pkl")
-
-print("====================================================================")
-print(f"Collecting the wsr sigma file")
-dirnames = subprocess.check_output(["ls", f"{dpy_batchdir}"])
-dirnames = dirnames.decode().split('\n')
-for dpyname in dirnames[:-1]:
-    dpysplit = dpyname.split('_')
-    daynum = int(dpysplit[2])
-    copy_files(f"cp {dpy_batchdir}/{dpyname}/wsr_sigma.npy",
-               f"{scratch_dir}/sigma-files/wsr_sigma_{daynum}.npy")
+    print(f"====================== {daynum} ==============================================")
+    delete_files(f"{hybrid_batchdir}/{hybridname}/dpy_files/param_coeff*")
+    delete_files(f"{hybrid_batchdir}/{hybridname}/qdpy_files/param_coeff*")
+    delete_files(f"{hybrid_batchdir}/{hybridname}/qdpy_full_hess/param_coeff*")
+    
+    delete_files(f"{hybrid_batchdir}/{hybridname}/dpy_files/RL_poly*")
+    delete_files(f"{hybrid_batchdir}/{hybridname}/qdpy_files/RL_poly*")
+    delete_files(f"{hybrid_batchdir}/{hybridname}/qdpy_full_hess/RL_poly*")

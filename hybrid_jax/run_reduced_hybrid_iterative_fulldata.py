@@ -69,7 +69,8 @@ dpy_dir = f"{PARGS.rundir}/dpy_files"
 dpyfull_dir = f"{PARGS.rundir}/dpy_full_hess"
 qdpy_dir = f"{PARGS.rundir}/qdpy_files"
 instr_dirname = PARGS.rundir.split('/')[-1]
-test_dir = f"{PARGS.rundir}/../../batch_runs_dpy/{instr_dirname}"
+# test_dir = f"{PARGS.rundir}/../../batch_runs_dpy/{instr_dirname}"
+test_dir = dpyfull_dir
 #------------------------------------------------------------------------# 
 sys.path.append(f"{package_dir}/plotter")
 import postplotter
@@ -157,6 +158,7 @@ omega0_arr_Q = np.load(f'{qdpy_dir}/omega0_arr.{sfxQ}.npy')
 # shape (nmults x (smax+1) x 2*ellmax+1)
 RL_poly_Q = np.load(f'{qdpy_dir}/RL_poly.{sfxQ}.npy')
 
+"""
 #-------------loading DPT files for testing -------------------# 
 sfxD = GVARS_D.filename_suffix
 _data_D = np.load(f'{test_dir}/data_model.{sfxD}.npy')
@@ -173,6 +175,7 @@ _RL_poly_D = np.load(f'{test_dir}/RL_poly.{sfxD}.npy')
 # sigma2scale = np.load(f'{test_dir}/sigma2scale.{sfxD}.npy')
 _D_bsp_j_D_bsp_k = np.load(f'{test_dir}/D_bsp_j_D_bsp_k.{sfxD}.npy')
 testvals(D_bsp_j_D_bsp_k, _D_bsp_j_D_bsp_k, "Djk(hybrid) = Djk(DPT)")
+"""
 
 #-------------------Miscellaneous parameters---------------------------#
 nmults_D = len(GVARS_D.ell0_arr)
@@ -342,9 +345,9 @@ def data_misfit_fn_Q(c_arr, dac_Q, fullfac):
 def model_misfit_fn(c_arr, fullfac, mu_scale=knee_mu):
     # Djk is the same for s=1, 3, 5
     Djk = D_bsp_j_D_bsp_k
-    np.testing.assert_array_almost_equal(D_bsp_j_D_bsp_k, _D_bsp_j_D_bsp_k)
-    print(f"[TESTING] Djk(hybrid) = Djk(dpt): PASSED -- " 
-          f"maxdiff = {abs(D_bsp_j_D_bsp_k - _D_bsp_j_D_bsp_k).max():.5e}")
+    # np.testing.assert_array_almost_equal(D_bsp_j_D_bsp_k, _D_bsp_j_D_bsp_k)
+    # print(f"[TESTING] Djk(hybrid) = Djk(dpt): PASSED -- " 
+    #       f"maxdiff = {abs(D_bsp_j_D_bsp_k - _D_bsp_j_D_bsp_k).max():.5e}")
     sidx, eidx = 0, GVARS_D.knot_ind_th
     cDc = 0.0
 

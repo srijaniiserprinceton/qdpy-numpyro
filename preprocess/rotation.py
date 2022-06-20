@@ -74,16 +74,17 @@ def get_omegak(rot_profile, smax):
     lplist = []
     omegak = []
     for k in klist:
-        lplist.append(scipy_legendre(k)(costh))
-        omegak.append(np.zeros(lenr))
+        lplist.append(scipy_legendre(k)(costh).reshape(costh.shape[0], 1))
+        omegak.append(np.zeros((lenr, rot_profile.shape[-1])))
 
     for ik, k in enumerate(klist):
         for ir in range(lenr):
-            omegak[ik][ir] = simps(rot_profile[ir, :]*lplist[ik], costh)*(2*k+1.)/2.
+            omegak[ik][ir] = simps(rot_profile[ir, ...]*lplist[ik], costh, axis=0)*(2*k+1.)/2.
     return omegak
 
 
 def get_ws(rot_profile, smax):
+    rmesh_sample = rmesh.reshape(len(rmesh), 1)
     omegak = get_omegak(rot_profile, smax)
     klist = np.arange(smax+2)[::2]
     slist = np.arange(smax)[::2] + 1
@@ -92,7 +93,7 @@ def get_ws(rot_profile, smax):
         prefac = -2*sqrt(pi/(2*s+1))
         omfac1 = 2*klist[iess] + 1
         omfac2 = omfac1 + 4
-        ws.append(prefac*rmesh*(omegak[iess]/omfac1 - omegak[iess+1]/omfac2))
+        ws.append(prefac*rmesh_sample*(omegak[iess]/omfac1 - omegak[iess+1]/omfac2))
         # writefitsfile(ws[iess], f'{output_dir}/w{s}{fprefix}-{INSTR}.fits',
         #               overwrite=True)
     return ws
@@ -102,7 +103,7 @@ def get_interpolated_ws(rot_profile, smax):
     ws_hmi_list = get_ws(rot_profile, smax)
     ws_list = []
     for ws in ws_hmi_list:
-        ws_int = interp.interp1d(rmesh, ws, fill_value="extrapolate")
+        ws_int = interp.interp1d(rmesh, ws, fill_value="extrapolate", axis=0)
         ws_global = ws_int(r_global)
         ws_list.append(ws_global*unit_conv)
     return np.vstack(ws_list)
@@ -160,6 +161,7 @@ if __name__=="__main__":
     fnames_rot2d = get_fnames("rot")
     fnames_err2d = get_fnames("err")
     fnames_rmesh = get_fnames("rmesh")
+    Nsample = 10000
     smax = ARGS.smax
 
     for i in range(len(fnames_rot2d)):
@@ -169,8 +171,20 @@ if __name__=="__main__":
         print(fname_re[0])
         (rmesh, theta), (rot2d, err2d) = load_data(fname_re)
         lenr = len(rmesh)
-        ws = get_interpolated_ws(rot2d, smax)
-        es = get_interpolated_ws(err2d, smax)
+
+
+        rot2d_samples = np.random.normal(loc=rot2d.reshape(rot2d.shape[0],
+                                                                 rot2d.shape[1],
+                                                                 1),
+                                               scale=err2d.reshape(err2d.shape[0],
+                                                                   err2d.shape[1],
+                                                                   1),
+                                               size=(err2d.shape[0], err2d.shape[1], Nsample))
+#        ws = get_interpolated_ws(rot2d, smax)
+#        es = get_interpolated_ws(err2d, smax)
+        
+        ws_samples = get_interpolated_ws(rot2d_samples, smax)
+        es = ws_samples.std(axis=-1)
         wsig = []
 
         newname = RN.get_newname(fnames_rot2d[i], instrument=INSTR, numsplits=smax)
@@ -178,6 +192,6 @@ if __name__=="__main__":
         mdi_day = fname_splits[2]
         numsplits = fname_splits[3]
 
-        np.savetxt(f'{opdir}/wsr.{INSTR}.{ARGS.tslen}.{mdi_day}.{numsplits}', ws)
+#        np.savetxt(f'{opdir}/wsr.{INSTR}.{ARGS.tslen}.{mdi_day}.{numsplits}', ws)
         np.savetxt(f'{opdir}/err.{INSTR}.{ARGS.tslen}.{mdi_day}.{numsplits}', es)
 

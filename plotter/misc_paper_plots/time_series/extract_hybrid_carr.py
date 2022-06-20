@@ -10,7 +10,9 @@ with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
 scratch_dir = dirnames[1]
 INSTR = dirnames[4]
+INSTR = "hmi"
 batchrun_dir = f'{scratch_dir}/batch_runs_hybrid'
+orgfiles_dir = f"{scratch_dir}/{INSTR}-run1/organized-files"
 
 # the list of days to extract
 pt = pd.read_table(f'{package_dir}/preprocess/daylist.{INSTR}', delim_whitespace=True,
@@ -25,19 +27,13 @@ baddays = []
 
 for dayind in range(dayind_min, dayind_max+1):       
     day = pt['MDI'][dayind]
-    daydir = f'{batchrun_dir}/hmi_72d_{day}_36'
-    
     if (day in baddays):  print(f'Bad day: {day}; skipping.')
     
     try:
-        summary_fname = os.listdir(f'{daydir}/summaryfiles')[0]
-        summary = jf.load_obj(f'{daydir}/summaryfiles/{summary_fname}')
-        print(f"Summary name = {summary_fname}")
-        
-        dpy_fname = os.listdir(f'{daydir}/dpy_full_hess/summaryfiles')[0]
-        summary_dpy = jf.load_obj(f'{daydir}/dpy_full_hess/summaryfiles/{dpy_fname}')
-    except IndexError:
-        print(f"Not found: {daydir}")
+        summary = jf.load_obj(f'{orgfiles_dir}/hybrid-summary/summary_{day}')
+        summary_dpy = jf.load_obj(f'{orgfiles_dir}/dpy-summary/summary_{day}')
+    except FileNotFoundError:
+        print(f"Not found: {day}")
         continue
 
 #    try:
@@ -55,7 +51,7 @@ for dayind in range(dayind_min, dayind_max+1):
     carr_dpt_fit_full = jf.c4fit_2_c4plot(summary['params']['dpy']['GVARS'],
                                           carr_dpy_fit, sind_arr, cind_arr)
     wsr_dpy_fit = carr_dpt_fit_full @ bsp_basis_full
-    np.save(f'{scratch_dir}/plot_files/wsr_dpy_fit_{day}.npy', wsr_dpy_fit)
+    jf.save_npy(f'{orgfiles_dir}/plot_files/wsr_dpy_fit_{day}.npy', wsr_dpy_fit)
 
     # saving the wsr from hybrid
     carr_hybrid_fit = summary['c_arr_fit'] * true_params_flat
@@ -67,10 +63,10 @@ for dayind in range(dayind_min, dayind_max+1):
     wsr_hybrid_fit = carr_hybrid_fit_full @ bsp_basis_full
 
     # saving the DPT and hybrid wsr profiles
-    np.save(f'{scratch_dir}/plot_files/wsr_hybrid_fit_{day}.npy', wsr_hybrid_fit)
+    jf.save_npy(f'{orgfiles_dir}/plot_files/wsr_hybrid_fit_{day}.npy', wsr_hybrid_fit)
 
 # saving the radial grid (which should be the same for all inverions)
-np.save(f'{scratch_dir}/plot_files/r.npy', summary['params']['dpy']['GVARS'].r)
+jf.save_npy(f'{orgfiles_dir}/plot_files/r.npy', summary['params']['dpy']['GVARS'].r)
 
 # saving GVARS.OM
-np.save(f'{scratch_dir}/plot_files/GVARS_OM.npy', summary['params']['dpy']['GVARS'].OM)
+jf.save_npy(f'{orgfiles_dir}/plot_files/GVARS_OM.npy', summary['params']['dpy']['GVARS'].OM)

@@ -17,7 +17,7 @@ plotter_dir = os.path.dirname(os.path.dirname(current_dir))
 package_dir = os.path.dirname(plotter_dir)
 with open(f"{package_dir}/.config", "r") as f:
     dirnames = f.read().splitlines()
-scratch_dir = dirnames[1]
+scratch_dir = f"{dirnames[1]}/organized-files"
 
 # loading the summaryfiles
 # loading the final dpy fitted .npy file
