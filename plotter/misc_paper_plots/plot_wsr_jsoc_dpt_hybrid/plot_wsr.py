@@ -5,11 +5,15 @@ import argparse
 import fnmatch
 import numpy as np
 import matplotlib.pyplot as plt
+plt.rcParams.update({'font.size': 24})
 import matplotlib as mpl
 
+'''
 label_size = 16
 mpl.rcParams['xtick.labelsize'] = label_size
 mpl.rcParams['ytick.labelsize'] = label_size
+'''
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--instr", help="hmi or mdi",
@@ -44,7 +48,7 @@ r = np.load(f'r.npy')
 # for dimensionalization of wsr before plotting                                              
 OM = np.load('GVARS_OM.npy')
 
-xlim_lo = 0.85
+xlim_lo = 0.89
 vline = 0.9
 
 r_lo_ind = np.argmin(np.abs(r - xlim_lo))
@@ -52,7 +56,7 @@ r_up_ind = np.argmin(np.abs(r - 1))
 
 def plot_two_wsr(wsr1, wsr2, wsr_sigma, type1, type2, day):
     # the wsr profiles plot                                                                
-    fig = plt.figure(figsize=(17, 10))
+    fig = plt.figure(figsize=(24, 12))
 
     ax1= fig.add_subplot(2,3,1)
     ax3= fig.add_subplot(2,3,2)
@@ -65,36 +69,44 @@ def plot_two_wsr(wsr1, wsr2, wsr_sigma, type1, type2, day):
 
     def plot_s(ax, axnum):
         s = 2*axnum + 1
-        #ax.plot(r[r_lo_ind:r_up_ind],
-        #        wsr1[axnum,r_lo_ind:r_up_ind]-wsr2[axnum,r_lo_ind:r_up_ind],
-        #        'k', label=f'{type1} $w_{s}(r)$ in nHz')
-        ax.plot(r, wsr1[axnum], 'r', label=f'{type1} $w_{s}(r)$ in nHz')
-        ax.plot(r, wsr2[axnum], 'r', label=f'{type2} $w_{s}(r)$ in nHz')
+        if(s==1):
+            ax.plot(r[r_lo_ind:r_up_ind], wsr1[axnum][r_lo_ind:r_up_ind],
+                    'k', label=f'2D RLS: {type1} $w_s(r)$ in nHz')
+            ax.plot(r[r_lo_ind:r_up_ind], wsr2[axnum][r_lo_ind:r_up_ind],
+                    '--r', label=f'1.5D RLS: {type2} $w_s(r)$ in nHz')
+        else:
+            ax.plot(r[r_lo_ind:r_up_ind], wsr1[axnum][r_lo_ind:r_up_ind], 'k')
+            ax.plot(r[r_lo_ind:r_up_ind], wsr2[axnum][r_lo_ind:r_up_ind], '--r')
+        ax.text(0.5, 0.9, f'$w_{s}(r)$ in nHz', horizontalalignment='center',
+                verticalalignment='center', transform=ax.transAxes,
+                bbox=dict(facecolor='none', edgecolor='black', boxstyle='round,pad=0.2',
+                          alpha=0.2))
         ax.set_xlim([xlim_lo, 1])
         ax.axvline(vline)
         ax.grid(alpha=0.3)
-        ax.legend(fontsize=16)
-        ax.fill_between(r[r_lo_ind:r_up_ind], -0.5*wsr_sigma[axnum, r_lo_ind:r_up_ind],
-                        0.5*wsr_sigma[axnum, r_lo_ind:r_up_ind], color='b', alpha=0.4)
-
+        # ax.set_ylabel(f'$w_{s}(r)$ in nHz')
+        
     for axnum in range(5):
         plot_s(axs[axnum], axnum)
 
     # plt.suptitle("1.5D $w_s(r)$ profiles from 2DRLS $\Omega(r,\\theta)$ JSOC profiles",
     #               fontsize=18)
 
+    handles, labels = ax1.get_legend_handles_labels()
+    fig.legend(handles, labels, loc='upper center', ncol = 2, borderaxespad=0.05)
+
     plt.subplots_adjust(left=0.06,
-                        bottom=0.1,
+                        bottom=0.08,
                         right=0.98,
                         top=0.94,
-                        wspace=0.12,
+                        wspace=0.2,
                         hspace=0.12)
 
     fig.add_subplot(111, frameon=False)
     # hide tick and tick label of the big axes                                                 
     plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
     plt.grid(False)
-    plt.xlabel('$r$ in $R_{\odot}$', fontsize=16)
+    plt.xlabel('$r$ in $R_{\odot}$')
 
     plt.savefig(f'{plot_dir}/wsr_{instr}_{type1}_{type2}_{day}.pdf')
     plt.close()
