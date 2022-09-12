@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 
@@ -33,12 +34,23 @@ a4interp = interp1d(nu_a4, ella4, kind="linear", fill_value="extrapolate")
 ella2_obs = a2interp(nu0_data)
 ella4_obs = a4interp(nu0_data)
 
-a2_obs = ella2_obs#/ell0_data
-a4_obs = ella4_obs#/ell0_data
+a2_obs = ella2_obs/ell0_data
+a4_obs = ella4_obs/ell0_data
 
-plt.figure()
-plt.plot(ell0_data, a2_obs, '+k')
-plt.plot(ell0_data, a4_obs, 'xr')
+
+font = {'family' : 'normal',
+        'size'   : 12}
+
+matplotlib.rc('font', **font)
+
+plt.figure(figsize=(6, 4))
+plt.plot(ell0_data, a2_obs, '+k', label='$\delta a_2$')
+plt.plot(ell0_data, a4_obs, 'xr', label='$\delta a_4$')
+plt.xlabel('Spherical harmonic degree $\ell$')
+plt.ylabel('$\delta a$ in nHz')
+plt.legend()
+plt.tight_layout()
+plt.savefig('antia-compare.pdf')
 plt.show()
 
 
