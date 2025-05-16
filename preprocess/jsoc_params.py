@@ -14,4 +14,11 @@ class jsocParams():
             self.NDT = "103680"
             self.freq_series_name = "mdi.vw_V_sht_modes"
 
+        elif instr=="mdi-360d":
+            self.series_name = "mdi.vw_V_sht_2drls"
+            self.daylist_fname = "daylist.mdi"
+            self.LMAX = "300"
+            self.NDT = "518400"
+            self.freq_series_name = "mdi.vw_V_sht_modes"
+
 

@@ -1,6 +1,6 @@
 import numpy as np
 import argparse
-from preprocess import jsoc_params as jsp
+import jsoc_params as jsp
 import os
 import sys
 import time

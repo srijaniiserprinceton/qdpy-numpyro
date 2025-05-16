@@ -4,7 +4,7 @@ import numpy as np
 import os
 import sys
 
-from preprocess import rename_files as RN
+import rename_files as RN
 #-----------------------------------------------------------------------#
 PARSER = argparse.ArgumentParser()
 PARSER.add_argument("--instrument", help="hmi or mdi",

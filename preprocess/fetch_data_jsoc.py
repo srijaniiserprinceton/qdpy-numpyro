@@ -1,6 +1,6 @@
 from sunpy.net import jsoc
 from sunpy.net import attrs as a
-from preprocess import jsoc_params as jsp
+import jsoc_params as jsp
 import argparse
 import pandas as pd
 import numpy as np
@@ -69,12 +69,13 @@ pt = pd.read_table(f'{daylist_fname}', delim_whitespace=True,
                    dtype={'SN': np.int64,
                           'MDI': np.int64,
                           'DATE': str})
+print(pt.shape)
 
 day1 = pt['DATE'][ds_idx]
 day2 = pt['DATE'][de_idx]
 print(f"day1 = {day1}; day2 = {day2}")
 print(f"atime = {a.Time(f'{day1}T00:00:00', f'{day2}T00:00:00')}")
-
+"""
 if ARGS.wsr:
     #----------------------------------------------------------------------#
     client = jsoc.JSOCClient()
@@ -107,6 +108,7 @@ if ARGS.wsr:
     res = client.get_request(requests, path=dldir)
     #----------------------------------------------------------------------#
 
+"""
 
 if ARGS.splits:
     # ---- downloading the a-coefficient fits ---------------
